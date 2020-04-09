@@ -170,7 +170,7 @@ function confirmDelete() {
 function updateState(projectname) {
     let actualState = $("#line-project-" + projectname).attr("data-state");
     if(actualState == "running") {
-        utils.showInfiniteLoading("Stopping project...<br/>This can take a while.");
+        utils.showInfiniteLoading("Stopping project...");
         $.getJSON("/api/v1/projects/stop/" + projectname).fail((xhr, status, err) => {
             console.warn(err);
             $.notify({message: "Unable to stop this project (server error). See console for details."}, {type: "danger"});
@@ -203,7 +203,7 @@ function updateState(projectname) {
         });
     } else {
         // unknown
-        $.notify({message: "Unknown actual state. Please refresh the page."}, {type: "warning"});
+        $.notify({message: "Unknown actual state. Please refresh the page and inspect docker events."}, {type: "warning"});
     }
 }
 

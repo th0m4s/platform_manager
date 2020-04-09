@@ -101,6 +101,12 @@ function init() {
             inputCollabs.tagsinput("add", collab, {default: true});
         });
     }
+
+    window.onbeforeunload = () => {
+        if(!saving && ((!edit && $("#input-project-name").val().length > 0) || getChanges().count > 0)) {
+            return "You have unsaved changes on this page. Do you want to leave?";
+        }
+    }
 }
 
 function displayEnv(key, value) {
@@ -163,6 +169,7 @@ let lastDifferences = undefined;
 function confirm() {
     let confirmButton = $("#confirm-button");
     if(!edit) {
+        saving = true;
         disableAllInputs();
         utils.disableButton(confirmButton, "Creating the project...");
 
@@ -191,6 +198,7 @@ function confirm() {
         projectData.customdomains = domains;
 
         $.post("/api/v1/projects/create", projectData).fail((xhr, status, error) => {
+            saving = false;
             $.notify({message: "Unable to contact server. See console for details."}, {type: "danger"});
             console.warn("Unable to create project (server error):", error);
 
@@ -198,6 +206,7 @@ function confirm() {
             utils.enableButton(confirmButton, "Create this project");
         }).done((response) => {
             if(response.error) {
+                saving = false;
                 if(response.code == 409) {
                     utils.addNotification(response.message, "warning");
                     location.href = "list";
@@ -214,113 +223,8 @@ function confirm() {
             }
         });
     } else {
-        let wantpluginnames = $("#input-plugins").val().split(",");
-        let wantcollaborators = $("#input-collaborators").val().split(",");
-
-        let envrows = $(".env-row"), wantenv = {};
-        for(let i = 0; i < envrows.length; i++) {
-            let row = $(envrows.get(i));
-            let key = row.find(".input-env-key").val().trim();
-            if(key.length > 0) wantenv[key] = row.find(".input-env-val").val();
-        }
-
-        let domrows = $(".domain-row"), wantdomains = [];
-        for(let i = 0; i < domrows.length; i++) {
-            let row = $(domrows.get(i));
-            let domain = row.find(".input-domain").val().trim();
-            if(domain.length > 0) wantdomains.push({domain: domain, enablesub: row.find(".input-enablesub").is(":checked")});
-        }
-
-        // check differences
-        let differences = {}, count = 0;
-        differences.plugins = {add: [], remove: []};
-        let originalplugins = Object.keys(values.plugins);
-        // removed plugins
-        for(let originalplugin of originalplugins) {
-            if(!wantpluginnames.includes(originalplugin)) {
-                differences.plugins.remove.push(originalplugin);
-                count++;
-            }
-        }
-
-        // added plugins
-        wantpluginnames.forEach((wantpluginname) => {
-            if(wantpluginname.trim().length > 0) {
-                if(!originalplugins.includes(wantpluginname)) {
-                    differences.plugins.add.push(wantpluginname);
-                    count++;
-                }
-            }
-        });
-
-        differences.collabs = {add: [], remove: []};
-        // removed collabs
-        for(let originalcollab of values.collabs) {
-            if(!wantcollaborators.includes(originalcollab)) {
-                differences.collabs.remove.push(originalcollab);
-                count++;
-            }
-        }
-
-        // added collabs
-        wantcollaborators.forEach((wantcollaborator) => {
-            if(wantcollaborator.trim().length > 0) {
-                if(!values.collabs.includes(wantcollaborator)) {
-                    differences.collabs.add.push(wantcollaborator);
-                    count++;
-                }
-            }
-        });
-
-
-        differences.domains = {add: [], remove: [], modify: []};
-        let originalDomains = [], wantdomainsobject = {};
-        for(let d of wantdomains) {
-            wantdomainsobject[d.domain] = d.enablesub;
-        }
-        let wantdomainskeys = Object.keys(wantdomainsobject);
-
-        // removed and modified domains
-        for(let allDomain of values.domains) {
-            let originalDomain = allDomain.domain;
-            originalDomains.push(originalDomain);
-
-            if(!wantdomainskeys.includes(originalDomain)) {
-                differences.domains.remove.push(originalDomain);
-                count++;
-            } else if(allDomain.enablesub != wantdomainsobject[originalDomain]) {
-                differences.domains.modify.push({domain: originalDomain, newstate: wantdomainsobject[originalDomain]});
-                count++;
-            }
-        }
-
-        // added domains
-        for(let allWantdomain of wantdomains) {
-            if(!originalDomains.includes(allWantdomain.domain)) {
-                differences.domains.add.push(allWantdomain);
-                count++;
-            }
-        }
-
-        differences.env = {add: [], remove: [], modify: []}
-        let wantenvkeys = Object.keys(wantenv), originalenvkeys = Object.keys(values.userenv);
-
-        for(let originalkey of originalenvkeys) {
-            if(!wantenvkeys.includes(originalkey)) {
-                differences.env.remove.push(originalkey);
-                count++;
-            } else if(values.userenv[originalkey] !== wantenv[originalkey]) {
-                differences.env.modify.push({key: originalkey, newvalue: wantenv[originalkey]});
-                count++;
-            }
-        }
-
-        for(let wantkey of wantenvkeys) {
-            if(!originalenvkeys.includes(wantkey)) {
-                differences.env.add.push({key: wantkey, value: wantenv[wantkey]});
-                count++;
-            }
-        }
+        let changes = getChanges();
+        let count = changes.count, differences = changes.differences;
 
         if(count > 0) {
             let diffTexts = [];
@@ -428,18 +332,153 @@ function confirm() {
     return false;
 }
 
+function getChanges() {
+    let wantpluginnames = $("#input-plugins").val().split(",");
+    let wantcollaborators = $("#input-collaborators").val().split(",");
+
+    let envrows = $(".env-row"), wantenv = {};
+    for(let i = 0; i < envrows.length; i++) {
+        let row = $(envrows.get(i));
+        let key = row.find(".input-env-key").val().trim();
+        if(key.length > 0) wantenv[key] = row.find(".input-env-val").val();
+    }
+
+    let domrows = $(".domain-row"), wantdomains = [];
+    for(let i = 0; i < domrows.length; i++) {
+        let row = $(domrows.get(i));
+        let domain = row.find(".input-domain").val().trim();
+        if(domain.length > 0) wantdomains.push({domain: domain, enablesub: row.find(".input-enablesub").is(":checked")});
+    }
+
+    // check differences
+    let differences = {}, count = 0;
+    differences.plugins = {add: [], remove: []};
+    let originalplugins = Object.keys(values.plugins);
+    // removed plugins
+    for(let originalplugin of originalplugins) {
+        if(!wantpluginnames.includes(originalplugin)) {
+            differences.plugins.remove.push(originalplugin);
+            count++;
+        }
+    }
+
+    // added plugins
+    wantpluginnames.forEach((wantpluginname) => {
+        if(wantpluginname.trim().length > 0) {
+            if(!originalplugins.includes(wantpluginname)) {
+                differences.plugins.add.push(wantpluginname);
+                count++;
+            }
+        }
+    });
+
+    differences.collabs = {add: [], remove: []};
+    // removed collabs
+    for(let originalcollab of values.collabs) {
+        if(!wantcollaborators.includes(originalcollab)) {
+            differences.collabs.remove.push(originalcollab);
+            count++;
+        }
+    }
+
+    // added collabs
+    wantcollaborators.forEach((wantcollaborator) => {
+        if(wantcollaborator.trim().length > 0) {
+            if(!values.collabs.includes(wantcollaborator)) {
+                differences.collabs.add.push(wantcollaborator);
+                count++;
+            }
+        }
+    });
+
+
+    differences.domains = {add: [], remove: [], modify: []};
+    let originalDomains = [], wantdomainsobject = {};
+    for(let d of wantdomains) {
+        wantdomainsobject[d.domain] = d.enablesub;
+    }
+    let wantdomainskeys = Object.keys(wantdomainsobject);
+
+    // removed and modified domains
+    for(let allDomain of values.domains) {
+        let originalDomain = allDomain.domain;
+        originalDomains.push(originalDomain);
+
+        if(!wantdomainskeys.includes(originalDomain)) {
+            differences.domains.remove.push(originalDomain);
+            count++;
+        } else if(allDomain.enablesub != wantdomainsobject[originalDomain]) {
+            differences.domains.modify.push({domain: originalDomain, newstate: wantdomainsobject[originalDomain]});
+            count++;
+        }
+    }
+
+    // added domains
+    for(let allWantdomain of wantdomains) {
+        if(!originalDomains.includes(allWantdomain.domain)) {
+            differences.domains.add.push(allWantdomain);
+            count++;
+        }
+    }
+
+    differences.env = {add: [], remove: [], modify: []}
+    let wantenvkeys = Object.keys(wantenv), originalenvkeys = Object.keys(values.userenv);
+
+    for(let originalkey of originalenvkeys) {
+        if(!wantenvkeys.includes(originalkey)) {
+            differences.env.remove.push(originalkey);
+            count++;
+        } else if(values.userenv[originalkey] !== wantenv[originalkey]) {
+            differences.env.modify.push({key: originalkey, newvalue: wantenv[originalkey]});
+            count++;
+        }
+    }
+
+    for(let wantkey of wantenvkeys) {
+        if(!originalenvkeys.includes(wantkey)) {
+            differences.env.add.push({key: wantkey, value: wantenv[wantkey]});
+            count++;
+        }
+    }
+
+    return {differences: differences, count: count};
+}
+
+let saving = false;
 function confirmSave() {
     if(lastDifferences == null) return;
     let differences = lastDifferences;
     lastDifferences = null;
 
+    saving = true;
     $("#confirmModal").modal("hide");
 
     let confirmButton = $("#confirm-button");
     disableAllInputs();
     utils.disableButton(confirmButton, "Saving the project...");
 
-    $.post("/api/v1/projects/edit/" + values.name, {differences: JSON.stringify(differences)});
+    $.post("/api/v1/projects/edit/" + values.name, {differences: JSON.stringify(differences)}).fail((xhr, status, error) => {
+        saving = false;
+        $.notify({message: "Unable to contact server. See console for details."}, {type: "danger"});
+        console.warn("Unable to save the project (server error):", error);
+
+        enableAllInputs();
+        $("#input-project-name").attr("disabled", "disabled");
+        utils.enableButton(confirmButton, "Save this project");
+    }).done((response) => {
+        if(response.error) {
+            saving = false;
+            $.notify({message: "Unable to save this project. See console for details."}, {type: "danger"});
+            console.warn("Unable to save the project (application error):", error);
+
+            enableAllInputs();
+            $("#input-project-name").attr("disabled", "disabled");
+            utils.enableButton(confirmButton, "Save this project");
+        } else {
+            utils.addNotification("Project successfully saved.", "success");
+            location.href = "../list";
+        }
+    });
 }
 
 

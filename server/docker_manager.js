@@ -6,11 +6,18 @@ const rmfr = require("rmfr");
 const tar = require("tar");
 const path = require("path");
 const logger = require('simple-node-logger').createSimpleLogger();
+const database_server = require("./database_server");
 
 const docker = new Docker(process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)});
 
 function getProjectMainContainer(projectname) {
-    return "project_" + projectname + "_main";
+    return "pmng_" + projectname + "_main";
+}
+
+// a plugin cannot be named main
+// some plugins like persistent-storage don't need a container
+function getProjectPluginContainer(projectname, plugin) {
+    return "pmng_" + projectname + "_" + plugin;
 }
 
 function isProjectContainerRunning(projectname) {
@@ -55,7 +62,11 @@ function maininstance() {
                         let prom = [];
                         containers.forEach((container) => { // normally only one because plugins not implemented
                             prom.push(container.stop()); // delete is automatic
+                            // container stopped using sigkill (set in Dockerfile) but can use sigterm and timeout
                         });
+
+                        // updating database
+                        prom.push(database_server.database("projects").where("name", projectname).update({autostart: "false"}));
 
                         removePort(projectname);
             
@@ -156,21 +167,28 @@ function maininstance() {
                         // start the container
                         await container.start();
 
+                        // updating database
+                        try {
+                            await database_server.database("projects").where("name", projectname).update({autostart: "true"});
+                        } catch(error) {}
+
                         clearStarting(projectname).then(() => intercom.respond(id, {error: false, message: "Project started."}));
                     } catch(error) {
                         console.warn(error);
-                        clearStarting(projectname).then(() => intercom.respond(id, {error: true, message: "Cannot start project: " + error}));
+                        clearStarting(projectname).then(() => intercom.respond(id, {error: true, message: "Cannot start project " + projectname + ": " + error}));
                     }
                 })
                 break;
             case "analyzeRunning":
                 logger.info("Searching for running docker containers...");
                 docker.container.list({filters: {label: ["pmng.containertype=project"]}}).then((containers) => {
+                    let alreadyRunning = [];
                     if(containers.length > 0) {
                         logger.info("Indexing " + containers.length + " container(s).");
 
                         containers.forEach((container) => {
                             let projectname = container.data.Labels["pmng.projectname"];
+                            alreadyRunning.push(projectname);
                             let port = -1;
                             container.data.Ports.some((portObject) => {
                                 let actualPort = portObject.PublicPort;
@@ -189,6 +207,35 @@ function maininstance() {
                             }
                         });
                     } else logger.info("No containers running.");
+
+                    logger.info("Searching for autostart containers...");
+                    database_server.database("projects").where("autostart", "true").select("*").then((results) => {
+                        if(results == null || results.length == 0) logger.info("No autostart container found.");
+                        else {
+                            let prom = [];
+                            results.forEach((result) => {
+                                if(!alreadyRunning.includes(result.name)) {
+                                    logger.info("Autostarting " + result.name + "...");
+                                    prom.push(intercom.sendPromise("dockermng", {command: "startProject", project: result.name}));
+                                }
+                            });
+
+                            if(prom.length > 0) {
+                                Promise.allSettled(prom).then((states) => {
+                                    let successes = 0;
+                                    states.forEach((state) => {
+                                        if(state.status == "fulfilled") {
+                                            successes++;
+                                        } else {
+                                            logger.warn("Error during autostart: " + state.reason);
+                                        }
+                                    });
+
+                                    if(successes > 0) logger.info("Successfully autostarted " + successes + " container(s).");
+                                });
+                            } else logger.info("No container to autostart (they can already be up and running).");
+                        }
+                    });
                 });
                 break;
         }
