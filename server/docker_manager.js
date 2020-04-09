@@ -7,6 +7,7 @@ const tar = require("tar");
 const path = require("path");
 const logger = require('simple-node-logger').createSimpleLogger();
 const database_server = require("./database_server");
+const plugins_manager = require("./plugins_manager");
 
 const docker = new Docker(process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)});
 
@@ -14,10 +15,14 @@ function getProjectMainContainer(projectname) {
     return "pmng_" + projectname + "_main";
 }
 
-// a plugin cannot be named main
+// a plugin cannot be named main nor net
 // some plugins like persistent-storage don't need a container
 function getProjectPluginContainer(projectname, plugin) {
     return "pmng_" + projectname + "_" + plugin;
+}
+
+function getProjectNetworkName(projectname) {
+    return "pmng_" + projectname + "_net";
 }
 
 function isProjectContainerRunning(projectname) {
@@ -58,7 +63,7 @@ function maininstance() {
                 isProjectContainerRunning(projectname).then((result) => {
                     if(!result) return Promise.reject("Cannot stop a stopped project.");
             
-                    return docker.container.list({filters: {name: [getProjectMainContainer(projectname)]}}).then((containers) => {
+                    return docker.container.list({filters: {label: ["pmng.projectname=" + projectname]}}).then((containers) => {
                         let prom = [];
                         containers.forEach((container) => { // normally only one because plugins not implemented
                             prom.push(container.stop()); // delete is automatic
@@ -66,11 +71,17 @@ function maininstance() {
                         });
 
                         // updating database
-                        prom.push(database_server.database("projects").where("name", projectname).update({autostart: "false"}));
+                        let dbProm = database_server.database("projects").where("name", projectname).update({autostart: "false"});
 
                         removePort(projectname);
             
-                        return Promise.all(prom);
+                        return Promise.all([Promise.all(prom).then(() => {
+                            // when all containers are removed
+                            // ... remove project network
+                            docker.network.list({filters: {name: [getProjectNetworkName(projectname)]}}).then((networks) => {
+                                return networks[0].remove();
+                            });
+                        }), dbProm]);
                     });
                 }).then(() => {
                     intercom.respond(id, {error: false, message: "Project stopped."});
@@ -125,16 +136,38 @@ function maininstance() {
                         let hostPort = requestPort(projectname);
                         // port broadcasted by requestPort
                         
-                        let exposedPort = {};
-                        exposedPort[hostPort + "/tcp"] = {}; // hostport = containerport
                         env.push("PORT=" + hostPort);
 
                         let portBindings = {}; // bind the two ports
                         portBindings[hostPort + "/tcp"] = [{HostPort: hostPort.toString()}];
 
-                        // create container
-                        let container = await docker.container.create({
+                        let networkName = getProjectNetworkName(projectname);
+
+                        // if network already exists (normally deleted on stop or prune), delete it
+                        await docker.network.list({filters: {name: [networkName]}}).then((networks) => {
+                            let prom = [];
+                            networks.forEach((network) => { // normally only one exists, but as is this is a total clear, also remove possible duplicates
+                                prom.push(network.remove());
+                            });
+
+                            return Promise.all(prom);
+                        });
+
+                        // create closed network
+                        await docker.network.create({
+                            Name: networkName,
+                            CheckDuplicates: true,
+                            Driver: "bridge", // default
+                            Labels: {
+                                "pmng.projectname": projectname
+                            }
+                        });
+
+                        console.log(env);
+
+                        let containerConfig = {
                             Image: imageName,
+                            Hostname: "project-" + projectname,
                             name: getProjectMainContainer(projectname),
                             Labels: {
                                 "pmng.containertype": "project",
@@ -142,12 +175,31 @@ function maininstance() {
                             },
                             Env: env,
                             Entrypoint: entrypoint,
-                            ExposedPorts: exposedPort,
+                            ExposedPorts: {
+                                [hostPort + "/tcp"]: {}
+                            },
                             HostConfig: {
                                 PortBindings: portBindings,
-                                AutoRemove: true
+                                AutoRemove: true,
+                                NetworkMode: networkName
+                            },
+                            NetworkingConfig: {
+                                EndpointsConfig: {
+                                    [networkName]: {
+                                        Aliases: ["project-" + projectname, "project"] // same as hostname
+                                    }
+                                }
                             }
-                        });
+                        };
+
+                        // each plugin can modify the main container and can create another container based on the given name and correctly set label pmng.containertype to plugin
+                        let plugins = project.plugins;
+                        for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
+                            containerConfig = await plugins_manager.getPlugin(pluginName).startPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
+                        }
+
+                        // create container
+                        let container = await docker.container.create(containerConfig);
 
                         let projectFilesFolder = path.resolve(startingFolder, "deploying");
                         let projectArchive = path.resolve(startingFolder, "archive.tar");
