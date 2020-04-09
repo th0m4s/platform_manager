@@ -192,7 +192,7 @@ function maininstance() {
                             let port = -1;
                             container.data.Ports.some((portObject) => {
                                 let actualPort = portObject.PublicPort;
-                                if(actualPort >= firstPort && actualPort < firstPluginPort) {
+                                if(actualPort >= firstPort/* && actualPort < firstPluginPort*/) {
                                     port = actualPort;
                                     return true;
                                 } else return false;
@@ -274,9 +274,8 @@ function removePort(projectname) {
     }
 }
 
-let portMappings = {}, firstPort = 11001, firstPluginPort = 21001;
+let portMappings = {}, firstPort = 11001/*, firstPluginPort = 21001*/;
 // 11001 is for project
-// 21001 is for plugins
 
 const types = {"node": "pmng/node", "apache-php": "pmng/apache2-php7"};
 function getImageFromType(type) {
