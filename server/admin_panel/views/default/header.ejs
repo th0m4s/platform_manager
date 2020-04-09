@@ -1,0 +1,57 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <a class="navbar-brand" href="#"><%= site.title %></a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarContent">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item <%= isActive('home') %>">
+                <a class="nav-link" href="/panel/dashboard">Dashboard</a>
+            </li>
+            <li class="nav-item dropdown <%= isActive('projects') %>">
+                <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
+                    Projects
+                </a>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item <%= isActive('projects', 'list') %>" href="/panel/projects/list">List projects</a>
+                    <a class="dropdown-item <%= isActive('projects', 'create') %>" href="/panel/projects/create">Create a project</a>
+                </div>
+            </li>
+            <% if(hasAccess('docker')) { %>
+                <li class="nav-item dropdown <%= isActive('docker') %>">
+                    <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
+                        Docker
+                    </a>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item <%= isActive('docker', 'running') %>" href="/panel/docker/running">List running containers</a>
+                        <a class="dropdown-item <%= isActive('docker', 'ports') %>" href="/panel/docker/ports">List ports</a>
+                        <a class="dropdown-item <%= isActive('docker', 'admin') %>" href="/panel/docker/admin">Manage docker</a>
+                    </div>
+                </li>
+            <% } %>
+
+            <% if(hasAccess('admin')) { %>
+                <li class="nav-item <%= isActive('users', 'all') %>">
+                    <a class="nav-link" href="/panel/users/all">Users</a>
+                </li>
+            <% } %>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item mr-2 <%= isActive('users', 'me') %>">
+                <a class="nav-link" href="/panel/users/me">Account</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/panel/login/logout">Logout</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+<div class="modal fade" id="modal-loading" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-body" id="loading-content">
+            
+        </div>
+      </div>
+    </div>
+  </div>

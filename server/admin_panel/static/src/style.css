@@ -1,0 +1,19 @@
+.btn:disabled {
+    cursor: default !important;
+}
+
+.env-row:last-child .button-add-env-line, .domain-row:last-child .button-add-domain-line {
+    display: block !important;
+}
+
+.twitter-typeahead {
+    display: inline !important;
+}
+
+.no-select {
+    user-select: none;
+}
+
+.bootstrap-tagsinput .badge {
+    margin-right: 3px;
+}
