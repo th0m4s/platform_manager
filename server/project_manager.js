@@ -205,6 +205,7 @@ module.exports.addCustomDomain = addCustomDomain;
 module.exports.addCollaborator = addCollaborator;
 module.exports.getProjectRepository = getProjectRepository;
 module.exports.getProjectFolder = getProjectFolder;
+module.exports.getProjectLogsFolder = getProjectLogsFolder;
 module.exports.getProjectDeployFolder = getProjectDeployFolder;
 module.exports.getProjectBuild = getProjectBuild;
 module.exports.getProjectFromCustomDomain = getProjectFromCustomDomain;
