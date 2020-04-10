@@ -36,7 +36,10 @@ function getProject(project_name, check = true) {
 function addProject(projectname, ownerid, env, plugins) {
     let configs = {};
     plugins.forEach((plugin) => {
-        if(plugin.trim().length > 0) configs[plugin] = plugins_manager.getDefaultConfig(plugin);
+        if(plugin.trim().length > 0) {
+            configs[plugin] = plugins_manager.getDefaultConfig(plugin);
+            plugins_manager.install(plugin, projectname, configs[plugin]);
+        }
     });
     return database_server.database("projects").insert({name: projectname, ownerid: ownerid, userenv: env, version: 0, plugins: configs}).then(() => {
         return pfs.mkdir(getProjectFolder(projectname)).then(() => {

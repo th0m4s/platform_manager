@@ -28,13 +28,19 @@ function startPlugin(projectname, containerconfig, network, plugincontainer, plu
     });
 }
 
-/*function stopPlugin(projectname, plugincontainer) {
+function installPlugin(projectname, pluginconfig) {
 
-}*/
+}
+
+function uninstallPlugin(projectname, pluginconfig) {
+
+}
 
 
 module.exports.startPlugin = startPlugin;
-// module.exports.stopPlugin = stopPlugin;
+module.exports.installPlugin = installPlugin;
+module.exports.uninstallPlugin = uninstallPlugin;
+
 module.exports.defaultConfig = {
     discoveryType: "single-node"
 };

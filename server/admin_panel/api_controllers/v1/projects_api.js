@@ -173,6 +173,7 @@ router.post("/edit/:projectname", function(req, res) {
                 if(differences.plugins.add.length > 0 || differences.plugins.remove.length > 0) {
                     differences.plugins.add.forEach((item) => {
                         originalproject.plugins[item] = plugins_manager.getDefaultConfig(item);
+                        plugins_manager.install(item, projectname, originalproject.plugins[item]);
                     });
     
                     differences.plugins.remove.forEach((item) => {
