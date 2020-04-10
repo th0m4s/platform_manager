@@ -3,11 +3,23 @@ function init() {
     requestOwned(requestLimit).always(() => {
         requestCollab(requestLimit).always(() => {
             utils.hideLoading();
-            setInterval(() => {
-                checkStates(allProjects);
-            }, 10*1000);
+            startIntervalChecking();
         });
     });
+}
+
+let checkIntervalId = -1;
+function stopChecking() {
+    if(checkIntervalId > 0) {
+        clearInterval(checkIntervalId);
+        checkIntervalId = -1;
+    } 
+}
+
+function startIntervalChecking() {
+    checkIntervalId = setInterval(() => {
+        checkStates(allProjects, true);
+    }, 10*1000);
 }
 
 let allProjects = [];
@@ -23,7 +35,7 @@ function addOwnedProjects(projects) {
     if(projects.length > 0) {
         list.parent().show();
         allProjects = allProjects.concat(names);
-        checkStates(names);
+        checkStates(names, false);
     }
 }
 
@@ -39,7 +51,7 @@ function addCollabProjects(results) {
     if(results.length > 0) {
         list.parent().show();
         allProjects = allProjects.concat(names);
-        checkStates(names);
+        checkStates(names, false);
     }
 }
 
@@ -51,7 +63,7 @@ function getProjectHtml(project, disabled) {
     + `<button class="btn btn-sm btn-danger" onclick="projects_list.deleteProject('${project.name}')"${d}><i class="fas fa-trash-alt"></i> Delete</button></div></span></li>`;
 }
 
-function checkStates(projects) {
+function checkStates(projects, canStop) {
     $.getJSON("/api/v1/projects/arerunning/" + projects.join(",")).done((response) => {
         if(response.error) {
             projects.forEach((projectname) => {
@@ -60,6 +72,7 @@ function checkStates(projects) {
 
             console.warn(response.message);
             $.notify({message: "Unable to check states (application error). See console for details."}, {type: "danger"});
+            if(canStop) stopChecking();
         } else {
             for(let [projectname, state] of Object.entries(response.results)) {
                 if(state) {
@@ -76,6 +89,7 @@ function checkStates(projects) {
 
         console.warn(error);
         $.notify({message: "Unable to check states (server error). See console for details."}, {type: "danger"});
+        if(canStop) stopChecking();
     });
 }
 
@@ -187,6 +201,7 @@ function updateState(projectname) {
             } else {
                 $.notify({message: "The project was successfully stopped."}, {type: "success"});
                 setProjectState(projectname, "success", "play", "Start", false, "stopped");
+                if(checkIntervalId == -1) startIntervalChecking();
             }
         }).always(() => {
             utils.hideLoading();
@@ -203,6 +218,7 @@ function updateState(projectname) {
             } else {
                 $.notify({message: "The project was successfully started."}, {type: "success"});
                 setProjectState(projectname, "dark", "stop", "Stop", false, "running");
+                if(checkIntervalId == -1) startIntervalChecking();
             }
         }).always(() => {
             utils.hideLoading();
