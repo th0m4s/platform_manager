@@ -3,7 +3,7 @@ const project_manager = require("../project_manager");
 
 class FTPfs extends FileSystem {
     constructor(connection, user) {
-        super(connection, {root: process.env.VOLUMES_PATH, cwd: "/"});
+        super(connection, {root: process.env.STORAGES_PATH, cwd: "/"});
         this._user = user;
     }
 

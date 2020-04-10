@@ -7,11 +7,11 @@ function startPlugin(projectname, containerconfig, network, plugincontainer, plu
 }
 
 function installPlugin(projectname, pluginconfig) {
-    return pfs.mkdir(project_manager.getProjectVolume(projectname));
+    return pfs.mkdir(project_manager.getProjectStorage(projectname));
 }
 
 function uninstallPlugin(projectname, pluginconfig) {
-    return rmfr(project_manager.getProjectVolume(projectname));
+    return rmfr(project_manager.getProjectStorage(projectname));
 }
 
 

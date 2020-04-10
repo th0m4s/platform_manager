@@ -10,7 +10,7 @@ const ftpServer = new FtpSrv({
     pasv_url: process.env.ROOT_DOMAIN,
     pasv_min: 21001,
     pasv_max: 21999,
-    greeting: "Welcome to the Platform Manager volumes FTP server!",
+    greeting: "Welcome to the Platform Manager storages FTP server!",
     log: blackhole()
 });
 

@@ -237,7 +237,7 @@ function confirm() {
                     text += "<li>" + item + "</li>";
                     if(item == "persistent-storage") {
                         needDelay = true;
-                        specialTexts.push("<i class='fas fa-exclamation-triangle'></i> Warning: By removing the persistent-storage plugin, you are removing all the files stored in the volume of this project.");
+                        specialTexts.push("<i class='fas fa-exclamation-triangle'></i> Warning: By removing the persistent-storage plugin, you are removing all the files stored for this project.");
                     }
                 })
                 text += "</ul>";

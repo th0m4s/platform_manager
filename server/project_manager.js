@@ -169,9 +169,9 @@ function _getProjectBuild(project_name, save = false) {
     return path.join(getProjectFolder(project_name), "build." + (save ? "save." : "") + "tgz");
 }; const getProjectBuild = runtime_cache(_getProjectBuild);
 
-function _getProjectVolume(project_name) {
-    return path.join(process.env.VOLUMES_PATH, project_name);
-}; const getProjectVolume = runtime_cache(_getProjectVolume);
+function _getProjectStorage(project_name) {
+    return path.join(process.env.STORAGES_PATH, project_name);
+}; const getProjectStorage = runtime_cache(_getProjectStorage);
 
 function listOwnedProjects(userId, after, limit) {
     return database_server.database("projects").where("ownerid", userId).andWhere("id", ">", after).select("*").then((results) => {
@@ -217,7 +217,7 @@ module.exports.getProjectFolder = getProjectFolder;
 module.exports.getProjectLogsFolder = getProjectLogsFolder;
 module.exports.getProjectDeployFolder = getProjectDeployFolder;
 module.exports.getProjectBuild = getProjectBuild;
-module.exports.getProjectVolume = getProjectVolume;
+module.exports.getProjectStorage = getProjectStorage;
 module.exports.getProjectFromCustomDomain = getProjectFromCustomDomain;
 module.exports.invalidateCachedProject = invalidateCachedProject;
 module.exports.invalidCachedDomain = invalidCachedDomain;
