@@ -54,7 +54,7 @@ function areProjectContainersRunning(projects) {
     });
 }
 
-let startingProjects = [];
+let startingProjects = [], intervalId = -1;
 function maininstance() {
     intercom.subscribe(["dockermng"], (message, id) => {
         let projectname = message.project || ""; // some commands don't need project
@@ -163,8 +163,6 @@ function maininstance() {
                             }
                         });
 
-                        console.log(env);
-
                         let containerConfig = {
                             Image: imageName,
                             Hostname: "project-" + projectname,
@@ -174,6 +172,13 @@ function maininstance() {
                                 "pmng.projectname": projectname
                             },
                             Env: env,
+                            Healthcheck: {
+                                Test: ["CMD-SHELL", "exit $(( $(netstat -a | grep \":" + hostPort + "\" | grep \"LISTEN\" | wc -l) * -1 + 1))"],
+                                Interval: 1000000000*30, // in ns (10^-9s)
+                                Timeout: 1000000000*10,
+                                Retries: 2
+                            },
+                            StopTimeout: 3,
                             Entrypoint: entrypoint,
                             ExposedPorts: {
                                 [hostPort + "/tcp"]: {}
@@ -292,6 +297,17 @@ function maininstance() {
                 break;
         }
     });
+
+    intervalId = setInterval(() => {
+        docker.container.list({filters: {label: ["pmng.containertype=project"]}}).then((containers) => {
+            containers.forEach((container) => {
+                if(container.data.Status.indexOf("unhealthy") !== -1) {
+                    // unhealthy container == port not used
+                    intercom.send("dockermng", {command: "stopProject", project: container.data.Labels["pmng.projectname"]});
+                }
+            });
+        });
+    }, 60*1000); // check containers every minute
 }
 
 // only for maininstance
