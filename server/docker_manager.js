@@ -60,181 +60,18 @@ function maininstance() {
         let projectname = message.project || ""; // some commands don't need project
         switch(message.command) {
             case "stopProject":
-                isProjectContainerRunning(projectname).then((result) => {
-                    if(!result) return Promise.reject("Cannot stop a stopped project.");
-            
-                    return docker.container.list({filters: {label: ["pmng.projectname=" + projectname]}}).then((containers) => {
-                        let prom = [];
-                        containers.forEach((container) => { // normally only one because plugins not implemented
-                            prom.push(container.stop()); // delete is automatic
-                            // container stopped using sigkill (set in Dockerfile) but can use sigterm and timeout
-                        });
-
-                        // updating database
-                        let dbProm = database_server.database("projects").where("name", projectname).update({autostart: "false"});
-
-                        removePort(projectname);
-            
-                        return Promise.all([Promise.all(prom).then(() => {
-                            // when all containers are removed
-                            // ... remove project network
-                            docker.network.list({filters: {name: [getProjectNetworkName(projectname)]}}).then((networks) => {
-                                return networks[0].remove();
-                            });
-                        }), dbProm]);
-                    });
-                }).then(() => {
+                stopProject(projectname).then(() => {
                     intercom.respond(id, {error: false, message: "Project stopped."});
                 }).catch((error) => {
                     intercom.respond(id, {error: true, message: "Cannot stop project: " + error});
                 });
                 break;
             case "startProject":
-                isProjectContainerRunning(projectname).then(async (result) => {
-                    if(result) return Promise.reject("Cannot start a running project.");
-            
-                    if(startingProjects.includes(projectname)) return Promise.reject("Cannot start a starting project.");
-                    startingProjects.push(projectname);
-
-                    try {
-                        let project = await project_manager.getProject(projectname, true);
-
-                        // check build
-                        let buildPath = project_manager.getProjectBuild(projectname);
-                        await fs.access(buildPath);
-
-                        // if starting folder exists, delete it
-                        let startingFolder = project_manager.getProjectDeployFolder(projectname, true);
-                        try {
-                            await fs.access(startingFolder);
-                            await rmfr(startingFolder);
-                        } catch(e) {}
-                        await fs.mkdir(startingFolder);
-
-                        // extracting build
-                        await tar.x({
-                            file: buildPath,
-                            cwd: startingFolder
-                        });
-
-                        let settings = JSON.parse(await fs.readFile(path.resolve(startingFolder, "settings.json"))).project;
-                        let type = settings.type;
-                        let entrypoint = settings.entrypoint;
-                        
-                        let imageName = getImageFromType(type);
-                        if(imageName == undefined) throw new Error("Unknown image for project");
-
-                        let env = [], specialEnv = ["PORT", "PROJECT_VERSION"];
-                        for(let [key, value] of Object.entries(project.userenv)) {
-                            if(!specialEnv.includes(key.toUpperCase())) env.push(key + "=" + value);
-                        }
-
-                        // add version env
-                        env.push("PROJECT_VERSION=" + project.version);
-
-                        // request port
-                        let hostPort = requestPort(projectname);
-                        // port broadcasted by requestPort
-                        
-                        env.push("PORT=" + hostPort);
-
-                        let portBindings = {}; // bind the two ports
-                        portBindings[hostPort + "/tcp"] = [{HostPort: hostPort.toString()}];
-
-                        let networkName = getProjectNetworkName(projectname);
-
-                        // if network already exists (normally deleted on stop or prune), delete it
-                        await docker.network.list({filters: {name: [networkName]}}).then((networks) => {
-                            let prom = [];
-                            networks.forEach((network) => { // normally only one exists, but as is this is a total clear, also remove possible duplicates
-                                prom.push(network.remove());
-                            });
-
-                            return Promise.all(prom);
-                        });
-
-                        // create closed network
-                        await docker.network.create({
-                            Name: networkName,
-                            CheckDuplicates: true,
-                            Driver: "bridge", // default
-                            Labels: {
-                                "pmng.projectname": projectname
-                            }
-                        });
-
-                        let containerConfig = {
-                            Image: imageName,
-                            Hostname: "project-" + projectname,
-                            name: getProjectMainContainer(projectname),
-                            Labels: {
-                                "pmng.containertype": "project",
-                                "pmng.projectname": projectname
-                            },
-                            Env: env,
-                            Healthcheck: {
-                                Test: ["CMD-SHELL", "exit $(( $(netstat -a | grep \":" + hostPort + "\" | grep \"LISTEN\" | wc -l) * -1 + 1))"],
-                                Interval: 1000000000*30, // in ns (10^-9s)
-                                Timeout: 1000000000*10,
-                                Retries: 2
-                            },
-                            StopTimeout: 3,
-                            Entrypoint: entrypoint,
-                            ExposedPorts: {
-                                [hostPort + "/tcp"]: {}
-                            },
-                            HostConfig: {
-                                PortBindings: portBindings,
-                                AutoRemove: true,
-                                NetworkMode: networkName
-                            },
-                            NetworkingConfig: {
-                                EndpointsConfig: {
-                                    [networkName]: {
-                                        Aliases: ["project-" + projectname, "project"] // same as hostname
-                                    }
-                                }
-                            }
-                        };
-
-                        // each plugin can modify the main container and can create another container based on the given name and correctly set label pmng.containertype to plugin
-                        let plugins = project.plugins;
-                        for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
-                            containerConfig = await plugins_manager.getPlugin(pluginName).startPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
-                        }
-
-                        // create container
-                        let container = await docker.container.create(containerConfig);
-
-                        let projectFilesFolder = path.resolve(startingFolder, "deploying");
-                        let projectArchive = path.resolve(startingFolder, "archive.tar");
-                        
-                        // archive without gzip project
-                        let archiveFiles = await fs.readdir(projectFilesFolder);
-                        await tar.c({
-                            file: projectArchive,
-                            cwd: projectFilesFolder
-                        }, archiveFiles);
-
-                        // send tar to container
-                        await container.fs.put(projectArchive, {
-                            path: "/var/project"
-                        });
-
-                        // start the container
-                        await container.start();
-
-                        // updating database
-                        try {
-                            await database_server.database("projects").where("name", projectname).update({autostart: "true"});
-                        } catch(error) {}
-
-                        clearStarting(projectname).then(() => intercom.respond(id, {error: false, message: "Project started."}));
-                    } catch(error) {
-                        console.warn(error);
-                        clearStarting(projectname).then(() => intercom.respond(id, {error: true, message: "Cannot start project " + projectname + ": " + error}));
-                    }
-                })
+                startProject(projectname).then(() => {
+                    clearStarting(projectname).then(() => intercom.respond(id, {error: false, message: "Project started."}));
+                }).catch((error) => {
+                    clearStarting(projectname).then(() => intercom.respond(id, {error: true, message: "Cannot start project " + projectname + ": " + error}));
+                });
                 break;
             case "analyzeRunning":
                 logger.info("Searching for running docker containers...");
@@ -303,11 +140,180 @@ function maininstance() {
             containers.forEach((container) => {
                 if(container.data.Status.indexOf("unhealthy") !== -1) {
                     // unhealthy container == port not used
-                    intercom.send("dockermng", {command: "stopProject", project: container.data.Labels["pmng.projectname"]});
+                    stopProject(container.data.Labels["pmng.projectname"], true);
                 }
             });
         });
     }, 60*1000); // check containers every minute
+}
+
+// only for maininstance
+function stopProject(projectname, force = false) {
+    return (force ? Promise.resolve(true) : isProjectContainerRunning(projectname)).then((result) => {
+        if(!result) return Promise.reject("Cannot stop a stopped project.");
+
+        return docker.container.list({filters: {label: ["pmng.projectname=" + projectname]}}).then((containers) => {
+            let prom = [];
+            containers.forEach((container) => {
+                prom.push(container.stop()); // delete is automatic
+            });
+
+            // updating database
+            let dbProm = database_server.database("projects").where("name", projectname).update({autostart: "false"});
+
+            removePort(projectname);
+
+            return Promise.all([Promise.all(prom).then(() => {
+                // when all containers are removed
+                // ... remove project network
+                docker.network.list({filters: {name: [getProjectNetworkName(projectname)]}}).then((networks) => {
+                    return networks[0].remove();
+                });
+            }), dbProm]);
+        });
+    });
+}
+
+// only for maininstance
+function startProject(projectname) {
+    return isProjectContainerRunning(projectname).then(async (result) => {
+        if(result) return Promise.reject("Cannot start a running project.");
+
+        if(startingProjects.includes(projectname)) return Promise.reject("Cannot start a starting project.");
+        startingProjects.push(projectname);
+
+        let project = await project_manager.getProject(projectname, true);
+
+        // check build
+        let buildPath = project_manager.getProjectBuild(projectname);
+        await fs.access(buildPath);
+
+        // if starting folder exists, delete it
+        let startingFolder = project_manager.getProjectDeployFolder(projectname, true);
+        try {
+            await fs.access(startingFolder);
+            await rmfr(startingFolder);
+        } catch(e) {}
+        await fs.mkdir(startingFolder);
+
+        // extracting build
+        await tar.x({
+            file: buildPath,
+            cwd: startingFolder
+        });
+
+        let settings = JSON.parse(await fs.readFile(path.resolve(startingFolder, "settings.json"))).project;
+        let type = settings.type;
+        let entrypoint = settings.entrypoint;
+        
+        let imageName = getImageFromType(type);
+        if(imageName == undefined) throw new Error("Unknown image for project");
+
+        let env = [], specialEnv = ["PORT", "PROJECT_VERSION"];
+        for(let [key, value] of Object.entries(project.userenv)) {
+            if(!specialEnv.includes(key.toUpperCase())) env.push(key + "=" + value);
+        }
+
+        // add version env
+        env.push("PROJECT_VERSION=" + project.version);
+
+        // request port
+        let hostPort = requestPort(projectname);
+        // port broadcasted by requestPort
+        
+        env.push("PORT=" + hostPort);
+
+        let portBindings = {}; // bind the two ports
+        portBindings[hostPort + "/tcp"] = [{HostPort: hostPort.toString()}];
+
+        let networkName = getProjectNetworkName(projectname);
+
+        // if network already exists (normally deleted on stop or prune), delete it
+        await docker.network.list({filters: {name: [networkName]}}).then((networks) => {
+            let prom = [];
+            networks.forEach((network) => { // normally only one exists, but as is this is a total clear, also remove possible duplicates
+                prom.push(network.remove());
+            });
+
+            return Promise.all(prom);
+        });
+
+        // create closed network
+        await docker.network.create({
+            Name: networkName,
+            CheckDuplicates: true,
+            Driver: "bridge", // default
+            Labels: {
+                "pmng.projectname": projectname
+            }
+        });
+
+        let containerConfig = {
+            Image: imageName,
+            Hostname: "project-" + projectname,
+            name: getProjectMainContainer(projectname),
+            Labels: {
+                "pmng.containertype": "project",
+                "pmng.projectname": projectname
+            },
+            Env: env,
+            Healthcheck: {
+                Test: ["CMD-SHELL", "exit $(( $(netstat -a | grep \":" + hostPort + "\" | grep \"LISTEN\" | wc -l) * -1 + 1))"],
+                Interval: 1000000000*30, // in ns (10^-9s)
+                Timeout: 1000000000*10,
+                Retries: 2
+            },
+            StopTimeout: 3,
+            Entrypoint: entrypoint,
+            ExposedPorts: {
+                [hostPort + "/tcp"]: {}
+            },
+            HostConfig: {
+                PortBindings: portBindings,
+                AutoRemove: true,
+                NetworkMode: networkName
+            },
+            NetworkingConfig: {
+                EndpointsConfig: {
+                    [networkName]: {
+                        Aliases: ["project-" + projectname, "project"] // same as hostname
+                    }
+                }
+            }
+        };
+
+        // each plugin can modify the main container and can create another container based on the given name and correctly set label pmng.containertype to plugin
+        let plugins = project.plugins;
+        for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
+            containerConfig = await plugins_manager.getPlugin(pluginName).startPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
+        }
+
+        // create container
+        let container = await docker.container.create(containerConfig);
+
+        let projectFilesFolder = path.resolve(startingFolder, "deploying");
+        let projectArchive = path.resolve(startingFolder, "archive.tar");
+        
+        // archive without gzip project
+        let archiveFiles = await fs.readdir(projectFilesFolder);
+        await tar.c({
+            file: projectArchive,
+            cwd: projectFilesFolder
+        }, archiveFiles);
+
+        // send tar to container
+        await container.fs.put(projectArchive, {
+            path: "/var/project"
+        });
+
+        // start the container
+        await container.start();
+
+        // updating database
+        try {
+            await database_server.database("projects").where("name", projectname).update({autostart: "true"});
+        } catch(error) {}
+    });
 }
 
 // only for maininstance
