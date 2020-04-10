@@ -15,6 +15,9 @@ child_process.fork("./server/intercom/intercom_server");
 logger.info("Forking DNS server...");
 child_process.fork("./server/dns_server");
 
+logger.info("Forking FTP server...");
+child_process.fork("./server/ftp_server/ftp_server");
+
 logger.info("Starting all web servers...");
 require("./server/web_server").start();
 
