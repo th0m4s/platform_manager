@@ -105,6 +105,7 @@ function init() {
     window.onbeforeunload = () => {
         if(!saving && ((!edit && $("#input-project-name").val().length > 0) || getChanges().count > 0)) {
             return "You have unsaved changes on this page. Do you want to leave?";
+            // some browser don't display this message
         }
     }
 }
@@ -227,13 +228,17 @@ function confirm() {
         let count = changes.count, differences = changes.differences;
 
         if(count > 0) {
-            let diffTexts = [];
+            let diffTexts = [], specialTexts = [], needDelay = false;
             lastDifferences = differences;
 
             if(differences.plugins.remove.length > 0) {
                 let text = "You removed the following plugin" + (differences.plugins.remove.length > 1 ? "s" : "") + ":<ul>";
                 differences.plugins.remove.forEach((item) => {
                     text += "<li>" + item + "</li>";
+                    if(item == "persistent-storage") {
+                        needDelay = true;
+                        specialTexts.push("<i class='fas fa-exclamation-triangle'></i> Warning: By removing the persistent-storage plugin, you are removing all the files stored in the volume of this project.");
+                    }
                 })
                 text += "</ul>";
                 diffTexts.push(text);
@@ -321,7 +326,18 @@ function confirm() {
                 diffTexts.push(text);
             }
 
-            $("#confirmModal-content").html("Do you want to save this project?<br/><br/>" + diffTexts.join(""));
+            $("#confirmModal-content").html("Do you want to save this project?<br/><br/>" + diffTexts.join("") + (specialTexts.length == 0 ? "" : "<br/>" + specialTexts.join("<br/>")));
+
+            let confirmButton = $("#button-confirm-save");
+            if(needDelay) {
+                utils.disableButton(confirmButton, "Are you sure?");
+                setTimeout(() => {
+                    utils.enableButton(confirmButton, "Confirm save");
+                }, 5000 );
+            } else {
+                utils.enableButton(confirmButton, "Confirm save");
+            }
+
             $("#confirmModal").modal();
         } else {
             $.notify({message: "No modifications made."}, {type: "info"});

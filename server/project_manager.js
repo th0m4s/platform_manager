@@ -34,21 +34,23 @@ function getProject(project_name, check = true) {
 }
 
 function addProject(projectname, ownerid, env, plugins) {
-    let configs = {};
+    let configs = {}, pluginProm = [];
     plugins.forEach((plugin) => {
         if(plugin.trim().length > 0) {
             configs[plugin] = plugins_manager.getDefaultConfig(plugin);
-            plugins_manager.install(plugin, projectname, configs[plugin]);
+            pluginProm.push(plugins_manager.install(plugin, projectname, configs[plugin]));
         }
     });
-    return database_server.database("projects").insert({name: projectname, ownerid: ownerid, userenv: env, version: 0, plugins: configs}).then(() => {
-        return pfs.mkdir(getProjectFolder(projectname)).then(() => {
-            let repo = getProjectRepository(projectname);
-            return Promise.all([pfs.mkdir(repo), pfs.mkdir(getProjectLogsFolder(projectname))]).then(() => {
-                return simpleGit(repo).init(true).then(() => {
-                    let postUpdate = path.resolve(repo, "hooks", "post-update");
-                    return pfs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
-                        return pfs.chmod(postUpdate, "700"); // or 0o700
+    return Promise.all(pluginProm).then(() => {
+        return database_server.database("projects").insert({name: projectname, ownerid: ownerid, userenv: env, version: 0, plugins: configs}).then(() => {
+            return pfs.mkdir(getProjectFolder(projectname)).then(() => {
+                let repo = getProjectRepository(projectname);
+                return Promise.all([pfs.mkdir(repo), pfs.mkdir(getProjectLogsFolder(projectname))]).then(() => {
+                    return simpleGit(repo).init(true).then(() => {
+                        let postUpdate = path.resolve(repo, "hooks", "post-update");
+                        return pfs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
+                            return pfs.chmod(postUpdate, "700"); // or 0o700
+                        });
                     });
                 });
             });
@@ -167,6 +169,10 @@ function _getProjectBuild(project_name, save = false) {
     return path.join(getProjectFolder(project_name), "build." + (save ? "save." : "") + "tgz");
 }; const getProjectBuild = runtime_cache(_getProjectBuild);
 
+function _getProjectVolume(project_name) {
+    return path.join(process.env.VOLUMES_PATH, project_name);
+}; const getProjectVolume = runtime_cache(_getProjectVolume);
+
 function listOwnedProjects(userId, after, limit) {
     return database_server.database("projects").where("ownerid", userId).andWhere("id", ">", after).select("*").then((results) => {
         return {projects: results.slice(0, limit), hasMore: results.length > limit};
@@ -211,6 +217,7 @@ module.exports.getProjectFolder = getProjectFolder;
 module.exports.getProjectLogsFolder = getProjectLogsFolder;
 module.exports.getProjectDeployFolder = getProjectDeployFolder;
 module.exports.getProjectBuild = getProjectBuild;
+module.exports.getProjectVolume = getProjectVolume;
 module.exports.getProjectFromCustomDomain = getProjectFromCustomDomain;
 module.exports.invalidateCachedProject = invalidateCachedProject;
 module.exports.invalidCachedDomain = invalidCachedDomain;
