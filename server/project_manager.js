@@ -6,7 +6,7 @@ const plugins_manager = require("./plugins_manager");
 const simpleGit = require("simple-git/promise");
 const intercom = require("./intercom/intercom_client").connect();
 
-const fs = require("fs").promises;
+const pfs = require("fs").promises;
 const PROJECTS_PATH = process.env.PROJECTS_PATH;
 
 
@@ -39,13 +39,13 @@ function addProject(projectname, ownerid, env, plugins) {
         if(plugin.trim().length > 0) configs[plugin] = plugins_manager.getDefaultConfig(plugin);
     });
     return database_server.database("projects").insert({name: projectname, ownerid: ownerid, userenv: env, version: 0, plugins: configs}).then(() => {
-        return fs.mkdir(getProjectFolder(projectname)).then(() => {
+        return pfs.mkdir(getProjectFolder(projectname)).then(() => {
             let repo = getProjectRepository(projectname);
-            return Promise.all([fs.mkdir(repo), fs.mkdir(getProjectLogsFolder(projectname))]).then(() => {
+            return Promise.all([pfs.mkdir(repo), pfs.mkdir(getProjectLogsFolder(projectname))]).then(() => {
                 return simpleGit(repo).init(true).then(() => {
                     let postUpdate = path.resolve(repo, "hooks", "post-update");
-                    return fs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
-                        return fs.chmod(postUpdate, "700"); // or 0o700
+                    return pfs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
+                        return pfs.chmod(postUpdate, "700"); // or 0o700
                     });
                 });
             });
@@ -134,7 +134,7 @@ intercom.subscribe(["projectsmng"], (message) => {
 
 function projectExists(project_name) {
     return Promise.all([
-        fs.access(getProjectFolder(project_name)).then(() => {return true;}).catch(() => {return Promise.reject("Project does not exists: Unable to access project foler.")}),
+        pfs.access(getProjectFolder(project_name)).then(() => {return true;}).catch(() => {return Promise.reject("Project does not exists: Unable to access project foler.")}),
         database_server.database("projects").select("*").where("name", project_name).count("id AS cnt").then((total) => {
             return total[0].cnt > 0;
         })

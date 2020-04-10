@@ -1,7 +1,7 @@
 const Docker = require("node-docker-api").Docker;
 const project_manager = require("./project_manager");
 const intercom = require("./intercom/intercom_client").connect();
-const basefs = require("fs"), fs = basefs.promises;
+const fs = require("fs"), pfs = fs.promises;
 const rmfr = require("rmfr");
 const tar = require("tar");
 const path = require("path");
@@ -187,7 +187,7 @@ function stopProject(projectname, force = false) {
 
 // only for maininstance
 function attachLogs(projectname, container) {
-    let logStream = basefs.createWriteStream(path.resolve(project_manager.getProjectLogsFolder(projectname), "project.log"), {flags: "a"});
+    let logStream = fs.createWriteStream(path.resolve(project_manager.getProjectLogsFolder(projectname), "project.log"), {flags: "a"});
     return container.logs({
         follow: true,
         stdout: true,
@@ -227,15 +227,15 @@ function startProject(projectname) {
 
         // check build
         let buildPath = project_manager.getProjectBuild(projectname);
-        await fs.access(buildPath);
+        await pfs.access(buildPath);
 
         // if starting folder exists, delete it
         let startingFolder = project_manager.getProjectDeployFolder(projectname, true);
         try {
-            await fs.access(startingFolder);
+            await pfs.access(startingFolder);
             await rmfr(startingFolder);
         } catch(e) {}
-        await fs.mkdir(startingFolder);
+        await pfs.mkdir(startingFolder);
 
         // extracting build
         await tar.x({
@@ -243,7 +243,7 @@ function startProject(projectname) {
             cwd: startingFolder
         });
 
-        let settings = JSON.parse(await fs.readFile(path.resolve(startingFolder, "settings.json"))).project;
+        let settings = JSON.parse(await pfs.readFile(path.resolve(startingFolder, "settings.json"))).project;
         let type = settings.type;
         let entrypoint = settings.entrypoint;
         
@@ -336,7 +336,7 @@ function startProject(projectname) {
         let projectArchive = path.resolve(startingFolder, "archive.tar");
         
         // archive without gzip project
-        let archiveFiles = await fs.readdir(projectFilesFolder);
+        let archiveFiles = await pfs.readdir(projectFilesFolder);
         await tar.c({
             file: projectArchive,
             cwd: projectFilesFolder
@@ -404,12 +404,12 @@ function clearStarting(projectname) {
     startingProjects.splice(startingProjects.indexOf(projectname), 1);
     let prom = []
     /*let buildPath = project_manager.getProjectBuild(projectname);
-    fs.access(buildPath).then(() => {
-        prom.push(fs.unlink(buildPath));
+    pfs.access(buildPath).then(() => {
+        prom.push(pfs.unlink(buildPath));
     });*/
 
     let startingFolder = project_manager.getProjectDeployFolder(projectname, true);
-    fs.access(startingFolder).then(() => {
+    pfs.access(startingFolder).then(() => {
         prom.push(rmfr(startingFolder));
     });
 

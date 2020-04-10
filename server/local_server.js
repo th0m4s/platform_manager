@@ -1,7 +1,7 @@
 const logger = require("simple-node-logger").createSimpleLogger();
 const net = require("net");
 const project_manager = require("./project_manager");
-const fs = require("fs").promises;
+const pfs = require("fs").promises;
 const rmfr = require("rmfr");
 const child_process = require("child_process");
 const tar = require("tar");
@@ -42,9 +42,9 @@ function start() {
                                 let saveBuildPath = project_manager.getProjectBuild(projectname, true);
 
                                 try {
-                                    await fs.access(currentBuildPath);
+                                    await pfs.access(currentBuildPath);
                                     connection.write(LINE + "Saving last build...\n");
-                                    await fs.rename(currentBuildPath, saveBuildPath);
+                                    await pfs.rename(currentBuildPath, saveBuildPath);
                                     connection.write(SPACES + "Build saved.\n");
                                 } catch(error) {
                                     // first deploy, no version to save
@@ -57,7 +57,7 @@ function start() {
                                 let settingsFile = path.resolve(projectFolder, "settings.json");
 
                                 try {
-                                    await fs.access(deployFolder);
+                                    await pfs.access(deployFolder);
                                     // deploy folder remains should be deleted
                                     connection.write(LINE + "Deploy folder from last version detected. Deleting it...\n");
                                     await rmfr(deployFolder);
@@ -67,14 +67,14 @@ function start() {
                                 }
 
                                 try {
-                                    await fs.access(settingsFile);
-                                    await fs.unlink(settingsFile);
+                                    await pfs.access(settingsFile);
+                                    await pfs.unlink(settingsFile);
                                 } catch(error) {
                                     // normally ok
                                 }
 
                                 connection.write(LINE + "Exporting project repository...\n");
-                                await fs.mkdir(deployFolder);
+                                await pfs.mkdir(deployFolder);
                                 let export_process = child_process.spawn("/bin/bash", ["-c", "git archive master | tar -xf - -C " + deployFolder], {cwd: projectRepo});
 
                                 await new Promise((resolve, reject) => {
@@ -97,7 +97,7 @@ function start() {
                                 
                                 let projectData = {};
                                 try {
-                                projectData = JSON.parse(await fs.readFile(path.resolve(deployFolder, "project.json"))).project;
+                                projectData = JSON.parse(await pfs.readFile(path.resolve(deployFolder, "project.json"))).project;
                                 } catch(error) {
                                     throw new Error("Cannot access project.json. Please create this file before deploying this project.");
                                 }
@@ -109,7 +109,7 @@ function start() {
                                             connection.write(SPACES + "  [BUILDPACK] " + message + "\n");
                                         });
 
-                                        await fs.writeFile(settingsFile, JSON.stringify({project: {type: type, entrypoint: startCmd}}));
+                                        await pfs.writeFile(settingsFile, JSON.stringify({project: {type: type, entrypoint: startCmd}}));
                                     } catch(e) {
                                         if(e.code == "MODULE_NOT_FOUND") throw new Error("Process type '" + type + "' is incorrect.");
                                         else throw new Error("Buildpack error: " + e);
@@ -126,14 +126,14 @@ function start() {
 
                                 let compressedSize = "";
                                 try {
-                                    compressedSize = formatBytes((await fs.stat(currentBuildPath)).size, 1);
+                                    compressedSize = formatBytes((await pfs.stat(currentBuildPath)).size, 1);
                                 } catch(error) { }
 
                                 connection.write(SPACES + "Done: " + compressedSize + " \n");
 
                                 connection.write(LINE + "Removing temporary deployment files...\n");
                                 await rmfr(deployFolder);
-                                await fs.unlink(settingsFile);
+                                await pfs.unlink(settingsFile);
                                 connection.write(SPACES + "Temporary files removed.\n");
 
                                 connection.write(LINE + "Updating database...\n");
@@ -176,8 +176,8 @@ function start() {
                                 connection.write(SPACES + "Please solve the issue and recommit any change to deploy this project.\n");
 
                                 try {
-                                    await fs.access(saveBuildPath);
-                                    await fs.rename(saveBuildPath, currentBuildPath);
+                                    await pfs.access(saveBuildPath);
+                                    await pfs.rename(saveBuildPath, currentBuildPath);
                                 } catch(error) {/* no save to restore */}
                             }
 

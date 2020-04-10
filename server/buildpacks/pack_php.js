@@ -1,4 +1,4 @@
-const fs = require("fs").promises;
+const pfs = require("fs").promises;
 const path = require("path");
 const rmfr = require("rmfr");
 const child_process = require("child_process");
@@ -7,13 +7,13 @@ async function build(projectname, deployFolder, logger) {
     logger("Analyzing project...");
 
     try {
-        let stats = await fs.stat(path.resolve(deployFolder, "public"));
+        let stats = await pfs.stat(path.resolve(deployFolder, "public"));
         if(!stats.isDirectory()) throw new Error(); // will be catched and rethrown with message
     } catch(error) {
         throw new Error("Cannot build PHP project. Only files in the public directory are served and no matching directory found.");
     }
 
-    let baseContents = await fs.readdir(deployFolder);
+    let baseContents = await pfs.readdir(deployFolder);
     if(baseContents.some((name) => {
         return name.endsWith(".php");
     })) {
@@ -23,7 +23,7 @@ async function build(projectname, deployFolder, logger) {
     // check vendor for composer packages
     try {
         let vendorPath = path.resolve(deployFolder, "vendor");
-        await fs.access(vendorPath);
+        await pfs.access(vendorPath);
         logger("Removing vendor...");
         await rmfr(vendorPath);
         logger("User-provided vendor directory removed.");
@@ -33,7 +33,7 @@ async function build(projectname, deployFolder, logger) {
 
     let hasComposer = false;
     try {
-        await fs.access(path.resolve(deployFolder, "composer.json"));
+        await pfs.access(path.resolve(deployFolder, "composer.json"));
         hasComposer = true;
     } catch(error) {}
 

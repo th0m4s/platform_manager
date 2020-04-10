@@ -1,4 +1,4 @@
-const fs = require("fs").promises;
+const pfs = require("fs").promises;
 const path = require("path");
 const rmfr = require("rmfr");
 const child_process = require("child_process");
@@ -15,7 +15,7 @@ async function build(projectname, deployFolder, logger) {
 
     let mainscript = pkg.main || "index.js";
     try {
-        await fs.access(path.resolve(deployFolder, mainscript));
+        await pfs.access(path.resolve(deployFolder, mainscript));
     } catch(error) {
         throw new Error("Cannot find main file.");
     }
@@ -23,7 +23,7 @@ async function build(projectname, deployFolder, logger) {
     // check node_modules
     try {
         let modulesPath = path.resolve(deployFolder, "node_modules");
-        await fs.access(modulesPath);
+        await pfs.access(modulesPath);
         logger("Removing node_modules...");
         await rmfr(modulesPath);
         logger("User-provided modules removed.");
@@ -33,7 +33,7 @@ async function build(projectname, deployFolder, logger) {
 
     let npm = true;
     try {
-        await fs.access(path.resolve(deployFolder, "yarn.lock"));
+        await pfs.access(path.resolve(deployFolder, "yarn.lock"));
         npm = false;
     } catch(error) {}
 
