@@ -35,9 +35,6 @@ function start() {
     logger.info("Forking admin web server...");
     child_process.fork("./server/admin_panel/admin_server");
 
-    logger.info("Forking error web server...");
-    child_process.fork("./server/error_server");
-
     logger.info("Forking git web server...");
     child_process.fork("./server/git_server");
 
