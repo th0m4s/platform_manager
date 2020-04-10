@@ -3,10 +3,14 @@ function init() {
     requestOwned(requestLimit).always(() => {
         requestCollab(requestLimit).always(() => {
             utils.hideLoading();
+            setInterval(() => {
+                checkStates(allProjects);
+            }, 10*1000);
         });
     });
 }
 
+let allProjects = [];
 function addOwnedProjects(projects) {
     let list = $("#owned-list");
     let names = [];
@@ -18,6 +22,7 @@ function addOwnedProjects(projects) {
 
     if(projects.length > 0) {
         list.parent().show();
+        allProjects = allProjects.concat(names);
         checkStates(names);
     }
 }
@@ -33,6 +38,7 @@ function addCollabProjects(results) {
 
     if(results.length > 0) {
         list.parent().show();
+        allProjects = allProjects.concat(names);
         checkStates(names);
     }
 }
