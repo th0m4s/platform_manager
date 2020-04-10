@@ -1,7 +1,7 @@
 const Docker = require("node-docker-api").Docker;
 const project_manager = require("./project_manager");
 const intercom = require("./intercom/intercom_client").connect();
-const fs = require("fs").promises;
+const basefs = require("fs"), fs = basefs.promises;
 const rmfr = require("rmfr");
 const tar = require("tar");
 const path = require("path");
@@ -54,7 +54,7 @@ function areProjectContainersRunning(projects) {
     });
 }
 
-let startingProjects = [], intervalId = -1;
+let startingProjects = [], stoppingProjects = [], intervalId = -1;
 function maininstance() {
     intercom.subscribe(["dockermng"], (message, id) => {
         let projectname = message.project || ""; // some commands don't need project
@@ -97,7 +97,14 @@ function maininstance() {
                                 container.stop();
                             } else {
                                 logger.info("Binding " + projectname + " to port " + port);
-                                addPort(projectname, port);
+                                attachLogs(projectname, container).then(() => {
+                                    // container is working
+                                    addPort(projectname, port);
+                                }).catch((error) => {
+                                    // something's wrong, stop the container
+                                    logger.warn(projectname + " cannot be attached and will be stopped: " + error);
+                                    stopProject(projectname, true);
+                                });
                             }
                         });
                     } else logger.info("No containers running.");
@@ -110,7 +117,7 @@ function maininstance() {
                             results.forEach((result) => {
                                 if(!alreadyRunning.includes(result.name)) {
                                     logger.info("Autostarting " + result.name + "...");
-                                    prom.push(intercom.sendPromise("dockermng", {command: "startProject", project: result.name}));
+                                    prom.push(startProject(result.name));
                                 }
                             });
 
@@ -151,11 +158,13 @@ function maininstance() {
 function stopProject(projectname, force = false) {
     return (force ? Promise.resolve(true) : isProjectContainerRunning(projectname)).then((result) => {
         if(!result) return Promise.reject("Cannot stop a stopped project.");
-
+        stoppingProjects.push(projectname);
         return docker.container.list({filters: {label: ["pmng.projectname=" + projectname]}}).then((containers) => {
             let prom = [];
             containers.forEach((container) => {
-                prom.push(container.stop()); // delete is automatic
+                prom.push(container.stop().catch((err) => {
+                    if(!force) return Promise.reject("Cannot stop " + container.data.Names[0] + ": " + err);
+                })); // delete is automatic
             });
 
             // updating database
@@ -167,9 +176,40 @@ function stopProject(projectname, force = false) {
                 // when all containers are removed
                 // ... remove project network
                 docker.network.list({filters: {name: [getProjectNetworkName(projectname)]}}).then((networks) => {
-                    return networks[0].remove();
+                    return networks[0].remove().catch((err) => {
+                        if(!force) return Promise.reject("Cannot remove network for project " + projectname + ": " + err);
+                    });
                 });
             }), dbProm]);
+        });
+    });
+}
+
+// only for maininstance
+function attachLogs(projectname, container) {
+    let logStream = basefs.createWriteStream(path.resolve(project_manager.getProjectLogsFolder(projectname), "project.log"), {flags: "a"});
+    return container.logs({
+        follow: true,
+        stdout: true,
+        stderr: true
+    }).then((stream) => {
+        stream.on("data", (log) => {
+            logStream.write((new Date().toISOString()) + " STDOUT " + log);
+        });
+
+        stream.on("data", (log) => {
+            logStream.write((new Date().toISOString()) + " STDERR " + log);
+        });
+
+        stream.on("close", () => {
+            if(stoppingProjects.includes(projectname)) {
+                stoppingProjects.splice(stoppingProjects.indexOf(projectname), 1);
+            } else {
+                logger.warn("Container of project " + projectname + " close without stopping project.");
+                stopProject(projectname, true).then(() => { // maybe use finally
+                    stoppingProjects.splice(stoppingProjects.indexOf(projectname), 1);
+                });
+            }
         });
     });
 }
@@ -308,6 +348,9 @@ function startProject(projectname) {
 
         // start the container
         await container.start();
+
+        // attach logs
+        await attachLogs(projectname, container);
 
         // updating database
         try {
