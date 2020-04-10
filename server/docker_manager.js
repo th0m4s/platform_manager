@@ -191,14 +191,15 @@ function attachLogs(projectname, container) {
     return container.logs({
         follow: true,
         stdout: true,
-        stderr: true
+        stderr: true,
+        timestamps: true
     }).then((stream) => {
         stream.on("data", (log) => {
-            logStream.write((new Date().toISOString()) + " STDOUT " + log);
+            logStream.write(log);
         });
 
-        stream.on("data", (log) => {
-            logStream.write((new Date().toISOString()) + " STDERR " + log);
+        stream.on("error", (err) => {
+            logStream.write("ERROR " + err);
         });
 
         stream.on("close", () => {
