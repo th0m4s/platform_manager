@@ -4,6 +4,7 @@ const database_server = require("./database_server");
 const path = require("path");
 const plugins_manager = require("./plugins_manager");
 const simpleGit = require("simple-git/promise");
+const intercom = require("./intercom/intercom_client").connect();
 
 const fs = require("fs").promises;
 const PROJECTS_PATH = process.env.PROJECTS_PATH;
@@ -107,15 +108,29 @@ function getMultipleProjects(names, check = true) {
     });
 }
 
+// public function that broadcasts the command
 function invalidateCachedProject(project_name) {
-    projects_cache.del(project_name);
+    intercom.send("projectsmng", {command: "invalidateProject", project: project_name});
 }
 
+// public function that broadcasts the command
 function invalidCachedDomain(custom_domain) {
-    domains_cache.del(custom_domain);
-    domains_valid_cache.del(custom_domain + "_true");
-    domains_valid_cache.del(custom_domain + "_false");
+    intercom.send("projectsmng", {command: "invalidateDomains", domain: custom_domain})
 }
+
+intercom.subscribe(["projectsmng"], (message) => {
+    switch(message.command) {
+        case "invalidateProject":
+            projects_cache.del(message.project);
+            break;
+        case "invalidateDomains":
+            let custom_domain = message.domain;
+            domains_cache.del(custom_domain);
+            domains_valid_cache.del(custom_domain + "_true");
+            domains_valid_cache.del(custom_domain + "_false");
+            break;
+    }
+}); 
 
 function projectExists(project_name) {
     return Promise.all([
@@ -183,10 +198,6 @@ function canAccessProject(projectname, userid, manageMode) {
     })
 }
 
-function deploy(projectname) {
-
-}
-
 
 module.exports.getProject = getProject;
 module.exports.addProject = addProject;
@@ -204,4 +215,3 @@ module.exports.projectExists = projectExists;
 module.exports.listOwnedProjects = listOwnedProjects;
 module.exports.listCollabProjects = listCollabProjects;
 module.exports.canAccessProject = canAccessProject;
-module.exports.deploy = deploy;
