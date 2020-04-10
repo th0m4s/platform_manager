@@ -94,7 +94,14 @@ function start() {
                                 });
 
                                 connection.write(LINE + "Building project...\n");
-                                let projectData = JSON.parse(await fs.readFile(path.resolve(deployFolder, "project.json"))).project;
+                                
+                                let projectData = {};
+                                try {
+                                projectData = JSON.parse(await fs.readFile(path.resolve(deployFolder, "project.json"))).project;
+                                } catch(error) {
+                                    throw new Error("Cannot access project.json. Please create this file before deploying this project.");
+                                }
+
                                 let type = projectData.type.replace(/\./g, "");
                                 if(type !== undefined && type.length > 0) {
                                     try {
