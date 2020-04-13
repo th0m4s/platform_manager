@@ -44,7 +44,7 @@ function start() {
 
 // 8042 is for local server, 8043 for intercom
 // projects start at 11000
-const special_ports = {"admin": 8080, "git": 8081}, errorPort = 8099;
+const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort};
 async function getPort(host) {
     let special = regex_utils.testSpecial(host);
     if(special !== null) return special_ports[special];

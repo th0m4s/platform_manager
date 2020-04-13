@@ -1,5 +1,5 @@
 const project_regex = new RegExp("^(?<project>[a-z-0-9]{4,32})\\\." + process.env.ROOT_DOMAIN.replace(/\./g, "\\.") + "$");
-const special_regex = new RegExp("^(?<special>admin|git|ns(1|2))\\\." + process.env.ROOT_DOMAIN.replace(/\./g, "\\.") + "$");
+const special_regex = new RegExp("^(?<special>admin|git|ns(1|2)|ftp)\\\." + process.env.ROOT_DOMAIN.replace(/\./g, "\\.") + "$");
 const project_manager = require("./project_manager");
 
 function testSpecial(domain) {
