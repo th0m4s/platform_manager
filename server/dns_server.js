@@ -47,7 +47,7 @@ dns_server.on("request", async function(request, response) {
 });
 
 function start() {
-    dns_server.serve(53, "0.0.0.0", () => {
+    dns_server.serve(parseInt(process.env.DNS_PORT), "0.0.0.0", () => {
         logger.info("DNS server started.");
         privileges.drop();
     });

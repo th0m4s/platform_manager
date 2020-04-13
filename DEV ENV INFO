@@ -1,4 +1,7 @@
 on wsl, run sudo /home/thomas/Programmation/utils/docker-relay
 pmng run with node >= 12 (prefer 12.16.1) and yarn
 
-system should have php7 and composer
+system should have php7 and composer for pmng/apache2-php7 images
+
+sudppipe [wsl ip] 5342 5342
+172.23.180.224
