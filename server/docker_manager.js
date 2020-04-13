@@ -109,32 +109,36 @@ function maininstance() {
                         });
                     } else logger.info("No containers running.");
 
-                    logger.info("Searching for autostart containers...");
-                    database_server.database("projects").where("autostart", "true").select("*").then((results) => {
-                        if(results == null || results.length == 0) logger.info("No autostart container found.");
-                        else {
-                            let prom = [];
-                            results.forEach((result) => {
-                                if(!alreadyRunning.includes(result.name)) {
-                                    logger.info("Autostarting " + result.name + "...");
-                                    prom.push(startProject(result.name));
-                                }
-                            });
-
-                            if(prom.length > 0) {
-                                Promise.allSettled(prom).then((states) => {
-                                    let successes = 0;
-                                    states.forEach((state) => {
-                                        if(state.status == "fulfilled") {
-                                            successes++;
-                                        } else {
-                                            logger.warn("Error during autostart: " + state.reason);
+                    database_server.isInstalled().then((result) => {
+                        if(result) {
+                            logger.info("Searching for autostart containers...");
+                            database_server.database("projects").where("autostart", "true").select("*").then((results) => {
+                                if(results == null || results.length == 0) logger.info("No autostart container found.");
+                                else {
+                                    let prom = [];
+                                    results.forEach((result) => {
+                                        if(!alreadyRunning.includes(result.name)) {
+                                            logger.info("Autostarting " + result.name + "...");
+                                            prom.push(startProject(result.name));
                                         }
                                     });
 
-                                    if(successes > 0) logger.info("Successfully autostarted " + successes + " container(s).");
-                                });
-                            } else logger.info("No container to autostart (they can already be up and running).");
+                                    if(prom.length > 0) {
+                                        Promise.allSettled(prom).then((states) => {
+                                            let successes = 0;
+                                            states.forEach((state) => {
+                                                if(state.status == "fulfilled") {
+                                                    successes++;
+                                                } else {
+                                                    logger.warn("Error during autostart: " + state.reason);
+                                                }
+                                            });
+
+                                            if(successes > 0) logger.info("Successfully autostarted " + successes + " container(s).");
+                                        });
+                                    } else logger.info("No container to autostart (they can already be up and running).");
+                                }
+                            });
                         }
                     });
                 });
