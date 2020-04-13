@@ -7,7 +7,7 @@ const blackhole = require("bunyan-blackhole");
 
 const ftpServer = new FtpSrv({
     url: "ftp://0.0.0.0:21",
-    pasv_url: process.env.ROOT_DOMAIN,
+    pasv_url: process.env.SERVER_HOST,
     pasv_min: 21001,
     pasv_max: 21999,
     greeting: "Welcome to the Platform Manager storages FTP server!",
