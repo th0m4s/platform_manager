@@ -238,6 +238,9 @@ function confirm() {
                     if(item == "persistent-storage") {
                         needDelay = true;
                         specialTexts.push("<i class='fas fa-exclamation-triangle'></i> Warning: By removing the persistent-storage plugin, you are removing all the files stored for this project.");
+                    } else if(item == "mariadb") {
+                        needDelay = true;
+                        specialTexts.push("<i class='fas fa-exclamation-triangle'></i> Warning: By removing the mariadb plugin, you are removing all the contents of the database of this project.")
                     }
                 })
                 text += "</ul>";
