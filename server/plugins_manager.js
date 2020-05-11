@@ -12,7 +12,7 @@ function getPlugin(plugin) {
 }
 
 function getDefaultConfig(plugin) {
-    return getPlugin(plugin).defaultConfig;
+    return getPlugin(plugin).getDefaultConfig();
 }
 
 function install(plugin, projectname, pluginconfig) {
