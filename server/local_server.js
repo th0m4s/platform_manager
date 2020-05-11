@@ -124,7 +124,7 @@ function start() {
                                     cwd: projectFolder
                                 }, [path.relative(projectFolder, deployFolder), path.relative(projectFolder, settingsFile)]);
 
-                                let compressedSize = "";
+                                let compressedSize = "Unknown size";
                                 try {
                                     compressedSize = formatBytes((await pfs.stat(currentBuildPath)).size, 1);
                                 } catch(error) { }
