@@ -8,6 +8,8 @@ const path = require("path");
 const logger = require('simple-node-logger').createSimpleLogger();
 const database_server = require("./database_server");
 const plugins_manager = require("./plugins_manager");
+const child_process = require("child_process");
+const regex_utils = require("./regex_utils");
 
 const docker = new Docker(process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)});
 
@@ -55,7 +57,67 @@ function areProjectContainersRunning(projects) {
 }
 
 let startingProjects = [], stoppingProjects = [], intervalId = -1;
-function maininstance() {
+async function maininstance() {
+    let dockerInitialized = false, delayWaited = 0, delayNeeded = parseInt(process.env.DOCKER_START_DELAY), intervalDelay = 500, messageSent = false;
+    while(true) {
+        try {
+            await docker.info();
+            break;
+        } catch(error) {
+            if(!messageSent) {
+                logger.info("Docker not running. Waiting for initialization....");
+                messageSent = true;
+            }
+
+            if(delayWaited >= delayNeeded && !dockerInitialized) {
+                logger.info("Docker not started, executing env command..."); // TODO: correct quotes
+                child_process.exec('"' + process.env.DOCKER_START + '"');
+                dockerInitialized = true;
+            }
+
+            await new Promise((resolve) => {
+                setTimeout(resolve, intervalDelay);
+            }); // wait before new try
+            delayWaited += intervalDelay;
+        }
+    }
+
+    logger.info("Docker is running.");
+
+    // loading plugins (starting global plugins containers)
+    // paths relative to platform.js:
+    //    - plugins is normally the data directory
+    //    - server/plugins contains the plugins scripts
+    pluginsConfigFile = path.join(process.env.PLUGINS_PATH, "config.json");
+    await pfs.readFile(pluginsConfigFile).then((config) => {
+        config = JSON.parse(config);
+
+        return pfs.readdir("server/plugins").then((files) => {
+            let prom = [];
+            files.forEach((file) => {
+                let pluginname = regex_utils.testPlugin(file);
+                if(pluginname !== null) {
+                    if(config[pluginname] == undefined) {
+                        config[pluginname] = {};
+                    }
+
+                    prom.push(plugins_manager.getPlugin(pluginname).startGlobalPlugin(path.join(process.env.PLUGINS_PATH, pluginname), config[pluginname], (newConfig) => {
+                        config[pluginname] = newConfig;
+                        return pfs.writeFile(pluginsConfigFile, JSON.stringify(config));
+                    }));
+                }
+            });
+
+            Promise.allSettled(prom).then((states) => {
+                states.forEach((state) => {
+                    if(state.status != "fulfilled") {
+                        logger.warn("Cannot start global plugin: " + state.reason);
+                    }
+                });
+            });
+        });
+    });
+
     intercom.subscribe(["dockermng"], (message, id) => {
         let projectname = message.project || ""; // some commands don't need project
         switch(message.command) {
@@ -254,7 +316,7 @@ function startProject(projectname) {
         let imageName = getImageFromType(type);
         if(imageName == undefined) throw new Error("Unknown image for project");
 
-        let env = [], specialEnv = ["PORT", "PROJECT_VERSION"];
+        let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"];
         for(let [key, value] of Object.entries(project.userenv)) {
             if(!specialEnv.includes(key.toUpperCase())) env.push(key + "=" + value);
         }
@@ -330,7 +392,7 @@ function startProject(projectname) {
         // each plugin can modify the main container and can create another container based on the given name and correctly set label pmng.containertype to plugin
         let plugins = project.plugins;
         for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
-            containerConfig = await plugins_manager.getPlugin(pluginName).startPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
+            containerConfig = await plugins_manager.getPlugin(pluginName).startProjectPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
         }
 
         // create container
@@ -350,6 +412,11 @@ function startProject(projectname) {
         await container.fs.put(projectArchive, {
             path: "/var/project"
         });
+
+        // container ready, maybe other stuff to do before start
+        for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
+            await plugins_manager.getPlugin(pluginName).projectContainerCreated(projectname, containerConfig, pluginConfig);
+        }
 
         // start the container
         await container.start();
