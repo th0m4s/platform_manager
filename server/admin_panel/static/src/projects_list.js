@@ -60,13 +60,14 @@ function getProjectHtml(project, disabled) {
     return `<li class="list-group-item" id="line-project-${project.name}" data-state="unknown">`
     + `<b>Project #${project.id} : </b>${project.name} (v${project.version})<span class="text-secondary d-block d-md-inline"><samp class="ml-4">${project.version > 0 ? project.type : "No version deployed"}</samp></span>`
     + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-primary" onclick="projects_list.editProject('${project.name}')"${d}><i class="fas fa-edit"></i> Edit</button><button class="btn btn-sm btn-info" data-current="info" id="button-state-${project.name}" onclick="projects_list.updateState('${project.name}')" ${disabled ? 'data-perm="no"' : ""} data-version="${project.version}" disabled><i class="fas fa-sync fa-spin"></i> Syncing...</button>`
-    + `<button class="btn btn-sm btn-danger" onclick="projects_list.deleteProject('${project.name}')"${d}><i class="fas fa-trash-alt"></i> Delete</button></div></span></li>`;
+    + `<button class="btn btn-sm btn-secondary" id="button-restart-${project.name}" onclick="projects_list.restartProject('${project.name}')" ${disabled ? 'data-perm="no"' : ""} disabled><i class="fas fa-undo-alt"></i> Restart</button><button class="btn btn-sm btn-danger" onclick="projects_list.deleteProject('${project.name}')"${d}><i class="fas fa-trash-alt"></i> Delete</button></div></span></li>`;
 }
 
 function checkStates(projects, canStop) {
     $.getJSON("/api/v1/projects/arerunning/" + projects.join(",")).done((response) => {
         if(response.error) {
             projects.forEach((projectname) => {
+                setCanRestart(projectname, false);
                 setProjectState(projectname, "warning", null, "Unknown", true, "unknown");
             });
 
@@ -76,15 +77,18 @@ function checkStates(projects, canStop) {
         } else {
             for(let [projectname, state] of Object.entries(response.results)) {
                 if(state) {
+                    setCanRestart(projectname, true);
                     setProjectState(projectname, "dark", "stop", "Stop", false, "running");
                 } else {
+                    setCanRestart(projectname, false);
                     setProjectState(projectname, "success", "play", "Start", false, "stopped");
                 }
             }
         }
     }).fail((xhr, status, error) => {
         projects.forEach((projectname) => {
-            setProjectState(projectname, "warning", null, "Unknown state", true, "unknown");
+            setCanRestart(projectname, false);
+            setProjectState(projectname, "warning", null, "Unknown", true, "unknown");
         });
 
         console.warn(error);
@@ -201,6 +205,7 @@ function updateState(projectname) {
             } else {
                 $.notify({message: "The project was successfully stopped."}, {type: "success"});
                 setProjectState(projectname, "success", "play", "Start", false, "stopped");
+                setCanRestart(projectname, false);
                 if(checkIntervalId == -1) startIntervalChecking();
             }
         }).always(() => {
@@ -218,6 +223,7 @@ function updateState(projectname) {
             } else {
                 $.notify({message: "The project was successfully started."}, {type: "success"});
                 setProjectState(projectname, "dark", "stop", "Stop", false, "running");
+                setCanRestart(projectname, true);
                 if(checkIntervalId == -1) startIntervalChecking();
             }
         }).always(() => {
@@ -226,6 +232,61 @@ function updateState(projectname) {
     } else {
         // unknown
         $.notify({message: "Unknown actual state. Please refresh the page and inspect docker events."}, {type: "warning"});
+    }
+}
+
+function setCanRestart(projectname, canRestart) {
+    let btn = $("#button-restart-" + projectname);
+    if(!canRestart) btn.attr("disabled", "disabled");
+    else if(btn.attr("data-perm") !== "no") btn.removeAttr("disabled");
+}
+
+function restartProject(projectname) {
+    let actualState = $("#line-project-" + projectname).attr("data-state");
+    if(actualState == "running") {
+        utils.showInfiniteLoading("Restarting project...");
+        $.getJSON("/api/v1/projects/stop/" + projectname).fail((xhr, status, err) => {
+            console.warn(err);
+            $.notify({message: "Unable to restart this project (stopping server error). See console for details."}, {type: "danger"});
+            setCanRestart(projectname, false);
+            utils.hideLoading();
+        }).done((response) => {
+            if(response.error) {
+                console.warn(response.message);
+                $.notify({message: "Unable to restart this project (stopping application error). See console for details."}, {type: "danger"});
+                setCanRestart(projectname, false);
+                utils.hideLoading();
+            } else {
+                setProjectState(projectname, "success", "play", "Start", false, "stopped");
+                setCanRestart(projectname, false);
+                if(checkIntervalId == -1) startIntervalChecking();
+
+                // restart automacally
+                $.getJSON("/api/v1/projects/start/" + projectname).fail((xhr, status, err) => {
+                    console.warn(err);
+                    $.notify({message: "Unable to restart this project (starting server error). See console for details."}, {type: "danger"});
+                    $.notify({message: "The project was stopped during the process. You will need to restart it manually."}, {type: "warning"});
+                    utils.hideLoading();
+                }).done((response) => {
+                    if(response.error) {
+                        console.warn(response.message);
+                        $.notify({message: "Unable to restart this project (starting application error). See console for details."}, {type: "danger"});
+                        $.notify({message: "The project was stopped during the process. You will need to restart it manually."}, {type: "warning"});
+                        utils.hideLoading();
+                    } else {
+                        $.notify({message: "The project was successfully restarted."}, {type: "success"});
+                        setProjectState(projectname, "dark", "stop", "Stop", false, "running");
+                        setCanRestart(projectname, true);
+                        if(checkIntervalId == -1) startIntervalChecking();
+
+                        utils.hideLoading();
+                    }
+                });
+            }
+        });
+    } else {
+        $.notify({message: "Cannot restart a non running project."}, {type: "warning"});
+        setCanRestart(projectname, false);
     }
 }
 
@@ -238,3 +299,4 @@ module.exports.editProject = editProject;
 module.exports.deleteProject = deleteProject;
 module.exports.confirmDelete = confirmDelete;
 module.exports.updateState = updateState;
+module.exports.restartProject = restartProject;
