@@ -2,6 +2,7 @@ const logger = require('simple-node-logger').createSimpleLogger();
 const dns = require("native-dns"), dns_server = dns.createServer();
 const regex_utils = require("./regex_utils");
 const project_manager = require("./project_manager");
+const database_server = require("./database_server");
 const privileges = require("./privileges");
 const intercom = require("./intercom/intercom_client").connect();
 
@@ -14,6 +15,7 @@ const getResponse = (question) => {
 }
 
 let challenges = {};
+let isInstalled = false;
 
 dns_server.on("request", async function(request, response) {
     let question = request.question[0].name.toLowerCase();
@@ -28,17 +30,23 @@ dns_server.on("request", async function(request, response) {
         if(regex_utils.testSpecial(question) !== null) {
             response.answer.push(getResponse(question));
         } else {
-            let project = regex_utils.testProject(question);
-            if(project != null) {        
-                try {
-                    await project_manager.projectExists(project);
-    
+            if(isInstalled !== true) {
+                isInstalled = await database_server.isInstalled();
+            }
+
+            if(isInstalled === true) {
+                let project = regex_utils.testProject(question);
+                if(project != null) {        
+                    try {
+                        await project_manager.projectExists(project);
+        
+                        response.answer.push(getResponse(question));
+                    } catch(e) {
+                        // doesnot exist
+                    }
+                } else if((await regex_utils.testCustom(question)) != null) {
                     response.answer.push(getResponse(question));
-                } catch(e) {
-                    // doesnot exist
                 }
-            } else if((await regex_utils.testCustom(question)) != null) {
-                response.answer.push(getResponse(question));
             }
         }
     }
