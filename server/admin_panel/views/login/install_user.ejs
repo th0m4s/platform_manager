@@ -11,7 +11,7 @@
                         <div class="card-body">
                             <h4 class="card-title text-center mb-4 mt-1"><%= page.title %></h4>
                             <hr>
-                            <form method="POST" class="mb-0">
+                            <form method="POST" class="mb-0" onsubmit="utils.disableButton($('#btn-create-user'), 'Creating...'); return true;">
                                 <div class="form-group">
                                     <label for="input-user-full">Fullname</label>
                                     <input type="text" class="form-control" id="input-user-full" name="fullname" placeholder="John DOE">
@@ -24,7 +24,7 @@
                                     <label for="input-user-pass">Password</label>
                                     <input type="password" class="form-control" id="input-user-pass" name="password" placeholder="Password">
                                 </div>
-                                <button type="submit" class="btn btn-primary btn-block" href="#" onclick="utils.disableButton(this, 'Creating...');">Create this user</button>
+                                <button type="submit" class="btn btn-primary btn-block" id="btn-create-user">Create this user</button>
                             </form>
                         </div>
                     </div>
