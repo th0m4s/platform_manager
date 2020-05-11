@@ -2,7 +2,7 @@ const logger = require('simple-node-logger').createSimpleLogger();
 const child_process = require("child_process");
 const net = require("net");
 const regex_utils = require("./regex_utils");
-const project_manager = require("./project_manager");
+const database_server = require("./database_server");
 const privileges = require("./privileges");
 const intercom = require("./intercom/intercom_client").connect();
 
@@ -45,10 +45,16 @@ function start() {
 // 8042 is for local server, 8043 for intercom
 // projects start at 11000
 const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort};
+let isInstalled = false;
 async function getPort(host) {
     let special = regex_utils.testSpecial(host);
     if(special !== null) return special_ports[special];
     
+    if(isInstalled !== true) {
+        isInstalled = await database_server.isInstalled();
+        if(isInstalled !== true) return errorPort;
+    }
+
     let project = regex_utils.testProject(host);
     if(project !== null) {
         if(portMappings.hasOwnProperty(project)) return portMappings[project];
