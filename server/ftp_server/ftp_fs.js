@@ -1,9 +1,10 @@
 const { FileSystem } = require("ftp-srv"), ftpErrors = require("ftp-srv/src/errors");
 const project_manager = require("../project_manager");
+const path = require("path");
 
 class FTPfs extends FileSystem {
     constructor(connection, user) {
-        super(connection, {root: process.env.STORAGES_PATH, cwd: "/"});
+        super(connection, {root: path.join(process.env.PLUGINS_PATH, "storages"), cwd: "/"});
         this._user = user;
     }
 
