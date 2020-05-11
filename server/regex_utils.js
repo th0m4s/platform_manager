@@ -1,5 +1,6 @@
 const project_regex = new RegExp("^(?<project>[a-z-0-9]{4,32})\\\." + process.env.ROOT_DOMAIN.replace(/\./g, "\\.") + "$");
 const special_regex = new RegExp("^(?<special>admin|git|ns(1|2)|ftp)\\\." + process.env.ROOT_DOMAIN.replace(/\./g, "\\.") + "$");
+const plugin_regex = new RegExp("^plugin_(?<plugin>[a-z-0-9]{4,32}).js$");
 const project_manager = require("./project_manager");
 
 function testSpecial(domain) {
@@ -27,6 +28,14 @@ async function testCustom(domain) {
     } else return null;
 }
 
+function testPlugin(filename) {
+    let match = filename.match(plugin_regex);
+    if(match != null) return match.groups.plugin;
+    else return null;
+}
+
+
 module.exports.testSpecial = testSpecial;
 module.exports.testProject = testProject;
 module.exports.testCustom = testCustom;
+module.exports.testPlugin = testPlugin;
