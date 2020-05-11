@@ -18,15 +18,16 @@ child_process.fork("./server/dns_server");
 logger.info("Forking FTP server...");
 child_process.fork("./server/ftp_server/ftp_server");
 
-logger.info("Starting all web servers...");
-require("./server/web_server").start();
-
-// priveleges dropped from web_server
-logger.info("Forking local server...");
-child_process.fork("./server/local_server");
-
 // indicating that docker main instance should be on this process
-require("./server/docker_manager").maininstance();
+require("./server/docker_manager").maininstance().then(() => {
+    // docker is started and running, so start scripts that require docker
+    logger.info("Starting all web servers...");
+    require("./server/web_server").start();
+
+    // priveleges dropped from web_server
+    logger.info("Forking local server...");
+    child_process.fork("./server/local_server");
+});
 
 // all processes should have dropped their privileges when started
 // check using ps -aux
