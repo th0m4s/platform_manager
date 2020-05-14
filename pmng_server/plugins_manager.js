@@ -1,11 +1,7 @@
 let loadedPlugins = {};
 function getPlugin(plugin) {
     if(!loadedPlugins.hasOwnProperty(plugin)) {
-        try {
-            loadedPlugins[plugin] = require("./plugins/plugin_" + plugin);
-        } catch(error) {
-            loadedPlugins[plugin] = {defaultConfig: {}};
-        }
+        loadedPlugins[plugin] = require("./plugins/plugin_" + plugin);
     }
 
     return loadedPlugins[plugin];

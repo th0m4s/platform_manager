@@ -27,6 +27,7 @@
     "express-flash-messages": "^0.1.1",
     "express-session": "^1.17.0",
     "ftp-srv": "^4.3.1",
+    "get-folder-size": "^2.0.1",
     "git-http-backend": "^1.0.2",
     "greenlock": "^4.0.4",
     "greenlock-store-fs": "^3.2.2",

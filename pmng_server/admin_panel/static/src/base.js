@@ -19,6 +19,7 @@ window.Bloodhound = require("corejs-typeahead/dist/typeahead.bundle");
 window.utils = require("./utils");
 
 window.projects_list = require("./projects_list");
+window.project_manage = require("./project_manage");
 window.project_details = require("./project_details");
 
 $.notifyDefaults({

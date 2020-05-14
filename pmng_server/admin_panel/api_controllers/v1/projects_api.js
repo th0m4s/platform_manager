@@ -38,20 +38,32 @@ router.get("/delete/:projectname", function(req, res) {
     api_auth(req, res, function(user) {
         let projectname = req.params.projectname;
         projects_manager.canAccessProject(projectname, user.id, true).then(() => {
-            Promise.all([
+            return docker_manager.isProjectContainerRunning(projectname);
+        }).then((isrunning) => {
+            return (isrunning ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.resolve());
+        }).then(() => {
+            projects_manager.invalidateCachedProject(projectname);
+            return projects_manager.getProject(projectname);
+        }).then((project) => {
+            let prom = [];
+            for(let [key, value] of Object.entries(project.plugins)) {
+                prom.push(plugins_manager.uninstall(key, projectname, value));
+            }
+
+            return Promise.all(prom);
+        }).then(() => {
+            return Promise.all([
                 database_server.database("projects").where("name", projectname).delete(),
                 database_server.database("domains").where("projectname", projectname).delete(),
                 database_server.database("collabs").where("projectname", projectname).delete(),
                 rmfr(projects_manager.getProjectFolder(projectname))
-            ]).then(() => {
-                projects_manager.invalidCachedDomain(projectname);
-                projects_manager.invalidateCachedProject(projectname);
-                res.status(200).json({error: false, code: 200, message: "Project successfully deleted."});
-            }).catch((err) => {
-                res.json({error: true, code: 500, message: "Unable to delete project: " + err});
-            });
-        }).catch((response) => {
-            res.status(response.code).json(response);
+            ]);
+        }).then(() => {
+            projects_manager.invalidCachedDomain(projectname);
+            projects_manager.invalidateCachedProject(projectname);
+            res.status(200).json({error: false, code: 200, message: "Project successfully deleted."});
+        }).catch((err) => {
+            res.json({error: true, code: 500, message: "Unable to delete project: " + err});
         });
     });
 });
@@ -61,7 +73,7 @@ router.get("/isrunning/:projectname", function(req, res) {
         let projectname = req.params.projectname;
         projects_manager.canAccessProject(projectname, user.id, false).then(() => {
             docker_manager.isProjectContainerRunning(projectname).then((result) => {
-                res.json({error: false, code: 200, running: result, message: "Container " + (!result ? "not":"") + " running."});
+                res.json({error: false, code: 200, running: result, message: "Container" + (!result ? " not":"") + " running."});
             }).catch((err) => {
                 res.json({error: true, code: 500, message: "Unable to check state: " + err});
             });
@@ -148,7 +160,7 @@ router.post("/create", function(req, res) {
                 if(domain !== "") prom.push(projects_manager.addCustomDomain(req.body.projectname, domain.domain, domain.enablesub == true || domain.enablesub == "true"));
             });
             collaborators.forEach((collaborator) => {
-                if(collaborator.trim().length > 0) prom.push(projects_manager.addCollaborator(req.body.projectname, collaborator, "manage"));
+                if(collaborator.trim().length > 0) prom.push(projects_manager.addCollaborator(req.body.projectname, collaborator, "view"));
             });
 
             (prom.length > 0 ? Promise.all(prom) : Promise.resolve()).then(() => {
@@ -201,7 +213,7 @@ router.post("/edit/:projectname", function(req, res) {
                 }
     
                 differences.collabs.add.forEach((item) => {
-                    promises.push(projects_manager.addCollaborator(projectname, item, "manage"));
+                    promises.push(projects_manager.addCollaborator(projectname, item, "view"));
                 });
     
                 differences.collabs.remove.forEach((item) => {
@@ -234,6 +246,130 @@ router.post("/edit/:projectname", function(req, res) {
         }).catch((response) => {
             res.status(response.code).json(response);
         });
+    });
+});
+
+function getUsageForPlugin(projectname, pluginname) {
+    return plugins_manager.getPlugin(pluginname).getUsage(projectname).then((usage) => {
+        return {plugin: pluginname, usage: usage};
+    });
+}
+
+router.get("/usage/:projectname", function(req, res) {
+    api_auth(req, res, function(user) {
+        let projectname = req.params.projectname;
+        projects_manager.canAccessProject(projectname, user.id, false).then(() => {
+            projects_manager.getProject(projectname).then((project) => {
+                let prom = [];
+                for(let plugin in project.plugins) {
+                    prom.push(getUsageForPlugin(projectname, plugin));
+                }
+
+                Promise.allSettled(prom).then((results) => {
+                    let usage = {};
+                    for(let result of results) {
+                        usage[result.value.plugin] = result.value.usage;
+                    }
+
+                    res.status(200).json({error: false, code: 200, usage: usage, message: "Usage retrieved."});
+                });
+            });
+        });
+    });
+});
+
+router.post("/updatecollab/:collabid/:collabmode", function(req, res) {
+    api_auth(req, res, function(user) {
+        let collabid = parseInt(req.params.collabid), newmode = req.params.collabmode;
+        if(isNaN(collabid)) {
+            res.status(400).json({error: true, code: 400, message: "Not a valid integer given as a collaboration id."});
+        } else if(!(["view", "manage"].includes(newmode))) {
+            res.status(400).json({error: true, code: 400, message: "Not a valid collaboration mode given."});
+        } else {
+            database_server.database("collabs").where("id", collabid).select("*").then((results) => {
+                if(results.length != 1) {
+                    res.status(400).json({error: true, code: 400, message: "Unable to find this collaboration."});
+                } else {
+                    if(results[0].userid == user.id) {
+                        res.status(400).json({error: true, code: 400, message: "Unable to edit your own collaboration mode."});
+                    } else {
+                        let projectname = results[0].projectname;
+                        projects_manager.canAccessProject(projectname, user.id, true).then(() => {
+                            database_server.database("collabs").where("id", collabid).update({mode: newmode}).then(() => {
+                                res.status(200).json({error: false, code: 200, message: "Collaboration mode changed."});
+                            }).catch((error) => {
+                                res.status(500).json({error: true, code: 500, message: "Unable to edit this collaboration: " + error});
+                            });
+                        }).catch(() => {
+                            res.status(403).json({error: true, code: 403, message: "Not authorized to modify this collaboration."});
+                        });
+                    }
+                }
+            }).catch((error) => {
+                res.status(500).json({error: true, code: 500, message: "Unable to fetch this collaboration."});
+            });
+        }
+    });
+});
+
+router.post("/removecollab/:collabid", function(req, res) {
+    api_auth(req, res, function(user) {
+        let collabid = parseInt(req.params.collabid);
+        if(isNaN(collabid)) {
+            res.status(400).json({error: true, code: 400, message: "Not a valid integer given as a collaboration id."});
+        } else {
+            database_server.database("collabs").where("id", collabid).select("*").then((results) => {
+                if(results.length != 1) {
+                    res.status(400).json({error: true, code: 400, message: "Unable to find this collaboration."});
+                } else {
+                    if(results[0].userid == user.id) {
+                        res.status(400).json({error: true, code: 400, message: "Unable to remove your own collaboration."});
+                    } else {
+                        let projectname = results[0].projectname;
+                        projects_manager.canAccessProject(projectname, user.id, true).then(() => {
+                            database_server.database("collabs").where("id", collabid).delete().then(() => {
+                                res.status(200).json({error: false, code: 200, message: "Collaboration removed."});
+                            }).catch((error) => {
+                                res.status(500).json({error: true, code: 500, message: "Unable to remove this collaboration: " + error});
+                            });
+                        }).catch(() => {
+                            res.status(403).json({error: true, code: 403, message: "Not authorized to remove this collaboration."});
+                        });
+                    }
+                }
+            }).catch((error) => {
+                res.status(500).json({error: true, code: 500, message: "Unable to fetch this collaboration."});
+            });
+        }
+    });
+});
+
+
+router.post("/removedomain/:domainid", function(req, res) {
+    api_auth(req, res, function(user) {
+        let domainid = parseInt(req.params.domainid);
+        if(isNaN(domainid)) {
+            res.status(400).json({error: true, code: 400, message: "Not a valid integer given as a custom domain id."});
+        } else {
+            database_server.database("domains").where("id", domainid).select("*").then((results) => {
+                if(results.length != 1) {
+                    res.status(400).json({error: true, code: 400, message: "Unable to find this custom domain."});
+                } else {
+                    let projectname = results[0].projectname;
+                    projects_manager.canAccessProject(projectname, user.id, true).then(() => {
+                        database_server.database("domains").where("id", domainid).delete().then(() => {
+                            res.status(200).json({error: false, code: 200, message: "Custom domain removed."});
+                        }).catch((error) => {
+                            res.status(500).json({error: true, code: 500, message: "Unable to remove this custom domain: " + error});
+                        });
+                    }).catch(() => {
+                        res.status(403).json({error: true, code: 403, message: "Not authorized to remove this custom domain."});
+                    });
+                }
+            }).catch((error) => {
+                res.status(500).json({error: true, code: 500, message: "Unable to fetch this custom domain."});
+            });
+        }
     });
 });
 

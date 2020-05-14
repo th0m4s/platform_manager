@@ -17,20 +17,19 @@
                     <a class="dropdown-item <%= isActive('projects', 'create') %>" href="/panel/projects/create">Create a project</a>
                 </div>
             </li>
-            <% if(hasAccess('docker')) { %>
-                <li class="nav-item dropdown <%= isActive('docker') %>">
+            <% if(hasAccess('system')) { %>
+                <li class="nav-item dropdown <%= isActive('system') %>">
                     <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
-                        Docker
+                        System
                     </a>
                     <div class="dropdown-menu">
-                        <a class="dropdown-item <%= isActive('docker', 'running') %>" href="/panel/docker/running">List running containers</a>
-                        <!--<a class="dropdown-item <%= isActive('docker', 'ports') %>" href="/panel/docker/ports">List ports</a>-->
-                        <a class="dropdown-item <%= isActive('docker', 'admin') %>" href="/panel/docker/admin">Manage docker</a>
+                        <a class="dropdown-item <%= isActive('system', 'docker') %>" href="/panel/system/docker">Running docker containers</a>
+                        <a class="dropdown-item <%= isActive('system', 'admin') %>" href="/panel/system/admin">System administration</a>
                     </div>
                 </li>
             <% } %>
 
-            <% if(hasAccess('admin')) { %>
+            <% if(hasAccess('users')) { %>
                 <li class="nav-item <%= isActive('users', 'all') %>">
                     <a class="nav-link" href="/panel/users/all">Users</a>
                 </li>

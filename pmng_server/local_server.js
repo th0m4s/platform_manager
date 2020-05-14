@@ -9,6 +9,7 @@ const path = require("path");
 const database_server = require("./database_server");
 const docker_manager = require("./docker_manager");
 const intercom = require("./intercom/intercom_client").connect();
+const string_utils = require("./string_utils");
 
 const LINE = "\n-----> ", SPACES = "       ";
 
@@ -126,7 +127,7 @@ function start() {
 
                                 let compressedSize = "Unknown size";
                                 try {
-                                    compressedSize = formatBytes((await pfs.stat(currentBuildPath)).size, 1);
+                                    compressedSize = string_utils.formatBytes((await pfs.stat(currentBuildPath)).size, 1);
                                 } catch(error) { }
 
                                 connection.write(SPACES + "Done: " + compressedSize + " \n");
@@ -202,19 +203,6 @@ function start() {
     server.listen(8042, "127.0.0.1", () => {
         logger.info("Local server started.");
     });
-}
-
-// see https://stackoverflow.com/a/18650828/6301383
-function formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return "0B";
-
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) +  sizes[i];
 }
 
 

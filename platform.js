@@ -10,23 +10,23 @@ if(process.env.NODE_ENV != undefined || process.env.NODE_ENV == "development") {
 logger.isDebug = !PRODUCTION;
 
 logger.info("Forking intercom server...");
-child_process.fork("./server/intercom/intercom_server");
+child_process.fork("./pmng_server/intercom/intercom_server");
 
 logger.info("Forking DNS server...");
-child_process.fork("./server/dns_server");
+child_process.fork("./pmng_server/dns_server");
 
 logger.info("Forking FTP server...");
-child_process.fork("./server/ftp_server/ftp_server");
+child_process.fork("./pmng_server/ftp_server/ftp_server");
 
 // indicating that docker main instance should be on this process
-require("./server/docker_manager").maininstance().then(() => {
+require("./pmng_server/docker_manager").maininstance().then(() => {
     // docker is started and running, so start scripts that require docker
     logger.info("Starting all web servers...");
-    require("./server/web_server").start();
+    require("./pmng_server/web_server").start();
 
     // priveleges dropped from web_server
     logger.info("Forking local server...");
-    child_process.fork("./server/local_server");
+    child_process.fork("./pmng_server/local_server");
 });
 
 // all processes should have dropped their privileges when started

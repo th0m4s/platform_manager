@@ -92,7 +92,7 @@ async function maininstance() {
     await pfs.readFile(pluginsConfigFile).then((config) => {
         config = JSON.parse(config);
 
-        return pfs.readdir("server/plugins").then((files) => {
+        return pfs.readdir("./pmng_server/plugins").then((files) => {
             let prom = [];
             files.forEach((file) => {
                 let pluginname = regex_utils.testPlugin(file);

@@ -59,7 +59,7 @@ function getProjectHtml(project, disabled) {
     let d = disabled ? " disabled" : "";
     return `<li class="list-group-item" id="line-project-${project.name}" data-state="unknown">`
     + `<b>Project #${project.id} : </b>${project.name} (v${project.version})<span class="text-secondary d-block d-md-inline"><samp class="ml-4">${project.version > 0 ? project.type : "No version deployed"}</samp></span>`
-    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-primary" onclick="projects_list.editProject('${project.name}')"${d}><i class="fas fa-edit"></i> Edit</button><button class="btn btn-sm btn-info" data-current="info" id="button-state-${project.name}" onclick="projects_list.updateState('${project.name}')" ${disabled ? 'data-perm="no"' : ""} data-version="${project.version}" disabled><i class="fas fa-sync fa-spin"></i> Syncing...</button>`
+    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="projects_list.details('${project.name}')"><i class="fas fa-info-circle"></i> Details</button><button class="btn btn-sm btn-primary" onclick="projects_list.editProject('${project.name}')"${d}><i class="fas fa-edit"></i> Edit</button><button class="btn btn-sm btn-info" data-current="info" id="button-state-${project.name}" onclick="projects_list.updateState('${project.name}')" ${disabled ? 'data-perm="no"' : ""} data-version="${project.version}" disabled><i class="fas fa-sync fa-spin"></i> Syncing...</button>`
     + `<button class="btn btn-sm btn-secondary" id="button-restart-${project.name}" onclick="projects_list.restartProject('${project.name}')" ${disabled ? 'data-perm="no"' : ""} disabled><i class="fas fa-undo-alt"></i> Restart</button><button class="btn btn-sm btn-danger" onclick="projects_list.deleteProject('${project.name}')"${d}><i class="fas fa-trash-alt"></i> Delete</button></div></span></li>`;
 }
 
@@ -153,6 +153,10 @@ function requestCollab(limit) {
 
 function editProject(projectname) {
     location.href = "edit/" + projectname;
+}
+
+function details(projectname) {
+    location.href = "details/" + projectname;
 }
 
 let lastDeleteProject = undefined;
@@ -300,3 +304,4 @@ module.exports.deleteProject = deleteProject;
 module.exports.confirmDelete = confirmDelete;
 module.exports.updateState = updateState;
 module.exports.restartProject = restartProject;
+module.exports.details = details;

@@ -23,28 +23,28 @@ function start() {
     // launching 2 processes to handle both HTTP and HTTPS public requests
     logger.info("Separating public servers into forks:");
     logger.info("Forking public http server...");         // path based on platform.js
-    child_process.fork("./server/public_web/http_public_server");
+    child_process.fork("./pmng_server/public_web/http_public_server");
 
     if(enable_https) {
         logger.info("Forking public https server...");
-        child_process.fork("./server/public_web/https_public_server");
+        child_process.fork("./pmng_server/public_web/https_public_server");
     }
 
     privileges.drop();
 
     logger.info("Forking admin web server...");
-    child_process.fork("./server/admin_panel/admin_server");
+    child_process.fork("./pmng_server/admin_panel/admin_server");
 
     logger.info("Forking git web server...");
-    child_process.fork("./server/git_server");
+    child_process.fork("./pmng_server/git_server");
 
     logger.info("Forking error web server...");
-    child_process.fork("./server/error_panel/error_server");
+    child_process.fork("./pmng_server/error_panel/error_server");
 }
 
 // 8042 is for local server, 8043 for intercom
 // projects start at 11000
-const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort};
+const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort}; // ftp is bound to error port when using http
 let isInstalled = false;
 async function getPort(host) {
     let special = regex_utils.testSpecial(host);
@@ -94,6 +94,7 @@ function registerPortInfo() {
     });
 }
 
+// TODO: really async?
 async function webServe(req, res) {
     let to = net.createConnection({host: "localhost", port: await getPort(req.headers.host.trimLeft())});
     to.on("data", (data) => {

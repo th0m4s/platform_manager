@@ -1,9 +1,11 @@
 function disableButton(button, text) {
-    $(button).html(text).addClass("disabled").attr("disabled", "disabled");
+    let btn = $(button).addClass("disabled").attr("disabled", "disabled");
+    if(text != undefined) btn.html(text)
 }
 
 function enableButton(button, text) {
-    $(button).html(text).removeClass("disabled").removeAttr("disabled");
+    let btn = $(button).removeClass("disabled").removeAttr("disabled");
+    if(text != undefined) btn.html(text);
 }
 
 let modalShown = false, lastText = "";

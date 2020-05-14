@@ -113,8 +113,8 @@ function init() {
 function displayEnv(key, value) {
     $("#env-list").append(`<div class="row env-row mb-2"><div class="col-md-4"><input type="text" required class="form-control input-env-key" placeholder="Variable name" value="${key}"></div><div class="col-md-8">`
      + `<div class="input-group"><input type="text" class="form-control input-env-val" placeholder="Value" value="${value}"><div class="input-group-append">`
-     + `<button class="btn btn-primary button-add-env-line" style="display: none;" type="button" onclick="project_details.addEnv()"><i class="fas fa-plus"></i> Add new</button>`
-     + `<button class="btn btn-danger btn-delete" type="button" onclick="project_details.deleteRow(this);"><i class="fas fa-trash-alt"></i> Delete</button></div></div></div></div>`);
+     + `<button class="btn btn-primary button-add-env-line" style="display: none;" type="button" onclick="project_manage.addEnv()"><i class="fas fa-plus"></i> Add new</button>`
+     + `<button class="btn btn-danger btn-delete" type="button" onclick="project_manage.deleteRow(this);"><i class="fas fa-trash-alt"></i> Delete</button></div></div></div></div>`);
      updateAdd();
 }
 
@@ -132,8 +132,8 @@ function displayDomain(domain, enabled) {
     $("#domains-list").append(`<div class="row domain-row mb-2"><div class="col">`
      + `<div class="input-group"><input type="text" class="form-control input-domain" placeholder="Custom domain" value="${domain}"><div class="input-group-append"><div class="input-group-text">`
      + `<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input input-enablesub" id="domain-sub-${randomKey}"${enabled ? " checked" : ""}><label class="custom-control-label no-select" for="domain-sub-${randomKey}">Enable subdomains (like www)</label></div></div>`
-     + `<button class="btn btn-primary button-add-domain-line" style="display: none;" type="button" onclick="project_details.addDomain()"><i class="fas fa-plus"></i> Add new</button>`
-     + `<button class="btn btn-danger btn-delete" type="button" onclick="project_details.deleteRow(this);"><i class="fas fa-trash-alt"></i> Delete</button></div></div></div></div>`);
+     + `<button class="btn btn-primary button-add-domain-line" style="display: none;" type="button" onclick="project_manage.addDomain()"><i class="fas fa-plus"></i> Add new</button>`
+     + `<button class="btn btn-danger btn-delete" type="button" onclick="project_manage.deleteRow(this);"><i class="fas fa-trash-alt"></i> Delete</button></div></div></div></div>`);
      updateAdd();
 }
 
