@@ -1,14 +1,10 @@
 const net = require("net");
-const logger = require("simple-node-logger").createSimpleLogger();
-const privileges = require("../privileges");
+const logger = require("../platform_logger").logger();
 
 let subscriptions = {};
 let responses = {};
 
 function start() {
-    privileges.drop();
-    // don't need privileges on port 8043
-
     const server = net.createServer();
     server.on("connection", function (connection) {
         let rcvBuffer = "";
@@ -27,8 +23,11 @@ function start() {
         });
     });
 
-    server.listen(8043, "127.0.0.1", () => {
-        logger.info("Intercom server started.");
+    return new Promise((resolve) => {
+        server.listen(8043, "127.0.0.1", () => {
+            logger.info("Intercom server started.");
+            resolve();
+        });
     });
 }
 
@@ -66,5 +65,4 @@ function processCommand(connection, command, value) {
     }
 }
 
-
-start();
+module.exports.start = start;
