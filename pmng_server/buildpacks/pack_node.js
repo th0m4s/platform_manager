@@ -8,7 +8,8 @@ async function build(projectname, deployFolder, logger) {
 
     logger("Analyzing package.json...");
     try {
-        pkg = require(path.resolve(deployFolder, "package.json"));
+        // do not use require as it caches the file
+        pkg = JSON.parse(await pfs.readFile(path.resolve(deployFolder, "package.json")));
     } catch(error) {
         throw new Error("Cannot build NodeJS project. package.json not found.");
     }
