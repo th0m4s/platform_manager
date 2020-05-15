@@ -1,7 +1,6 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../database_server");
 const passport = require('passport');
-const logger = require('simple-node-logger').createSimpleLogger();
 
 router.all("*", async function(req, res, next) {
     if(!(await database_server.isInstalled())) {

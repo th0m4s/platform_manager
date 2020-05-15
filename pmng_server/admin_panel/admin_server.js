@@ -1,4 +1,4 @@
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("../platform_logger").logger();
 const express = require("express"), admin = express(), bodyParser = require("body-parser");
 const passport = require('passport');
 const path = require("path");
@@ -18,7 +18,7 @@ admin.use("/static", express.static(path.join(__dirname, "static", "dist")));
 const favicon = path.join(__dirname, "static", "images", "favicon.ico");
 admin.get("/favicon.ico", function(req, res) {
     res.sendFile(favicon);
-})
+});
 
 admin.use("/api", require("./api_router"));
 admin.use("/panel", require("./panel_router"));

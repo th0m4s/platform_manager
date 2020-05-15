@@ -1,6 +1,6 @@
 const https = require("https");
 const web = require("../web_server");
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("../platform_logger").logger();
 const privileges = require("../privileges");
 const intercom = require("../intercom/intercom_client").connect();
 

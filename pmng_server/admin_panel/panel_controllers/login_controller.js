@@ -1,7 +1,7 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../database_server");
 const passport = require('passport');
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("../../platform_logger").logger();
 
 router.all("/", function(req, res, next) {
     if(req.user != null) {

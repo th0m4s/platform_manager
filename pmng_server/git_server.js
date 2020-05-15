@@ -4,7 +4,7 @@ const git_backend = require('git-http-backend');
 const zlib = require('zlib');
 const project_manager = require("./project_manager");
 const database_server = require("./database_server");
-const logger = require("simple-node-logger").createSimpleLogger();
+const logger = require("./platform_logger").logger();
 const auth = require("basic-auth");
 
 const isWindows = process.platform == "win32";

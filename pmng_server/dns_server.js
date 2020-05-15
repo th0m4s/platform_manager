@@ -1,4 +1,4 @@
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("./platform_logger").logger();
 const dns = require("native-dns"), dns_server = dns.createServer();
 const regex_utils = require("./regex_utils");
 const project_manager = require("./project_manager");

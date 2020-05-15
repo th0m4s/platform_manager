@@ -6,7 +6,7 @@ const docker_manager = require("../../../docker_manager");
 const api_auth = require("./api_auth");
 const rmfr = require("rmfr");
 const intercom = require("../../../intercom/intercom_client").connect();
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("../../../platform_logger").logger();
 
 router.get("/list/owned/:after/:limit", function(req, res) {
     api_auth(req, res, function(user) {

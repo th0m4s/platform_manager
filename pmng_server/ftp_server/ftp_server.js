@@ -1,5 +1,5 @@
 const FtpSrv = require('ftp-srv');
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("../platform_logger").logger();
 const privileges = require("../privileges");
 const database_server = require("../database_server");
 const FTPfs = require("./ftp_fs");

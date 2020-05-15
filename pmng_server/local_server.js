@@ -1,4 +1,4 @@
-const logger = require("simple-node-logger").createSimpleLogger();
+const logger = require("./platform_logger").logger();
 const net = require("net");
 const project_manager = require("./project_manager");
 const pfs = require("fs").promises;
@@ -163,7 +163,7 @@ function start() {
                                         connection.write(SPACES + "Stopped. Restarting project to apply changes...\n");
                                         await intercom.sendPromise("dockermng", {command: "startProject", project: projectname});
                                         
-                                        connection.write(SPACES + "Project successfully deployed into a container.\n");
+                                        connection.write(LINE + "Project successfully deployed and restarted into a container.\n");
                                     } catch(error) {
                                         connection.write("Cannot stop or restart the project container: " + error + "\n");
                                     }

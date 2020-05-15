@@ -1,4 +1,4 @@
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("./platform_logger").logger();
 const child_process = require("child_process");
 const net = require("net");
 const regex_utils = require("./regex_utils");

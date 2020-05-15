@@ -1,6 +1,6 @@
 const express = require("express");
 const app = express();
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("../platform_logger").logger();
 
 app.all("*", (req, res) => {
     res.send("No server found for this domain.");
