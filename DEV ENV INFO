@@ -7,3 +7,6 @@ system should have php7 and composer for pmng/apache2-php7 images
 sudppipe [wsl ip] 5342 5342
 172.23.191.124
 ip addr | grep eth0
+
+
+DONT FORGET TO GET /etc/init.d/pmng AND /etc/logrotate.d/pmng FOR PRODUCTION
