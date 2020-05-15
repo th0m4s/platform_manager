@@ -5,11 +5,12 @@ const fs = require("fs"), pfs = fs.promises;
 const rmfr = require("rmfr");
 const tar = require("tar");
 const path = require("path");
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("./platform_logger").logger();
 const database_server = require("./database_server");
 const plugins_manager = require("./plugins_manager");
 const child_process = require("child_process");
 const regex_utils = require("./regex_utils");
+const treekill = require("tree-kill");
 
 const docker = new Docker(process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)});
 
@@ -58,7 +59,7 @@ function areProjectContainersRunning(projects) {
 
 let startingProjects = [], stoppingProjects = [], intervalId = -1;
 async function maininstance() {
-    let dockerInitialized = false, delayWaited = 0, delayNeeded = parseInt(process.env.DOCKER_START_DELAY), intervalDelay = 500, messageSent = false;
+    let delayWaited = 0, delayNeeded = parseInt(process.env.DOCKER_START_DELAY), intervalDelay = 500, messageSent = false;
     while(true) {
         try {
             await docker.info();
@@ -69,10 +70,11 @@ async function maininstance() {
                 messageSent = true;
             }
 
-            if(delayWaited >= delayNeeded && !dockerInitialized) {
-                logger.info("Docker not started, executing env command..."); // TODO: correct quotes
-                child_process.exec('"' + process.env.DOCKER_START + '"');
-                dockerInitialized = true;
+            if(delayWaited >= delayNeeded) {
+                logger.warn("Docker not running. Cannot continue.");
+                // removing pid file as we are still with root permissions
+                await pfs.unlink("/var/run/pmng.pid");
+                treekill(process.pid); // kill subprocesses (like intercom - others are not started)
             }
 
             await new Promise((resolve) => {
@@ -251,28 +253,60 @@ function stopProject(projectname, force = false) {
     });
 }
 
+const LOGFILE_NAME = "project.log";
 // only for maininstance
 function attachLogs(projectname, container) {
-    let logStream = fs.createWriteStream(path.resolve(project_manager.getProjectLogsFolder(projectname), "project.log"), {flags: "a"});
+    let logStream = fs.createWriteStream(path.resolve(project_manager.getProjectLogsFolder(projectname), LOGFILE_NAME), {flags: "a"});
     return container.logs({
         follow: true,
         stdout: true,
         stderr: true,
-        timestamps: true
+        timestamps: true,
+        since: Date.now()/1000
     }).then((stream) => {
         stream.on("data", (log) => {
-            logStream.write(log);
+            let data = log.toString().split("\n");
+            let lastType = "      ";
+            data.forEach((line) => {
+                if(line.length > 0) {
+                    let type = line[7];
+                    line = line.slice(8);
+                    switch(type) {
+                        case "+":
+                            type = "INFO  ";
+                            break;
+                        case ",":
+                            type = "WARN  ";
+                            break;
+                        case "-":
+                            type = "ERROR ";
+                            break;
+                        case "(":
+                            type = lastType;
+                            break;
+                        default:
+                            line = type + line;
+                            type = "UNKN  ";
+                            break;
+                    }
+
+                    lastType = type;
+
+                    let parts = line.split(" ");
+                    logStream.write(parts[0] + " " + type + " " + parts.slice(1) + "\n");
+                }
+            });
         });
 
         stream.on("error", (err) => {
-            logStream.write("ERROR " + err);
+            logStream.write((new Date().toISOString()) + " SYSERR " + err);
         });
 
         stream.on("close", () => {
             if(stoppingProjects.includes(projectname)) {
                 stoppingProjects.splice(stoppingProjects.indexOf(projectname), 1);
             } else {
-                logger.warn("Container of project " + projectname + " close without stopping project.");
+                logger.warn("Container of project " + projectname + " was closed without stopping project.");
                 stopProject(projectname, true).then(() => { // maybe use finally
                     stoppingProjects.splice(stoppingProjects.indexOf(projectname), 1);
                 });
@@ -294,6 +328,14 @@ function startProject(projectname) {
         // check build
         let buildPath = project_manager.getProjectBuild(projectname);
         await pfs.access(buildPath);
+
+        // rotate log file
+        let logFolder = project_manager.getProjectLogsFolder(projectname);
+        let logFile = path.join(logFolder, LOGFILE_NAME);
+        let rotateConf = path.join(logFolder, "rorate.conf"), rotateStatus = path.join(logFolder, "rotate.status");
+
+        await pfs.writeFile(rotateConf, logFile + " {\n\tsize 1\n\trotate 7\n\tcompress\n\tdelaycompress\n\tmissingok\n}");
+        child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf);
 
         // if starting folder exists, delete it
         let startingFolder = project_manager.getProjectDeployFolder(projectname, true);
@@ -327,6 +369,10 @@ function startProject(projectname) {
         // request port
         let hostPort = requestPort(projectname);
         // port broadcasted by requestPort
+
+        if(hostPort == 0) {
+            return Promise.reject("Unable to find free port for this project.");
+        }
         
         env.push("PORT=" + hostPort);
 
@@ -435,12 +481,14 @@ function startProject(projectname) {
 function requestPort(projectname) {
     let wantPort = firstPort;
     let usedPorts = Object.values(portMappings).sort();
-    usedPorts.some((port) => {
+    if(usedPorts.length > 0 && usedPorts.some((port) => {
         if(wantPort == port) {
             wantPort++;
             return false;
         } return true;
-    });
+    }) == false) {
+        return 0;
+    }
 
     intercom.send("portBroadcast", {command: "addPort", project: projectname, port: wantPort});
 
