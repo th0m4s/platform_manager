@@ -2,16 +2,28 @@ const Knex = require("knex");
 const mdb = require('knex-mariadb');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const logger = require('simple-node-logger').createSimpleLogger();
+const logger = require("./platform_logger").logger();
 const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 
+const DB_NAME = "platform_manager";
 const knex = Knex({
     client: mdb,
     connection: {
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        database: "platform_manager"
+        database: DB_NAME
+    }
+});
+
+// check at least database creation (needed for sessions store of admin panel)
+// tables are created in installDatabase
+knex.raw("SHOW DATABASES;").catch((error) => {
+    if(error.toString().includes("Unknown database")) {
+        delete knex.client.connectionSettings.database;
+        knex.raw("CREATE DATABASE `" + DB_NAME + "`;").then(() => {
+            knex.client.connectionSettings.database = DB_NAME;
+        });
     }
 });
 
