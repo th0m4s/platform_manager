@@ -332,7 +332,7 @@ function startProject(projectname) {
         // rotate log file
         let logFolder = project_manager.getProjectLogsFolder(projectname);
         let logFile = path.join(logFolder, LOGFILE_NAME);
-        let rotateConf = path.join(logFolder, "rorate.conf"), rotateStatus = path.join(logFolder, "rotate.status");
+        let rotateConf = path.join(logFolder, "rotate.conf"), rotateStatus = path.join(logFolder, "rotate.status");
 
         await pfs.writeFile(rotateConf, logFile + " {\n\tsize 1\n\trotate 7\n\tcompress\n\tdelaycompress\n\tmissingok\n}");
         child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf);
