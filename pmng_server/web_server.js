@@ -94,7 +94,6 @@ function registerPortInfo() {
     });
 }
 
-// TODO: really async?
 async function webServe(req, res) {
     let to = net.createConnection({host: "localhost", port: await getPort(req.headers.host.trimLeft())});
     to.on("data", (data) => {
