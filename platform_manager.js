@@ -26,6 +26,10 @@ async function startPlatform() {
     logger.info("Starting intercom server...");
     await require("./pmng_server/intercom/intercom_server").start();
 
+    logger.info("Forking root commands processor...");
+    child_process.fork("./pmng_server/root_commands");
+    // starting the root commands processor before we drop privileges
+
     // indicating that docker main instance should be on this process
     await require("./pmng_server/docker_manager").maininstance();
     
@@ -44,7 +48,7 @@ async function startPlatform() {
     logger.info("Forking local server...");
     child_process.fork("./pmng_server/local_server");
 
-    // all processes should have dropped their privileges when started
+    // all processes (except root_commands) should have dropped their privileges when started
     // check using ps -aux
 }
 
