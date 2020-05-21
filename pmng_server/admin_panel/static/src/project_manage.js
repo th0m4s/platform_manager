@@ -1,3 +1,5 @@
+let containerRunning = 0; // 0 no info, 1 running, -1 stopped
+// only for edit
 function init() {
     const plugins = ["mariadb", "redis", "persistent-storage"];
 
@@ -84,6 +86,20 @@ function init() {
     });
     
     if(edit) {
+        $.get("/api/v1/projects/isrunning/" + values.name).fail((xhr, status, error) => {
+            $.notify({message: "Unable to check if project is running."}, {type: "warning"});
+            console.warn("Unable to access project state (server error):", error);
+        }).done((response) => {
+            if(response.error) {
+                $.notify({message: "Unable to check if project is running."}, {type: "warning"});
+                console.warn("Unable to access project state (application error):", error);
+            } else {
+                if(response.running)
+                    containerRunning = 1;
+                else containerRunning = -1;
+            }
+        });
+
         for(let [key, value] of Object.entries(values.userenv)) {
             displayEnv(key, value)
         }
@@ -228,11 +244,12 @@ function confirm() {
         let count = changes.count, differences = changes.differences;
 
         if(count > 0) {
-            let diffTexts = [], specialTexts = [], needDelay = false;
+            let diffTexts = [], specialTexts = [], needDelay = false, needRestart = false;
             lastDifferences = differences;
 
             if(differences.plugins.remove.length > 0) {
                 let text = "You removed the following plugin" + (differences.plugins.remove.length > 1 ? "s" : "") + ":<ul>";
+                needRestart = true;
                 differences.plugins.remove.forEach((item) => {
                     text += "<li>" + item + "</li>";
                     if(item == "persistent-storage") {
@@ -242,16 +259,17 @@ function confirm() {
                         needDelay = true;
                         specialTexts.push("<i class='fas fa-exclamation-triangle'></i> Warning: By removing the mariadb plugin, you are removing all the contents of the database of this project.")
                     }
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
 
             if(differences.plugins.add.length > 0) {
                 let text = "You added the following plugin" + (differences.plugins.add.length > 1 ? "s" : "") + ":<ul>";
+                needRestart = true;
                 differences.plugins.add.forEach((item) => {
                     text += "<li>" + item + "</li>";
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
@@ -260,7 +278,7 @@ function confirm() {
                 let text = "You removed the following collaborator" + (differences.collabs.remove.length > 1 ? "s" : "") + ":<ul>";
                 differences.collabs.remove.forEach((item) => {
                     text += "<li>" + item + "</li>";
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
@@ -269,7 +287,7 @@ function confirm() {
                 let text = "You added the following collaborator" + (differences.collabs.add.length > 1 ? "s" : "") + ":<ul>";
                 differences.collabs.add.forEach((item) => {
                     text += "<li>" + item + "</li>";
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
@@ -278,7 +296,7 @@ function confirm() {
                 let text = "You removed the following custom domain" + (differences.domains.remove.length > 1 ? "s" : "") + ":<ul>";
                 differences.domains.remove.forEach((item) => {
                     text += "<li>" + item + "</li>";
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
@@ -287,7 +305,7 @@ function confirm() {
                 let text = "You added the following custom domain" + (differences.domains.add.length > 1 ? "s" : "") + ":<ul>";
                 differences.domains.add.forEach((item) => {
                     text += "<li>" + item.domain + (item.enablesub ? " (subs enabled)" : " (subs disabled)") + "</li>";
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
@@ -296,7 +314,7 @@ function confirm() {
                 let text = "You modified the following custom domain" + (differences.domains.modify.length > 1 ? "s" : "") + ":<ul>";
                 differences.domains.modify.forEach((item) => {
                     text += "<li>" + item.domain + (item.newstate ? ": subs enabled" : ": subs disabled") + "</li>";
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
@@ -304,32 +322,53 @@ function confirm() {
             // env
             if(differences.env.remove.length > 0) {
                 let text = "You removed the following environment variable" + (differences.env.remove.length > 1 ? "s" : "") + ":<ul>";
+                needRestart = true;
                 differences.env.remove.forEach((item) => {
                     text += "<li>" + item + "</li>";
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
 
             if(differences.env.add.length > 0) {
                 let text = "You added the following environment variable" + (differences.env.add.length > 1 ? "s" : "") + ":<ul>";
+                needRestart = true;
                 differences.env.add.forEach((item) => {
                     text += "<li>" + item.key + ": " + item.value + "</li>";
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
 
             if(differences.env.modify.length > 0) {
                 let text = "You modified the following environment variable" + (differences.env.modify.length > 1 ? "s" : "") + ":<ul>";
+                needRestart = true;
                 differences.env.modify.forEach((item) => {
                     text += "<li>" + item.key + ": " + item.newvalue + "</li>";
-                })
+                });
                 text += "</ul>";
                 diffTexts.push(text);
             }
 
-            $("#confirmModal-content").html("Do you want to save this project?<br/><br/>" + diffTexts.join("") + (specialTexts.length == 0 ? "" : "<br/>" + specialTexts.join("<br/>")));
+            let restartText = "";
+            if(needRestart) {
+                restartText = "<br/><br/>";
+                switch(containerRunning) {
+                    case -1:
+                        restartText += "Changes will be applied on the next start.";
+                        break;
+                    case 0:
+                        restartText += "Unable to check if the project is running. Changes may require a manual restart.";
+                        break;
+                    case 1:
+                        restartText += "Your project will be restarted to apply the changes.";
+                        break;
+                }
+            }
+
+            lastNeedRestart = needRestart;
+
+            $("#confirmModal-content").html("Do you want to save this project?<br/><br/>" + diffTexts.join("") + (specialTexts.length == 0 ? "" : "<br/>" + specialTexts.join("<br/>")) + restartText);
 
             let confirmButton = $("#button-confirm-save");
             if(needDelay) {
@@ -463,7 +502,7 @@ function getChanges() {
     return {differences: differences, count: count};
 }
 
-let saving = false;
+let saving = false, lastNeedRestart = false;
 function confirmSave() {
     if(lastDifferences == null) return;
     let differences = lastDifferences;
@@ -476,7 +515,7 @@ function confirmSave() {
     disableAllInputs();
     utils.disableButton(confirmButton, "Saving the project...");
 
-    $.post("/api/v1/projects/edit/" + values.name, {differences: JSON.stringify(differences)}).fail((xhr, status, error) => {
+    $.post("/api/v1/projects/edit/" + values.name, {differences: JSON.stringify(differences), restart: (containerRunning != -1 && lastNeedRestart) ? "true" : "false"}).fail((xhr, status, error) => {
         saving = false;
         $.notify({message: "Unable to contact server. See console for details."}, {type: "danger"});
         console.warn("Unable to save the project (server error):", error);

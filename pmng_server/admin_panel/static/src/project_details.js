@@ -6,33 +6,39 @@ function init() {
         $("#owner-info").html(" (project owned by " + window.owner + ")");
     }
 
-    let collabsList = $("#collabs-list");
-    for(let collab of window.project.collabs) {
-        collabsList.append(getCollabLineHtml(collab.collabid, collab.userid, collab.name, collab.mode, !owned));
-    }
+    if(window.project.collabs.length > 0) {
+        let collabsList = $("#collabs-list");
+        for(let collab of window.project.collabs) {
+            collabsList.append(getCollabLineHtml(collab.collabid, collab.userid, collab.name, collab.mode, !owned));
+        }
 
-    collabsList.parent().show();
-    $("#collabs-status").hide();
+        collabsList.parent().show();
+        $("#collabs-status").hide();
+    } else $("#collabs-status").html("No collaborations on this project.");
 
 
-    let domainsList = $("#domains-list");
-    for(let domain of window.project.domains) {
-        domainsList.append(getDomainLineHtml(domain.domainid, domain.domain, domain.enablesubs, !owned));
-    }
+    if(window.project.domains.length > 0) {
+        let domainsList = $("#domains-list");
+        for(let domain of window.project.domains) {
+            domainsList.append(getDomainLineHtml(domain.domainid, domain.domain, domain.enablesub, !owned));
+        }
 
-    domainsList.parent().show();
-    $("#domains-status").hide();
+        domainsList.parent().show();
+        $("#domains-status").hide();
+    } else $("#domains-status").html("No custom domains bound to this project.");
 
-    let pluginsList = $("#plugins-list");
-    for(let plugin in window.project.plugins) {
-        pluginsList.append(getPluginLineHtml(plugin));
-    }
+    if(Object.keys(window.project.plugins).length > 0) {
+        let pluginsList = $("#plugins-list");
+        for(let plugin in window.project.plugins) {
+            pluginsList.append(getPluginLineHtml(plugin));
+        }
 
-    let pluginCheckIntervalId = setInterval(refreshPlugins, 30*1000);
-    refreshPlugins();
+        let pluginCheckIntervalId = setInterval(refreshPlugins, 30*1000);
+        refreshPlugins();
 
-    pluginsList.parent().show();
-    $("#plugins-status").hide();
+        pluginsList.parent().show();
+        $("#plugins-status").hide();
+    } else $("#plugins-status").html("No plugins added to this project.");
 }
 
 function getCollabModeText(mode) {
@@ -83,7 +89,7 @@ function refreshPlugins() {
     }).done((response) => {
         if(response.error) {
             if(!usageErrorSent) {
-                $.notify({message: `Unable to check usage status because of a server error.`}, {type: "danger"});
+                $.notify({message: `Unable to check usage status because of an application error.`}, {type: "danger"});
                 usageErrorSent = true;
             }
             console.warn(response.code, response.message);
@@ -95,6 +101,7 @@ function refreshPlugins() {
                         statusDom.html("Unable to measure usage for this plugin.");
                         break;
                     case "unlimited":
+                    case "limited":
                         statusDom.html(usage.formatted);
                         break;
                     case "not_measurable":
@@ -121,7 +128,7 @@ function invertCollabMode(collabid) {
         utils.enableButton(btn);
     }).done((response) => {
         if(response.error) {
-            $.notify({message: `Unable to change the mode of this collaboration because of a application error.`}, {type: "danger"});
+            $.notify({message: `Unable to change the mode of this collaboration because of an application error.`}, {type: "danger"});
             console.warn(error);
 
             utils.enableButton(btn);

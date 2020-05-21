@@ -22,10 +22,12 @@ window.projects_list = require("./projects_list");
 window.project_manage = require("./project_manage");
 window.project_details = require("./project_details");
 
+window.docker_list = require("./docker_list");
+
 $.notifyDefaults({
     delay: 3000
 });
 
 $(document).ready(() => {
     utils.showCookieNotifications();
-})
+});

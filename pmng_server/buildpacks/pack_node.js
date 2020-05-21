@@ -5,6 +5,7 @@ const child_process = require("child_process");
 
 async function build(projectname, deployFolder, logger) {
     let pkg = {};
+    // TODO: build in a container and get result with archive
 
     logger("Analyzing package.json...");
     try {
