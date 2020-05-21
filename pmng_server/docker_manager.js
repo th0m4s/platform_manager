@@ -240,15 +240,27 @@ function stopProject(projectname, force = false) {
 
             removePort(projectname);
 
-            return Promise.all([Promise.all(prom).then(() => {
-                // when all containers are removed
-                // ... remove project network
-                docker.network.list({filters: {name: [getProjectNetworkName(projectname)]}}).then((networks) => {
-                    return networks[0].remove().catch((err) => {
-                        if(!force) return Promise.reject("Cannot remove network for project " + projectname + ": " + err);
+            let projectNetworkName = getProjectNetworkName(projectname);
+
+            // project and per-project plugins stopped, executing plugin callbacks
+            return project_manager.getProject(projectname).then((project) => {
+                let pluginsProm = [];
+                for(let [pluginName, pluginConfig] of Object.entries(project.plugins)) {
+                    pluginsProm.push(plugins_manager.getPlugin(pluginName).stopProjectPlugin(projectname, pluginConfig, projectNetworkName));
+                }
+
+                return Promise.all(pluginsProm);
+            }).then(() => {
+                return Promise.all([Promise.all(prom).then(() => {
+                    // when all containers are removed
+                    // ... remove project network
+                    docker.network.list({filters: {name: [projectNetworkName]}}).then((networks) => {
+                        return networks[0].remove().catch((err) => {
+                            if(!force) return Promise.reject("Cannot remove network for project " + projectname + ": " + err);
+                        });
                     });
-                });
-            }), dbProm]);
+                }), dbProm])
+            });
         });
     });
 }
@@ -265,7 +277,7 @@ function attachLogs(projectname, container) {
         since: Date.now()/1000
     }).then((stream) => {
         stream.on("data", (log) => {
-            let data = log.toString().split("\n");
+            let data = log.toString("utf-8").split("\n");
             let lastType = "      ";
             data.forEach((line) => {
                 if(line.length > 0) {
@@ -461,7 +473,7 @@ function startProject(projectname) {
 
         // container ready, maybe other stuff to do before start
         for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
-            await plugins_manager.getPlugin(pluginName).projectContainerCreated(projectname, containerConfig, pluginConfig);
+            await plugins_manager.getPlugin(pluginName).projectContainerCreated(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
         }
 
         // start the container
@@ -481,14 +493,15 @@ function startProject(projectname) {
 function requestPort(projectname) {
     let wantPort = firstPort;
     let usedPorts = Object.values(portMappings).sort();
-    if(usedPorts.length > 0 && usedPorts.some((port) => {
+    
+    usedPorts.some((port) => {
         if(wantPort == port) {
             wantPort++;
             return false;
         } return true;
-    }) == false) {
-        return 0;
-    }
+    });
+
+    if(wantPort > lastPort) return 0;
 
     intercom.send("portBroadcast", {command: "addPort", project: projectname, port: wantPort});
 
@@ -511,7 +524,7 @@ function removePort(projectname) {
     }
 }
 
-let portMappings = {}, firstPort = 11001/*, firstPluginPort = 12001*/;
+let portMappings = {}, firstPort = 11001, lastPort = 11999/*, firstPluginPort = 12001*/;
 // 11001 is for project
 
 const types = {"node": "pmng/node", "apache-php": "pmng/apache2-php7"};
@@ -535,8 +548,49 @@ function clearStarting(projectname) {
     return Promise.all(prom);
 }
 
+function getRunningContainers() {
+    return docker.container.list().then((containers) => {
+        let sorted = {projects: [], platform: [], others: []};
+        for(let container of containers) {
+            let labels = container.data.Labels, type = labels["pmng.containertype"], cid = container.data.Id.slice(0, 12);
+            
+            let names = container.data.Names, name = "";
+            if(names !== undefined & names.length > 0) name = names[0].slice(1); // remove first slash in name
+
+            if(type == undefined) {
+                sorted.others.push({name: name, id: cid, kind: "not_pmng", image: container.data.Image});
+            } else {
+                let projectname = labels["pmng.projectname"], pluginname = labels["pmng.pluginname"];
+                // can be undefined, but can only declare one time the variables with these names
+                switch(type) {
+                    case "project":
+                        sorted.projects.push({name: name, id: cid, projectname: projectname});
+                        break;
+                    case "plugin":
+                        sorted.platform.push({name: name, id: cid, projectname: projectname, kind: "plugin", pluginname: pluginname});
+                        break;
+                    case "globalplugin":
+                        sorted.platform.push({name: name, id: cid, kind: "globalplugin", pluginname: pluginname});
+                        break;
+                    default:
+                        sorted.others.push({name: name, id: cid, kind: "not_reco", image: container.data.Image});
+                        break;
+                }
+            }
+        }
+
+        return sorted;
+    });
+}
+
+function getContainerDetails(isName, value) {
+    // value is name or id
+}
+
 
 module.exports.docker = docker;
 module.exports.isProjectContainerRunning = isProjectContainerRunning;
 module.exports.areProjectContainersRunning = areProjectContainersRunning;
+module.exports.getRunningContainers = getRunningContainers;
+module.exports.getContainerDetails = getContainerDetails;
 module.exports.maininstance = maininstance;
