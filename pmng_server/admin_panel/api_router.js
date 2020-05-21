@@ -33,6 +33,7 @@ router.use("/v1", (function() {
     v1.use("/login", require("./api_controllers/v1/login_api"));
     v1.use("/projects", require("./api_controllers/v1/projects_api"));
     v1.use("/users", require("./api_controllers/v1/users_api"));
+    v1.use("/docker", require("./api_controllers/v1/docker_api"));
 
     return v1;
 })());
