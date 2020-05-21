@@ -17,5 +17,5 @@ router.get("/", function(req, res) {
     res.render("dashboard/dashboard");
 });
 
-router.get("/*", function(req, res) {res.redirect("/panel/dashboard")});
+router.all("/*", function(req, res) {res.redirect("/panel/dashboard")});
 module.exports = router;
