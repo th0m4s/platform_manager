@@ -52,21 +52,21 @@ function processCommand(connection, command, value, subs, waitingResp) {
         case "recv":
             let subject = value.subject;
             if(subs.hasOwnProperty(subject)) {
-                connection.write("stat:" + JSON.stringify({error: false, message: "received"}) + "\n");
+                connection.write("stat:" + JSON.stringify({error: false, message: "received " + subject}) + "\n");
 
                 subs[subject].forEach((cb) => {
                     cb(value.message, value.id);
                 })
-            } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown subject for client"}) + "\n");
+            } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown subject " + subject + " for client"}) + "\n");
             break;
         case "resp":
             let id = value.id;
             if(waitingResp.hasOwnProperty(id)) {
-                connection.write("stat:" + JSON.stringify({error: false, message: "received"}) + "\n");
+                connection.write("stat:" + JSON.stringify({error: false, message: "received response " + id}) + "\n");
 
                 waitingResp[id](value.message);
                 delete waitingResp[id];
-            } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown responseid for client"}) + "\n");
+            } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown responseid " + id + " for client"}) + "\n");
             break;
     }
 }
