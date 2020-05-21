@@ -106,5 +106,5 @@ router.get("/details/:projectname", function(req, res) {
     })
 });
 
-router.get("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/projects/list");});
+router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/projects/list");});
 module.exports = router;
