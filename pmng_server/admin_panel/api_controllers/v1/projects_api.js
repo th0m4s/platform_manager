@@ -180,68 +180,80 @@ router.post("/edit/:projectname", function(req, res) {
         projects_manager.canAccessProject(projectname, user.id, true).then(() => {
             projects_manager.getProject(projectname).then((originalproject) => {
                 let differences = JSON.parse(req.body.differences);
+                let needRestart = req.body.restart == "true", needStart = needRestart;
                 let promises = [];
     
-                if(differences.plugins.add.length > 0 || differences.plugins.remove.length > 0) {
-                    differences.plugins.add.forEach((item) => {
-                        originalproject.plugins[item] = plugins_manager.getDefaultConfig(item);
-                        promises.push(plugins_manager.install(item, projectname, originalproject.plugins[item]));
+                (needRestart ? docker_manager.isProjectContainerRunning(projectname).then((running) => {
+                    return running ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.reject();
+                    //                                                                          do not start container at the end because it would not be a restart
+                }).catch(() => {
+                    // could not stop project, will require a manual restart
+                    needStart = false; 
+                }) : Promise.resolve()).then(() => {
+                    if(differences.plugins.add.length > 0 || differences.plugins.remove.length > 0) {
+                        differences.plugins.add.forEach((item) => {
+                            originalproject.plugins[item] = plugins_manager.getDefaultConfig(item);
+                            promises.push(plugins_manager.install(item, projectname, originalproject.plugins[item]));
+                        });
+        
+                        differences.plugins.remove.forEach((item) => {
+                            promises.push(plugins_manager.uninstall(item, projectname, originalproject.plugins[item]));
+                            delete originalproject.plugins[item];
+                        });
+        
+                        promises.push(database_server.database("projects").where("name", projectname).update({plugins: originalproject.plugins}));
+                    }
+        
+                    if(differences.env.add.length > 0 || differences.env.remove.length > 0 || differences.env.modify.length > 0) {
+                        differences.env.add.forEach((item) => {
+                            originalproject.userenv[item.key] = item.value;
+                        });
+        
+                        differences.env.remove.forEach((item) => {
+                            delete originalproject.userenv[item];
+                        });
+        
+                        differences.env.modify.forEach((item) => {
+                            originalproject.userenv[item.key] = item.newvalue;
+                        });
+        
+                        promises.push(database_server.database("projects").where("name", projectname).update({userenv: originalproject.userenv}));
+                    }
+        
+                    differences.collabs.add.forEach((item) => {
+                        promises.push(projects_manager.addCollaborator(projectname, item, "view"));
                     });
-    
-                    differences.plugins.remove.forEach((item) => {
-                        promises.push(plugins_manager.uninstall(item, projectname, originalproject.plugins[item]));
-                        delete originalproject.plugins[item];
+        
+                    differences.collabs.remove.forEach((item) => {
+                        promises.push(database_server.findUserId(item).then((id) => {
+                            return database_server.database("collabs").where("projectname", projectname).andWhere("userid", id).delete();
+                        }));
                     });
-    
-                    promises.push(database_server.database("projects").where("name", projectname).update({plugins: originalproject.plugins}));
-                }
-    
-                if(differences.env.add.length > 0 || differences.env.remove.length > 0 || differences.env.modify.length > 0) {
-                    differences.env.add.forEach((item) => {
-                        originalproject.userenv[item.key] = item.value;
+        
+                    differences.domains.add.forEach((item) => {
+                        promises.push(projects_manager.addCustomDomain(projectname, item.domain, item.enablesub == true || item.enablesub == "true"));
                     });
-    
-                    differences.env.remove.forEach((item) => {
-                        delete originalproject.userenv[item];
+        
+                    differences.domains.remove.forEach((item) => {
+                        promises.push(database_server.database("domains").where("domain", item).delete());
                     });
-    
-                    differences.env.modify.forEach((item) => {
-                        originalproject.userenv[item.key] = item.newvalue;
+        
+                    differences.domains.modify.forEach((item) => {
+                        promises.push(database_server.database("domains").where("domain", item.domain).update({enablesub: (item.newstate == true || item.newstate == "true" ? "true" : "false")}));
                     });
-    
-                    promises.push(database_server.database("projects").where("name", projectname).update({userenv: originalproject.userenv}));
-                }
-    
-                differences.collabs.add.forEach((item) => {
-                    promises.push(projects_manager.addCollaborator(projectname, item, "view"));
-                });
-    
-                differences.collabs.remove.forEach((item) => {
-                    promises.push(database_server.findUserId(item).then((id) => {
-                        return database_server.database("collabs").where("projectname", projectname).andWhere("userid", id).delete();
-                    }));
-                });
-    
-                differences.domains.add.forEach((item) => {
-                    promises.push(projects_manager.addCustomDomain(projectname, item.domain, item.enablesub == true || item.enablesub == "true"));
-                });
-    
-                differences.domains.remove.forEach((item) => {
-                    promises.push(database_server.database("domains").where("domain", item).delete());
-                });
-    
-                differences.domains.modify.forEach((item) => {
-                    promises.push(database_server.database("domains").where("domain", item.domain).update({enablesub: (item.newstate == true || item.newstate == "true" ? "true" : "false")}));
-                });
-    
-                Promise.all(promises).then(() => {
-                    res.json({error: false, code: 200, message: "Project modified."});
-    
-                    projects_manager.invalidCachedDomain(projectname);
-                    projects_manager.invalidateCachedProject(projectname);
-                }).catch((err) => {
-                    res.status(500).json({error: true, code: 500, message: "Unable to modify project: " + err});
-                });
+        
+                    Promise.all(promises).then(() => {
+                        projects_manager.invalidCachedDomain(projectname);
+                        projects_manager.invalidateCachedProject(projectname);
+                        // invalidated cache required to start the project
+
+                        return needStart ? intercom.sendPromise("dockermng", {command: "startProject", project: projectname}) : Promise.resolve();
+                    }).then(() => {
+                        res.json({error: false, code: 200, message: "Project modified."});
+                    }).catch((err) => {
+                        res.status(500).json({error: true, code: 500, message: "Unable to modify project: " + err});
+                    });
+                })
             });
         }).catch((response) => {
             res.status(response.code).json(response);
