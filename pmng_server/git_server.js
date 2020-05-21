@@ -7,7 +7,6 @@ const database_server = require("./database_server");
 const logger = require("./platform_logger").logger();
 const auth = require("basic-auth");
 
-const isWindows = process.platform == "win32";
 const server = http.createServer(function (req, res) {
     let repo = req.url.split('/')[1].trim();
     if(repo.length == 0) return res.end();
@@ -33,16 +32,9 @@ const server = http.createServer(function (req, res) {
                     res.setHeader('content-type', service.type);
                     // console.log(service.action, repo, service.fields);
 
-                    let cmd = service.cmd, args = [];
-                    if(isWindows) {
-                        if(service.cmd == "git-receive-pack") {
-                            cmd = "git"; args.push("receive-pack");
-                        } else if(service.cmd == "git-upload-pack") {
-                            cmd = "git"; args.push("upload-pack");
-                        }
-                    }
+                    let cmd = service.cmd;
                     
-                    var ps = child_process.spawn(cmd, args.concat(service.args.concat(dir)));
+                    var ps = child_process.spawn(cmd, service.args.concat(dir));
                     ps.stdout.pipe(service.createStream()).pipe(ps.stdin);
                     
                 })).pipe(res);
