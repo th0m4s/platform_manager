@@ -170,7 +170,7 @@ function _getProjectBuild(project_name, save = false) {
 }; const getProjectBuild = runtime_cache(_getProjectBuild);
 
 function _getProjectStorage(project_name) {
-    return path.join(process.env.PLUGINS_PATH, "storages", project_name);
+    return path.join(process.env.PLUGINS_PATH, "storages", "mounts", project_name);
 }; const getProjectStorage = runtime_cache(_getProjectStorage);
 
 function listOwnedProjects(userId, after, limit) {

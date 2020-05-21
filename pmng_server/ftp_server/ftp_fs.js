@@ -4,7 +4,7 @@ const path = require("path");
 
 class FTPfs extends FileSystem {
     constructor(connection, user) {
-        super(connection, {root: path.join(process.env.PLUGINS_PATH, "storages"), cwd: "/"});
+        super(connection, {root: path.join(process.env.PLUGINS_PATH, "storages", "mounts"), cwd: "/"});
         this._user = user;
     }
 
@@ -22,7 +22,8 @@ class FTPfs extends FileSystem {
             
             let project = parts[1];
             return project_manager.canAccessProject(project, this._user.id, writeMode).then(() => {
-                return true;
+                return (parts.length < 3 || parts[2] != "lost+found");
+                // hide lost+found directory in project root (required for ext4 volume)
             }).catch(() => {
                 return false;
             });
@@ -64,9 +65,18 @@ class FTPfs extends FileSystem {
                     return rightsOk;
                 });
             } else {
-                let project = clientPath.split("/")[1];
+                let parts = clientPath.split("/");
+                let project = parts[1];
                 return project_manager.canAccessProject(project, this._user.id, false).then(() => {
-                    return paths;
+                    if(parts.length > 2 && parts[2].length > 0) return paths;
+                    else {
+                        let results = [];
+                        for(let file of paths) {
+                            if(file.name !== "lost+found") results.push(file);
+                        }
+
+                        return results;
+                    }
                 }).catch(() => {
                     throw new ftpErrors.FileSystemError("Unauthorized access");
                 });
