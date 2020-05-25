@@ -583,8 +583,35 @@ function getRunningContainers() {
     });
 }
 
-function getContainerDetails(isName, value) {
+function getContainerDetails(value) {
     // value is name or id
+
+    // inspect api route is renamed status
+    // if value is name, it will be given to the inspect route that will correctly identify it
+    // but the resulting container will have its name in the container.id field (see container.data.Id for correct id)
+    return docker.container.get(value).status().then((container) => {
+        let data = container.data, networks = [];
+        for(let [name, network] of Object.entries(data.NetworkSettings.Networks)) {
+            networks.push({
+                name: name,
+                networkId: network.NetworkID,
+                aliases: network.Aliases || [],
+                ipAddress: network.IPAddress,
+                gateway: network.Gateway,
+                macAddress: network.MacAddress
+            });
+        }
+
+        return {
+            containerId: data.Id, // full id
+            name: data.Name.slice(1),
+            createdAt: data.Created,
+            startedAt: data.State.StartedAt,
+            image: data.Config.Image,
+            labels: data.Config.Labels,
+            networks: networks
+        }
+    });
 }
 
 
