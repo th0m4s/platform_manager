@@ -18,17 +18,11 @@ router.get("/list", (req, res) => {
     res.render("docker/list");
 });
 
-router.get("/details/:type/:nameorid", (req, res) => {
-    let type = req.params.type, nameOrId = req.params.nameorid;
-    if(type != "name" && type != "id") {
-        req.flash("warn", "Incorrect Docker identification type.");
-        res.redirect("/panel/docker/list");
-    } else {
-        res.locals.type = type;
-        res.locals.value = nameOrId;
-        req.setPage(res, "Details of container", "docker", "details");
-        res.render("docker/details");
-    }
+router.get("/details/:nameorid", (req, res) => {
+    let nameOrId = req.params.nameorid;
+    res.locals.value = nameOrId;
+    req.setPage(res, "Details of container", "docker", "details");
+    res.render("docker/details");
 });
 
 
