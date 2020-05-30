@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const logger_tools = require("./pmng_server/platform_logger");
 const child_process = require('child_process');
 
