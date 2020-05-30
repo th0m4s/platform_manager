@@ -4,7 +4,7 @@ function init() {
     refreshContainers();
 }
 
-let fetchError = false, loadHidden = false;;
+let fetchError = false, loadHidden = false;
 function refreshContainers() {
     $.getJSON("/api/v1/docker/running").fail((xhr, status, error) => {
         if(!fetchError) {
@@ -93,7 +93,7 @@ function _getOtherKindDisplay(kind) {
 }
 
 function showContainerDetails(containerName) {
-    window.location.href = "details/name/" + containerName;
+    window.location.href = "details/" + containerName;
 }
 
 
