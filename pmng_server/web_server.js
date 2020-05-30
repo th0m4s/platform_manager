@@ -95,7 +95,7 @@ function registerPortInfo() {
 }
 
 async function webServe(req, res) {
-    let to = net.createConnection({host: "localhost", port: await getPort(req.headers.host.trimLeft())});
+    let to = net.createConnection({host: "localhost", port: await getPort(req.headers.host.trimLeft().split(":")[0])});
     to.on("data", (data) => {
         req.socket.write(data);
     });
