@@ -614,10 +614,27 @@ function getContainerDetails(value) {
     });
 }
 
+function listNetworks() {
+    // only list names and ids
+    return docker.network.list().then((networks) => {
+        let results = [];
+        for(let network of networks) {
+            let nData = network.data;
+
+            results.push({
+                networkId: nData.Id,
+                name: nData.Name,
+            });
+        }
+        return results;
+    });
+}
+
 
 module.exports.docker = docker;
 module.exports.isProjectContainerRunning = isProjectContainerRunning;
 module.exports.areProjectContainersRunning = areProjectContainersRunning;
 module.exports.getRunningContainers = getRunningContainers;
 module.exports.getContainerDetails = getContainerDetails;
+module.exports.listNetworks = listNetworks;
 module.exports.maininstance = maininstance;

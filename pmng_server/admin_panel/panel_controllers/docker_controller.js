@@ -13,18 +13,23 @@ router.all("*", async function(req, res, next) {
     } else next();
 });
 
-router.get("/list", (req, res) => {
-    req.setPage(res, "List of docker container", "docker", "list");
-    res.render("docker/list");
+router.get("/containers/list", (req, res) => {
+    req.setPage(res, "List of docker containers", "docker", "containers");
+    res.render("docker/containers/list");
 });
 
-router.get("/details/:nameorid", (req, res) => {
+router.get("/containers/details/:nameorid", (req, res) => {
     let nameOrId = req.params.nameorid;
     res.locals.value = nameOrId;
-    req.setPage(res, "Details of container", "docker", "details");
-    res.render("docker/details");
+    req.setPage(res, "Details of container", "docker", "containers_details");
+    res.render("docker/containers/details");
+});
+
+router.get("/networks/list", (req, res) => {
+    req.setPage(res, "List of docker networks", "docker", "networks");
+    res.render("docker/networks/list");
 });
 
 
-router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/docker/list");});
+router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/docker/containers/list");});
 module.exports = router;
