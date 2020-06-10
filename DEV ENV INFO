@@ -10,3 +10,16 @@ ip addr | grep eth0
 
 
 DONT FORGET TO GET /etc/init.d/pmng AND /etc/logrotate.d/pmng FOR PRODUCTION
+
+
+
+MODIFIED FOR GRANVILLE:
+http public port was set to 1042
+ports.ps1 in Programmation/Docker set rules
+ports opened on freeboxos
+
+PERMS:
+1  admin
+9  system
+20 docker
+99 user
