@@ -104,6 +104,14 @@ async function upgradeRequest(req, socket, head) {
     httpProxyServer.ws(req, socket, head, {target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
 }
 
+httpProxyServer.on("error", function (err, req, res) {
+    res.writeHead(500, {
+        "Content-Type": "text/plain"
+    });
+  
+    res.end("Connection to the project was closed or impossible to open: " + err);
+});
+
 module.exports.start = start;
 module.exports.webServe = webServe;
 module.exports.registerPortInfo = registerPortInfo;
