@@ -294,14 +294,4 @@ function restartProject(projectname) {
     }
 }
 
-
-module.exports.init = init;
-module.exports.requestLimit = requestLimit;
-module.exports.requestOwned = requestOwned;
-module.exports.requestCollab = requestCollab;
-module.exports.editProject = editProject;
-module.exports.deleteProject = deleteProject;
-module.exports.confirmDelete = confirmDelete;
-module.exports.updateState = updateState;
-module.exports.restartProject = restartProject;
-module.exports.details = details;
+window.projects_list = {init, requestLimit, requestOwned, requestCollab, editProject, deleteProject, confirmDelete, updateState, restartProject, details};

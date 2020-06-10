@@ -539,10 +539,4 @@ function confirmSave() {
     });
 }
 
-
-module.exports.init = init;
-module.exports.addEnv = addEnv;
-module.exports.addDomain = addDomain;
-module.exports.deleteRow = deleteRow;
-module.exports.confirm = confirm;
-module.exports.confirmSave = confirmSave;
+window.project_manage = {init, addEnv, addDomain, deleteRow, confirm, confirmSave};

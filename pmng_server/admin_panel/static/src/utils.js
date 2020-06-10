@@ -64,13 +64,4 @@ function showCookieNotifications() {
     Cookies.remove("notifications");
 }
 
-
-module.exports.disableButton = disableButton;
-module.exports.showInfiniteLoading = showInfiniteLoading;
-module.exports.hideLoading = hideLoading;
-module.exports.generateAlert = generateAlert;
-module.exports.enableButton = enableButton;
-module.exports.updateTagsInputWidth = updateTagsInputWidth;
-module.exports.addNotification = addNotification;
-module.exports.showCookieNotifications = showCookieNotifications;
-module.exports.updateTagsInputWidth = updateTagsInputWidth;
+window.utils = {disableButton, showInfiniteLoading, hideLoading, generateAlert, enableButton, updateTagsInputWidth, addNotification, showCookieNotifications, updateTagsInputWidth};

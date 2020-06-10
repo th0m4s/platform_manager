@@ -71,12 +71,11 @@ router.get("*", function(req, res, next) {
     }
 
     res.locals.hasAccess = function(access) {
-        let perms = this.user.scope.split(",");
-        return perms.includes("admin") || perms.includes(access);
+        return database_server.checkScope(this.user.scope, access);
     }
 
     res.locals.startPageScript = function(script) {
-        return "<script>$(document).ready(() => {" + script + ".init()});</script>";
+        return "<script>$(document).ready(() => {loadAndInit(\"" + script + "\");});</script>";
     }
 
     res.locals.isEdit = function() {

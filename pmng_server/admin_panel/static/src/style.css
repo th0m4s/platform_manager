@@ -17,3 +17,8 @@
 .bootstrap-tagsinput .badge {
     margin-right: 3px;
 }
+
+.docker-link, .docker-link:hover, .docker-link:visited {
+    color: inherit;
+    text-decoration: none;
+}

@@ -208,8 +208,4 @@ function confirmDelete() {
     }
 }
 
-module.exports.init = init;
-module.exports.invertCollabMode = invertCollabMode;
-module.exports.removeCollab = removeCollab;
-module.exports.removeDomain = removeDomain;
-module.exports.confirmDelete = confirmDelete;
+window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete};

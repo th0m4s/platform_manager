@@ -5,6 +5,7 @@ const regex_utils = require("./regex_utils");
 const database_server = require("./database_server");
 const privileges = require("./privileges");
 const intercom = require("./intercom/intercom_client").connect();
+const runtime_cache_delay = 10000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 const countPublic = enable_https ? 2 : 1, runningPublic = [];
@@ -46,7 +47,7 @@ function start() {
 // projects start at 11000
 const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort}; // ftp is bound to error port when using http
 let isInstalled = false;
-async function getPort(host) {
+async function _getPort(host) {
     let special = regex_utils.testSpecial(host);
     if(special !== null) return special_ports[special];
     
@@ -68,7 +69,7 @@ async function getPort(host) {
     }
 
     return errorPort;
-}
+}; const getPort = runtime_cache(_getPort);
 
 function getTextHeaders(headers) {
     let resp = "";
@@ -95,7 +96,7 @@ function registerPortInfo() {
 }
 
 async function webServe(req, res) {
-    let to = net.createConnection({host: "localhost", port: await getPort(req.headers.host.trimLeft().split(":")[0])});
+    let to = net.createConnection({host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])});
     to.on("data", (data) => {
         req.socket.write(data);
     });

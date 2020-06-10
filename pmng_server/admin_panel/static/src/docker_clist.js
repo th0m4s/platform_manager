@@ -6,7 +6,7 @@ function init() {
 
 let fetchError = false, loadHidden = false;
 function refreshContainers() {
-    $.getJSON("/api/v1/docker/running").fail((xhr, status, error) => {
+    $.getJSON("/api/v1/docker/containers/running").fail((xhr, status, error) => {
         if(!fetchError) {
             $.notify({message: `Unable to list containers because of a server error.`}, {type: "danger"});
             fetchError = true;
@@ -36,8 +36,8 @@ function refreshContainers() {
                 let list = $("#projects-list").html("");
                 for(let container of containers.projects) {
                     let content = `<li class="list-group-item" id="line-project-${container.name}">`
-                        + `<b>Project ${container.projectname} : </b> Running in container <i>${container.name}</i> (id ${container.id})`
-                        + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_list.showContainerDetails('${container.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
+                        + `<b>Project ${container.projectname} : </b> Running in container <i>${getCDetailsLink(container.name)}</i> (id ${getCDetailsLink(container.id)})`
+                        + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_clist.showContainerDetails('${container.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
 
                     list.append(content);
                 }
@@ -52,8 +52,9 @@ function refreshContainers() {
                 let list = $("#platform-list").html("");
                 for(let container of containers.platform) {
                     let content = `<li class="list-group-item" id="line-platform-${container.name}">`
-                        + `<b>${_getPlatfomrKindDisplay(container.kind) + " " + (container.pluginname || "<i>Unknown</i>") + (container.kind == "plugin" ? ` (for project <i>${container.projectname}</i>)` : "")} : </b> Running in container <i>${container.name}</i> (id ${container.id})`
-                        + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_list.showContainerDetails('${container.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
+                        + `<b>${_getPlatfomrKindDisplay(container.kind) + " " + (container.pluginname || "<i>Unknown</i>") + (container.kind == "plugin" ? ` (for project <i>${container.projectname}</i>)` : "")} : </b> Running in container <i>${getCDetailsLink(container.name)}</i> (id ${getCDetailsLink(container.id)})`
+                        + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_c
+                        list.showContainerDetails('${container.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
 
                     list.append(content);
                 }
@@ -68,8 +69,8 @@ function refreshContainers() {
                 let list = $("#others-list").html("");
                 for(let container of containers.others) {
                     let content = `<li class="list-group-item" id="line-others-${container.name}">`
-                        + `<b>${_getOtherKindDisplay(container.kind) + " <i>" + container.name}</i> : </b> Based on image <i>${container.image}</i> (id ${container.id})`
-                        + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_list.showContainerDetails('${container.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
+                        + `<b>${_getOtherKindDisplay(container.kind) + " <i>" + getCDetailsLink(container.name)}</i> : </b> Based on image <i>${container.image}</i> (id ${getCDetailsLink(container.id)})`
+                        + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_clist.showContainerDetails('${container.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
 
                     list.append(content);
                 }
@@ -96,6 +97,8 @@ function showContainerDetails(containerName) {
     window.location.href = "details/" + containerName;
 }
 
+function getCDetailsLink(value) {
+    return `<a href="details/${value}" class="docker-link">${value}</a>`;
+}
 
-module.exports.init = init;
-module.exports.showContainerDetails = showContainerDetails;
+window.docker_clist = {init, showContainerDetails};

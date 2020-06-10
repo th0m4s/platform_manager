@@ -11,6 +11,7 @@ const runtime_cache_delay = 30000, runtime_cache = require("runtime-caching").ca
 const STORAGE_SIZE = 10737418240; // 10GB
 
 function startGlobalPlugin(plugindirectory) {
+    // TODO: check is baseDir could be replaced by plugindirectory
     let baseDir = path.join(process.env.PLUGINS_PATH, "storages");
     return pfs.readdir(path.join(baseDir, "disks")).then((files) => {
         let existingDisks = [];

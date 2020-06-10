@@ -1,0 +1,38 @@
+<html>
+    <head>
+        <%- include("../../default/head.ejs") %>
+    </head>
+    <body>
+        <%- include("../../default/flash.ejs") %>
+        <%- include("../../default/api.ejs") %>
+        <%- startPageScript("docker_cdetails") %>
+        <script>
+        window.nameOrId = "<%- value %>";
+        </script>
+        
+        <header>
+            <%- include("../../default/header.ejs") %>
+        </header>
+        <div class="container-fluid">
+            <div class="row mt-3 mx-3" id="details-row">
+                <div class="w-100">
+                    <h3 class="d-inline">Container details:</h3><h5 class="d-inline ml-md-2">(from reference <i><%- value %>)</i></h5>
+                    <a href="../list" class="my-1 btn btn-sm btn-secondary float-right"><i class="fas fa-arrow-left"></i> Back</a>
+                    <div id="status-msg">Loading details...</div>
+
+                    <div class="card w-100 mt-1 mb-3" style="display: none;" id="details-card">
+                        <ul class="list-group list-group-flush" id="details-list">
+                            <li class="list-group-item"><b>Container name: </b><span id="info-name"></span></li>
+                            <li class="list-group-item"><b>Container id: </b><span id="info-id"></span></li>
+                            <li class="list-group-item"><b>Created at: </b><span id="info-created"></span> (<span id="moment-created"></span>)</li>
+                            <li class="list-group-item"><b>Started at: </b><span id="info-started"></span> (<span id="moment-started"></span>)</li>
+                            <li class="list-group-item"><b>Based on image: </b><span id="info-image"></span></li>
+                            <li class="list-group-item"><b>Container labels: </b><br/><ul id="info-labels"></ul></li>
+                            <li class="list-group-item"><b>Connected networks: </b><br/><div class="card w-100"><ul class="list-group list-group-flush" id="info-networks"></ul></div></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

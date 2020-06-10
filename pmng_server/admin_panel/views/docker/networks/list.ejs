@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <%- include("../../default/head.ejs") %>
+    </head>
+    <body>
+        <%- include("../../default/flash.ejs") %>
+        <%- include("../../default/api.ejs") %>
+        <%- startPageScript("docker_nlist") %>
+        
+        <header>
+            <%- include("../../default/header.ejs") %>
+        </header>
+        <div class="container-fluid">
+            <div class="row mt-3 mx-3" id="details-row">
+                <div class="w-100">
+                    <h3 class="d-inline">List of docker networks:</h3>
+                </div>
+            </div>
+            <div class="row mt-3 mx-3" id="networks-row">
+                <p class="w-100 status-msg" id="networks-status">Loading...</p>
+                <div class="card w-100 mt-1" style="display: none;" id="networks-card">
+                    <ul class="list-group list-group-flush" id="networks-list">
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
