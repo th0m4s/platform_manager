@@ -6,6 +6,7 @@ const database_server = require("./database_server");
 const privileges = require("./privileges");
 const intercom = require("./intercom/intercom_client").connect();
 const runtime_cache_delay = 10000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
+const httpProxyServer = require("http-proxy").createProxyServer();
 
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 const countPublic = enable_https ? 2 : 1, runningPublic = [];
@@ -96,18 +97,14 @@ function registerPortInfo() {
 }
 
 async function webServe(req, res) {
-    let to = net.createConnection({host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])});
-    to.on("data", (data) => {
-        req.socket.write(data);
-    });
-    to.write(req.method + " " + req.url + " HTTP/" + req.httpVersion + "\r\n");
-    to.write(getTextHeaders(req.headers));
-    req.on("data", (data) => {
-        to.write(data);
-    }); // .pipe() doesn't work ....
-    to.setKeepAlive(true);
+    httpProxyServer.web(req, res, {target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
+}
+
+async function upgradeRequest(req, socket, head) {
+    httpProxyServer.ws(req, socket, head, {target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
 }
 
 module.exports.start = start;
 module.exports.webServe = webServe;
 module.exports.registerPortInfo = registerPortInfo;
+module.exports.upgradeRequest = upgradeRequest;

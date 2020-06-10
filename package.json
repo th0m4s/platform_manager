@@ -31,6 +31,7 @@
     "git-http-backend": "^1.0.2",
     "greenlock": "^4.0.4",
     "greenlock-store-fs": "^3.2.2",
+    "http-proxy": "^1.18.1",
     "knex": "^0.20.13",
     "knex-mariadb": "^2.0.0",
     "mariadb": "^2.3.1",
