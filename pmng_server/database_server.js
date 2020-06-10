@@ -54,8 +54,9 @@ function installDatabase() {
             users.increments("id").primary().index();
             users.text("name").unique();
             users.text("fullname");
+            users.text("email");
             users.text("password");
-            users.text("scope");
+            users.integer("scope");
         }).then(() => {
             return true;
         }), knex.schema.createTable("keys", (keys) => {
@@ -106,7 +107,7 @@ function hasDatabase() {
 }
 
 function hasAdminUser() {
-    return knex("users").select("*").where("scope", "admin").count("id AS cnt").then((total) => {
+    return knex("users").select("*").where("scope", 1).count("id AS cnt").then((total) => {
         return total[0].cnt > 0;
     });
 }
@@ -120,9 +121,9 @@ function isInstalled() {
     }).catch(() => {return false; });
 }
 
-function addUser(name, fullname, password, scope) {
+function addUser(name, fullname, password, email, scope) {
     return hashPassword(password).then((hash) => {
-        return knex("users").insert({name: name, fullname: fullname, password: hash, scope: scope});
+        return knex("users").insert({name: name, fullname: fullname, password: hash, email: email, scope: scope});
     });
 }
 
@@ -158,6 +159,12 @@ function _findUserId(username) {
     });
 } const findUserId = runtime_cache(_findUserId);
 
+const SCOPES = {ADMIN: 1, SYSTEM: 9, DOCKER: 20, USER: 99};
+function checkScope(userScopeId, requestedScope) {
+    requestedScope = requestedScope.toUpperCase();
+    return SCOPES.hasOwnProperty(requestedScope) && userScopeId <= SCOPES[requestedScope];
+}
+
 module.exports.database = knex;
 module.exports.findUserByName = findUserByName;
 module.exports.findUserById = findUserById;
@@ -172,3 +179,4 @@ module.exports.hashPassword = hashPassword;
 module.exports.comparePassword = comparePassword;
 module.exports.generateKey = generateKey;
 module.exports.revokeKey = revokeKey;
+module.exports.checkScope = checkScope;
