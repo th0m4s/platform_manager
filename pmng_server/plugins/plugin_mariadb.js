@@ -124,7 +124,10 @@ function projectContainerCreated(projectname, containerconfig, networkname, plug
     return docker_manager.docker.network.list({filters: {name: [networkname]}}).then((networks) => {
         if(networks.length == 1) {
             return networks[0].connect({
-                Container: PLUGIN_CONTAINER_NAME
+                Container: PLUGIN_CONTAINER_NAME,
+                EndpointConfig: {
+                    Aliases: ["mariadb"]
+                }
             });
         }
     });
