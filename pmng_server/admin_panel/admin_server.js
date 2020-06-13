@@ -32,8 +32,7 @@ function start() {
         logger.info("Admin server started.");
     });
 
-    // WIP-GREENLOCK
-    //greenlock_manager.init();
+    if(process.env.ENABLE_HTTPS.toLowerCase() == "true") greenlock_manager.init();
 }
 
 start();
