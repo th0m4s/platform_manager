@@ -1,5 +1,10 @@
 const Greenlock = require("greenlock");
 const path = require("path");
+const intercom = require("../intercom/intercom_client").connect();
+const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
+const tls = require("tls");
+const pfs = require("fs").promises;
+
 let greenlock = null;
 
 function init() {
@@ -17,10 +22,22 @@ function init() {
     });
 
     let localDomain = process.env.ROOT_DOMAIN;
+    add(localDomain);
 
+    intercom.subscribe(["greenlock"], (message, id) => {
+        let command = message.command, domain = message.domain;
+        switch(command) {
+            case "addCustom":
+                add(domain);
+                break;
+        }
+    });
+}
+
+function add(domain) {
     greenlock.add({
-        subject: localDomain,
-        altnames: [localDomain, "*." + localDomain],
+        subject: domain,
+        altnames: [domain, "*." + domain],
         subscriberEmail: process.env.WEBMASTER_MAIL,
         agreeToTerms: true,
         challenges: {
@@ -35,5 +52,18 @@ function init() {
     });
 }
 
+function _getSecureContext(serverFile, onlyOptions = false) {
+    return pfs.readFile(path.join(__dirname, "..", "./https/greenlock.d/live/" + serverFile + "/fullchain.pem")).then((cert) => {
+        return pfs.readFile(path.join(__dirname, "..", "./https/greenlock.d/live/" + serverFile + "/privkey.pem")).then((key) => {
+            let options = {
+                key: key,
+                cert: cert
+            };
+
+            return onlyOptions ? options : tls.createSecureContext(options);
+        });
+    });
+}; const getSecureContext = runtime_cache(_getSecureContext);
 
 module.exports.init = init;
+module.exports.getSecureContext = getSecureContext;
