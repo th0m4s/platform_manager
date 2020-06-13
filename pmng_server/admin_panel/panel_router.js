@@ -4,6 +4,7 @@ const database_server = require("../database_server");
 const session = require("express-session");
 const KnexSessionStore = require("connect-session-knex")(session);
 const flash = require('express-flash-messages');
+const string_utils = require("../string_utils");
 
 const store = new KnexSessionStore({
     knex: database_server.database,
@@ -64,6 +65,11 @@ router.get("*", function(req, res, next) {
     req.setPage = function(r, title, active, sub) { r.locals.page = {title: title, active: active || "none", sub: sub || "none"}; }
     res.locals.site = {title: "Platform Manager"};
     res.locals.user = req.user;
+    let alphabet = "abcdefghijklmopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    res.locals.randomNames = [
+        string_utils.generatePassword(6, 12, alphabet),
+        string_utils.generatePassword(6, 12, alphabet)
+    ];
     
     res.locals.isActive = function(page, sub) {
         sub = sub || "*";
