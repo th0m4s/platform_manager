@@ -84,6 +84,7 @@ function checkCustomDomain(custom_domain, useSub) {
 }
 
 function addCustomDomain(projectname, custom_domain, enablesub) {
+    intercom.send("greenlock", {command: "addCustom", domain: custom_domain}) // if https not enabled, no greenlock callback will be executed
     return database_server.database("domains").insert({domain: custom_domain, projectname: projectname, enablesub: enablesub ? "true" : "false"});
 }
 
