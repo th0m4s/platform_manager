@@ -7,6 +7,9 @@ const privileges = require("./privileges");
 const intercom = require("./intercom/intercom_client").connect();
 const runtime_cache_delay = 10000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const httpProxyServer = require("http-proxy").createProxyServer();
+const pfs = require("fs").promises;
+const path = require("path");
+const { error } = require("jquery");
 
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 const countPublic = enable_https ? 2 : 1, runningPublic = [];
@@ -44,13 +47,34 @@ function start() {
     child_process.fork("./pmng_server/error_panel/error_server");
 }
 
+async function prepareSocketError() {
+    let style = (await pfs.readFile(path.join(__dirname, "./error_panel/static/style.css"))).toString();
+    errorPageCache = (await pfs.readFile(path.join(__dirname, "./error_panel/static/socket_error.html"))).toString();
+    errorPageCache = errorPageCache.replace("style_cache", style);
+}
+
 // 8042 is for local server, 8043 for intercom
 // projects start at 11000
 const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort}; // ftp is bound to error port when using http
 let isInstalled = false;
 async function _getPort(host) {
-    let special = regex_utils.testSpecial(host);
-    if(special !== null) return special_ports[special];
+    host = host.toLowerCase();
+
+    let isDefault = false;
+    if(host == process.env.ROOT_DOMAIN) isDefault = true;
+
+    if(!isDefault) {
+        let special = regex_utils.testSpecial(host);
+        if(special !== null) {
+            if(special == "www") isDefault = true;
+            else return special_ports[special];
+        }
+    }
+
+    if(isDefault) {
+        if(portMappings.hasOwnProperty("default")) return portMappings["defaults"];
+        else return errorPort;
+    }
     
     if(isInstalled !== true) {
         isInstalled = await database_server.isInstalled();
@@ -72,11 +96,11 @@ async function _getPort(host) {
     return errorPort;
 }; const getPort = runtime_cache(_getPort);
 
-function getTextHeaders(headers) {
+/*function getTextHeaders(headers) {
     let resp = "";
     for(let [key, value] of Object.entries(headers)) { resp += key + ": " + value + "\r\n"; }
     return resp + "\r\n";
-}
+}*/
 
 let portMappings = {};
 // called by each process using portMappings
@@ -94,6 +118,8 @@ function registerPortInfo() {
                 break;
         }
     });
+
+    prepareSocketError();
 }
 
 async function webServe(req, res) {
@@ -104,12 +130,14 @@ async function upgradeRequest(req, socket, head) {
     httpProxyServer.ws(req, socket, head, {target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
 }
 
+let errorPageCache = "";
 httpProxyServer.on("error", function (err, req, res) {
-    res.writeHead(500, {
-        "Content-Type": "text/plain"
+    res.writeHead(200, {
+        "Content-Type": "text/html"
     });
-  
-    res.end("Connection to the project was closed or impossible to open: " + err);
+
+    if(errorPageCache == "") res.end("Could not connect to server: " + err);
+    else res.end(errorPageCache.replace("error_message", err));
 });
 
 module.exports.start = start;
