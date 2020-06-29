@@ -41,10 +41,10 @@ async function build(projectname, deployFolder, logger) {
 
     let cmd = "";
     if(npm) {
-        logger("Installing node modules from npm...");
+        logger("Installing node modules from npm (please wait)...");
         cmd = "npm install --production";
     } else {
-        logger("Installing node modules from yarn...");
+        logger("Installing node modules from yarn (please wait)...");
         cmd = "yarn install --production --frozen-lockfile";
     }
 
