@@ -74,7 +74,7 @@ async function startGlobalPlugin(plugindirectory, globalconfig, setconfig) {
         }
     });
 
-    intercom.subscribe(["plugin_mariadb"], async (message, id) => {
+    intercom.subscribe(["plugin_mariadb"], async (message, respond) => {
         let projectname = message.project || "", projectconfig = message.projectconfig || "";
         switch(message.command) {
             case "project_installPlugin": 
@@ -82,13 +82,13 @@ async function startGlobalPlugin(plugindirectory, globalconfig, setconfig) {
                 await knex.raw("CREATE DATABASE `db_" + projectname + "`;");
                 await knex.raw("GRANT ALL PRIVILEGES ON `db_" + projectname + "`.* TO 'dbu_" + projectname + "'@'%';");
                 await knex.raw("FLUSH PRIVILEGES;");
-                intercom.respond(id, {error: false, message: "Plugin installed."});
+                respond({error: false, message: "Plugin installed."});
                 break;
             case "project_uninstallPlugin": 
                 await knex.raw("DROP USER 'dbu_" + projectname + "';");
                 await knex.raw("DROP DATABASE `db_" + projectname + "`;");
                 await knex.raw("FLUSH PRIVILEGES;");
-                intercom.respond(id, {error: false, message: "Plugin uninstalled."});
+                respond({error: false, message: "Plugin uninstalled."});
                 break;
             case "databasesSizes":
                 knex.raw('SELECT table_schema "db", SUM(data_length + index_length) "bytes_size" FROM information_schema.tables GROUP BY table_schema;').then((result) => {
@@ -97,7 +97,7 @@ async function startGlobalPlugin(plugindirectory, globalconfig, setconfig) {
                         sizes[db.db] = db.bytes_size;
                     }
 
-                    intercom.respond(id, sizes);
+                    respond(sizes);
                 });
                 break;
         }

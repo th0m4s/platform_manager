@@ -120,21 +120,21 @@ async function maininstance() {
         });
     });
 
-    intercom.subscribe(["dockermng"], (message, id) => {
+    intercom.subscribe(["dockermng"], (message, respond) => {
         let projectname = message.project || ""; // some commands don't need project
         switch(message.command) {
             case "stopProject":
                 stopProject(projectname).then(() => {
-                    intercom.respond(id, {error: false, message: "Project stopped."});
+                    respond({error: false, message: "Project stopped."});
                 }).catch((error) => {
-                    intercom.respond(id, {error: true, message: "Cannot stop project: " + error});
+                    respond({error: true, message: "Cannot stop project: " + error});
                 });
                 break;
             case "startProject":
                 startProject(projectname).then(() => {
-                    clearStarting(projectname).then(() => intercom.respond(id, {error: false, message: "Project started."}));
+                    clearStarting(projectname).then(() => respond({error: false, message: "Project started."}));
                 }).catch((error) => {
-                    clearStarting(projectname).then(() => intercom.respond(id, {error: true, message: "Cannot start project " + projectname + ": " + error}));
+                    clearStarting(projectname).then(() => respond({error: true, message: "Cannot start project " + projectname + ": " + error}));
                 });
                 break;
             case "analyzeRunning":

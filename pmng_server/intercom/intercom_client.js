@@ -39,10 +39,10 @@ function connect() {
                     else return resolve(response.message || response);
                 });
             });
-        },
+        }/*,
         respond: function(id, message) {
             connection.write("resp:" + JSON.stringify({id: id, message: message}) + "\n");
-        }
+        }*/
     }
 }
 
@@ -55,7 +55,9 @@ function processCommand(connection, command, value, subs, waitingResp) {
                 connection.write("stat:" + JSON.stringify({error: false, message: "received " + subject}) + "\n");
 
                 subs[subject].forEach((cb) => {
-                    cb(value.message, value.id);
+                    cb(value.message, (response) => {
+                        connection.write("resp:" + JSON.stringify({id: value.id, message: response}) + "\n");
+                    });
                 })
             } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown subject " + subject + " for client"}) + "\n");
             break;
