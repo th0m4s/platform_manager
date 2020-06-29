@@ -1,46 +1,46 @@
 function init() {
-    utils.showInfiniteLoading("Loading container details..."),
+    utils.showInfiniteLoading("Loading network details..."),
     window.refreshInterval = setInterval(refreshDetails, 10*1000);
     refreshDetails();
 }
 
-let fetchError = false, loadHidden = false, lastContainerFailed = false;
-let lastCreated = null, lastStarted = null, createdInterval = -1, startedInterval = -1;
+let fetchError = false, loadHidden = false, lastNetworkFailed = false;
+let lastCreated = null, createdInterval = -1;
 function refreshDetails() {
-    $.getJSON("/api/v1/docker/containers/details/" + window.reference).fail((xhr, status, error) => {
+    $.getJSON("/api/v1/docker/networks/details/" + window.reference).fail((xhr, status, error) => {
         if(!fetchError) {
-            $.notify({message: `Unable to refresh container details because of a server error.`}, {type: "danger"});
+            $.notify({message: `Unable to refresh network details because of a server error.`}, {type: "danger"});
             fetchError = true;
             if(xhr.status != 404) clearInterval(window.refreshInterval);
         }
 
         if(xhr.status == 404) {
-            if(lastContainerFailed) {
+            if(lastNetworkFailed) {
                 setTimeout(() => {
                     window.location.href = "../list";
                 }, 3000);
-                $.notify({message: `Multiple consecutive refresh failures. This container doesn't exist anymore.`}, {type: "danger"});
-            } else lastContainerFailed = true;
+                $.notify({message: `Multiple consecutive refresh failures. This network doesn't exist anymore.`}, {type: "danger"});
+            } else lastNetworkFailed = true;
         }
 
         console.warn(error);
     }).done((response) => {
         if(response.error) {
             if(!fetchError) {
-                $.notify({message: `Unable to refresh container details because of an application error.`}, {type: "danger"});
+                $.notify({message: `Unable to refresh network details because of an application error.`}, {type: "danger"});
                 fetchError = true;
             }
 
             console.warn(response.code, response.message);
         } else {
-            lastContainerFailed = false;
+            lastNetworkFailed = false;
 
             let details = response.details;
 
-            $("#info-name").html(getDetailsLink(details.name, "containers"));
-            $("#info-id").html(getDetailsLink(details.containerId, "containers"));
+            $("#info-name").html(getDetailsLink(details.name, "networks"));
+            $("#info-id").html(getDetailsLink(details.networkId, "networks"));
             
-            $("#info-image").html(details.image);
+            $("#info-driver").html(details.driver);
 
             let created = moment(details.createdAt);
             if(lastCreated == null || lastCreated.unix() !== created.unix()) {
@@ -51,17 +51,6 @@ function refreshDetails() {
                     updateCreated();
 
                     $("#info-created").html(created.format("LLL"));
-            }
-            
-            let started = moment(details.startedAt);
-            if(lastStarted == null || lastStarted.unix() !== started.unix()) {
-                    lastStarted = started;
-
-                    if(startedInterval > 0) clearInterval(startedInterval);
-                    startedInterval = setInterval(updateStarted, 1000);
-                    updateStarted();
-
-                    $("#info-started").html(started.format("LLL"));
             }
 
             if (!loadHidden) {
@@ -75,9 +64,9 @@ function refreshDetails() {
                 labelsList.append(`<li>${name}: ${value}</li>`);
             }
 
-            let networksList = $("#info-networks").html("");
-            for(let network of details.networks) {
-                networksList.append(`<li class="list-group-item"><i>Name (Id):</i> ${getDetailsLink(network.name, "networks")} (${getDetailsLink(network.networkId, "networks")})<br/><i>IP address:</i> ${network.ipAddress} (gateway ${network.gateway})<br/><i>MAC address:</i> ${network.macAddress}<br/>${network.aliases.length > 0 ? "<i>Aliases:</i> " + network.aliases.join(", ") : ""}</li>`);
+            let containersList = $("#info-containers").html("");
+            for(let container of details.containers) {
+                containersList.append(`<li class="list-group-item"><i>Name (Id):</i> ${getDetailsLink(container.name, "containers")} (${getDetailsLink(container.id, "containers")})<br/><i>IP address:</i> ${container.ipAddress.split("/")[0]}<br/><i>MAC address:</i> ${container.macAddress}</li>`);
             }
 
         }
@@ -108,4 +97,4 @@ function getDetailsLink(value, part) {
     return `<a class="docker-link" href="../../${part}/details/${value}">${value}</a>`;
 }
 
-window.docker_cdetails = {init};
+window.docker_ndetails = {init};

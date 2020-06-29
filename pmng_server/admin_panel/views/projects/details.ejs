@@ -6,7 +6,7 @@
         <%- include("../default/flash.ejs") %>
         <%- include("../default/api.ejs") %>
         <script>
-        window.project = JSON.parse("<%- JSON.stringify(project).replace(new RegExp("\"", "g"), "\\\"") %>");
+        window.project = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(project)) %>"));
         window.owner = "<%- owner %>";
         </script>
         <%- startPageScript("project_details") %>

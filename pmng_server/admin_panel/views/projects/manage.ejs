@@ -7,7 +7,7 @@
         <%- include("../default/api.ejs") %>
         <script>
         const current = "<%- user.name %>";
-        const edit = <% if (isEdit()) { %>true; const values=JSON.parse("<%- JSON.stringify(edit).replace(new RegExp("\"", "g"), "\\\"") %>")<% } else { %>false<% } %>;
+        const edit = <% if (isEdit()) { %>true; const values=JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(edit)) %>"))<% } else { %>false<% } %>;
         </script>
         <%- startPageScript("project_manage") %>
         

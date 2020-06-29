@@ -18,9 +18,9 @@ router.get("/containers/list", (req, res) => {
     res.render("docker/containers/list");
 });
 
-router.get("/containers/details/:nameorid", (req, res) => {
-    let nameOrId = req.params.nameorid;
-    res.locals.value = nameOrId;
+router.get("/containers/details/:reference", (req, res) => {
+    let reference = req.params.reference;
+    res.locals.value = reference;
     req.setPage(res, "Details of container", "docker", "containers_details");
     res.render("docker/containers/details");
 });
@@ -28,6 +28,13 @@ router.get("/containers/details/:nameorid", (req, res) => {
 router.get("/networks/list", (req, res) => {
     req.setPage(res, "List of docker networks", "docker", "networks");
     res.render("docker/networks/list");
+});
+
+router.get("/networks/details/:reference", (req, res) => {
+    let reference = req.params.reference;
+    res.locals.value = reference;
+    req.setPage(res, "Details of network", "docker", "networks_details");
+    res.render("docker/networks/details");
 });
 
 

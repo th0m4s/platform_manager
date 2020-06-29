@@ -630,6 +630,32 @@ function listNetworks() {
     });
 }
 
+function getNetworkDetails(reference) {
+    // reference is name or id like container details
+
+    return docker.network.get(reference).status().then((network) => {
+        let data = network.data, containers = [];
+        for(let [id, container] of Object.entries(data.Containers)) {
+            containers.push({
+                id: id,
+                name: container.Name,
+                ipAddress: container.IPv4Address,
+                macAddress: container.MacAddress
+            });
+        }
+
+        return {
+            networkId: data.Id,
+            name: data.Name,
+            createdAt: data.Created,
+            driver: data.Driver,
+            config: data.IPAM.Config[0],
+            labels: data.Labels,
+            containers: containers
+        }
+    });
+}
+
 
 module.exports.docker = docker;
 module.exports.isProjectContainerRunning = isProjectContainerRunning;
@@ -637,4 +663,5 @@ module.exports.areProjectContainersRunning = areProjectContainersRunning;
 module.exports.getRunningContainers = getRunningContainers;
 module.exports.getContainerDetails = getContainerDetails;
 module.exports.listNetworks = listNetworks;
+module.exports.getNetworkDetails = getNetworkDetails;
 module.exports.maininstance = maininstance;
