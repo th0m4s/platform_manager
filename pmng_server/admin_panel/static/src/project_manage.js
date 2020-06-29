@@ -1,3 +1,4 @@
+let forbidden_names = [];
 let containerRunning = 0; // 0 no info, 1 running, -1 stopped
 // only for edit
 function init() {
@@ -118,6 +119,12 @@ function init() {
         });
     }
 
+    $.getJSON("/api/v1/projects/forbiddennames").fail((xhr, status, error) => {
+        console.warn("Cannot get forbidden names", error);
+    }).done((response) => {
+        forbidden_names = response;
+    });
+
     window.onbeforeunload = () => {
         if(!saving && ((!edit && $("#input-project-name").val().length > 0) || getChanges().count > 0)) {
             return "You have unsaved changes on this page. Do you want to leave?";
@@ -127,10 +134,12 @@ function init() {
 }
 
 function displayEnv(key, value) {
+    let rdnId = Math.floor(Math.random()*10000000);
     $("#env-list").append(`<div class="row env-row mb-2"><div class="col-md-4"><input type="text" required class="form-control input-env-key" placeholder="Variable name" value="${key}"></div><div class="col-md-8">`
-     + `<div class="input-group"><input type="text" class="form-control input-env-val" placeholder="Value" value="${value}"><div class="input-group-append">`
+     + `<div class="input-group"><input type="text" class="form-control input-env-val" placeholder="Value" id="env_${rdnId}"><div class="input-group-append">`
      + `<button class="btn btn-primary button-add-env-line" style="display: none;" type="button" onclick="project_manage.addEnv()"><i class="fas fa-plus"></i> Add new</button>`
      + `<button class="btn btn-danger btn-delete" type="button" onclick="project_manage.deleteRow(this);"><i class="fas fa-trash-alt"></i> Delete</button></div></div></div></div>`);
+     $("#env_" + rdnId).val(value);
      updateAdd();
 }
 
@@ -186,12 +195,18 @@ let lastDifferences = undefined;
 function confirm() {
     let confirmButton = $("#confirm-button");
     if(!edit) {
+        let projectData = {};
+        projectData.projectname = $("#input-project-name").val();
+
+        if(forbidden_names.includes(projectData.projectname.toLowerCase())) {
+            $.notify({message: "This name cannot be used for a project."}, {type: "danger"});
+            return false;
+        }
+
         saving = true;
         disableAllInputs();
         utils.disableButton(confirmButton, "Creating the project...");
 
-        let projectData = {};
-        projectData.projectname = $("#input-project-name").val();
         projectData.pluginnames = $("#input-plugins").val().split(",");
         projectData.collaborators = $("#input-collaborators").val().split(",");
 

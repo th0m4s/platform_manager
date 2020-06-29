@@ -8,6 +8,13 @@ const rmfr = require("rmfr");
 const intercom = require("../../../intercom/intercom_client").connect();
 const logger = require("../../../platform_logger").logger();
 
+const forbidden_names = ["www", "git", "admin", "ftp", "ns1", "ns2"];
+// same values as in regex_utils
+
+router.get("/forbiddennames", (req, res) => {
+    res.json(forbidden_names);
+});
+
 router.get("/list/owned/:after/:limit", function(req, res) {
     api_auth(req, res, function(user) {
         let after = parseInt(req.params.after), limit = parseInt(req.params.limit);
@@ -51,6 +58,13 @@ router.get("/delete/:projectname", function(req, res) {
             }
 
             return Promise.all(prom);
+        }).then(() => {
+            return database_server.database("domains").where("projectname", projectname).select("*");
+        }).then((domains_results) => {
+            // remove domains from greenlock (removed from database in next then);
+            for(let result of domains_results) {
+                intercom.send("greenlock", {command: "restoreCustom", domain: result.domain});
+            }
         }).then(() => {
             return Promise.all([
                 database_server.database("projects").where("name", projectname).delete(),
@@ -145,8 +159,11 @@ router.get("/stop/:projectname", function(req, res) {
 
 router.post("/create", function(req, res) {
     api_auth(req, res, function(user) {
-        if(req.body.projectname == undefined) {
+        let projectname = req.body.projectname;
+        if(projectname == undefined) {
             return res.status(400).json({error: true, code: 400, message: "Missing parameter."});
+        } else if(forbidden_names.includes(projectname.toLowerCase())) {
+            return res.status(405).json({error: true, code: 405, message: "Forbidden name."});
         }
 
         let userenv = req.body.userenv || {};
@@ -154,13 +171,13 @@ router.post("/create", function(req, res) {
         let collaborators = req.body.collaborators || [];
         let customdomains = req.body.customdomains || [];
 
-        projects_manager.addProject(req.body.projectname, user.id, userenv, pluginnames).then(() => {
+        projects_manager.addProject(projectname, user.id, userenv, pluginnames).then(() => {
             let prom = [];
             customdomains.forEach((domain) => {
-                if(domain !== "") prom.push(projects_manager.addCustomDomain(req.body.projectname, domain.domain, domain.enablesub == true || domain.enablesub == "true"));
+                if(domain !== "") prom.push(projects_manager.addCustomDomain(projectname, domain.domain, domain.enablesub == true || domain.enablesub == "true"));
             });
             collaborators.forEach((collaborator) => {
-                if(collaborator.trim().length > 0) prom.push(projects_manager.addCollaborator(req.body.projectname, collaborator, "view"));
+                if(collaborator.trim().length > 0) prom.push(projects_manager.addCollaborator(projectname, collaborator, "view"));
             });
 
             (prom.length > 0 ? Promise.all(prom) : Promise.resolve()).then(() => {
@@ -235,6 +252,7 @@ router.post("/edit/:projectname", function(req, res) {
                     });
         
                     differences.domains.remove.forEach((item) => {
+                        intercom.send("greenlock", {command: "removeCustom", domain: item});
                         promises.push(database_server.database("domains").where("domain", item).delete());
                     });
         
@@ -369,6 +387,7 @@ router.post("/removedomain/:domainid", function(req, res) {
                 } else {
                     let projectname = results[0].projectname;
                     projects_manager.canAccessProject(projectname, user.id, true).then(() => {
+                        intercom.send("greenlock", {command: "removeCustom", domain: results[0].domain});
                         database_server.database("domains").where("id", domainid).delete().then(() => {
                             res.status(200).json({error: false, code: 200, message: "Custom domain removed."});
                         }).catch((error) => {
