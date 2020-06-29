@@ -1,7 +1,7 @@
 const Greenlock = require("greenlock");
 const path = require("path");
 const intercom = require("../intercom/intercom_client").connect();
-const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
+const runtime_cache_delay = 300000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const tls = require("tls");
 const pfs = require("fs").promises;
 
@@ -21,23 +21,7 @@ function init() {
         }
     });
 
-    let localDomain = process.env.ROOT_DOMAIN;
-    add(localDomain);
-
-    intercom.subscribe(["greenlock"], (message, id) => {
-        let command = message.command, domain = message.domain;
-        switch(command) {
-            case "addCustom":
-                add(domain);
-                break;
-        }
-    });
-}
-
-function add(domain) {
-    greenlock.add({
-        subject: domain,
-        altnames: [domain, "*." + domain],
+    greenlock.manager.defaults({
         subscriberEmail: process.env.WEBMASTER_MAIL,
         agreeToTerms: true,
         challenges: {
@@ -50,6 +34,32 @@ function add(domain) {
             basepath: path.resolve(__dirname, "greenlock.d")
         }
     });
+
+    let localDomain = process.env.ROOT_DOMAIN;
+    add(localDomain);
+
+    intercom.subscribe(["greenlock"], (message) => {
+        let command = message.command, domain = message.domain;
+        switch(command) {
+            case "addCustom":
+                add(domain);
+                break;
+            case "removeCustom":
+                remove(domain);
+                break;
+        }
+    });
+}
+
+function add(domain) {
+    greenlock.add({
+        subject: domain,
+        altnames: [domain, "*." + domain]
+    });
+}
+
+function remove(domain) {
+    greenlock.remove(domain);
 }
 
 function _getSecureContext(serverFile, onlyOptions = false) {

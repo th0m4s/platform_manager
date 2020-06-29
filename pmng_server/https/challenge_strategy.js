@@ -1,6 +1,5 @@
 const intercom = require("../intercom/intercom_client").connect();
 
-// WIP-GREENLOCK
 module.exports.create = function () {
     let m = {};
 
