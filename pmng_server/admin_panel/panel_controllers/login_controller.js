@@ -46,7 +46,7 @@ router.get("/install/database", async function(req, res) {
         req.setPage(res, "Database installation");
         res.render("login/install_db");
     } else if(!(await database_server.hasAdminUser())) {
-        req.flash("info", "Database alreayd installed. Please create an admin user.");
+        req.flash("info", "Database already installed. Please create an admin user.");
         res.redirect("/panel/login/install/user");
     } else {
         req.flash("warn", "Database already installed.");
