@@ -45,26 +45,30 @@ dns_server.on("request", async function(request, response) {
         case "A":
             if(!A_ENABLED && !AAAA_ENABLED) break;
 
-            let special = regex_utils.testSpecial(requestedName);
-            if(special !== null) {
-                if(special.toLowerCase() != "ftp" || questionType == process.env.FTP_HOST_TYPE) response.answer.push(getResponse(requestedName, questionType));
+            if(requestedName == process.env.ROOT_DOMAIN) {
+                response.answer.push(getResponse(requestedName, questionType));
             } else {
-                if(isInstalled !== true) {
-                    isInstalled = await database_server.isInstalled();
-                }
-    
-                if(isInstalled === true) {
-                    let project = regex_utils.testProject(requestedName);
-                    if(project != null) {        
-                        try {
-                            await project_manager.projectExists(project);
-            
+                let special = regex_utils.testSpecial(requestedName);
+                if(special !== null) {
+                    if(special.toLowerCase() != "ftp" || questionType == process.env.FTP_HOST_TYPE) response.answer.push(getResponse(requestedName, questionType));
+                } else {
+                    if(isInstalled !== true) {
+                        isInstalled = await database_server.isInstalled();
+                    }
+        
+                    if(isInstalled === true) {
+                        let project = regex_utils.testProject(requestedName);
+                        if(project != null) {        
+                            try {
+                                await project_manager.projectExists(project);
+                
+                                response.answer.push(getResponse(requestedName, questionType));
+                            } catch(e) {
+                                // doesnot exist
+                            }
+                        } else if((await regex_utils.testCustom(requestedName)) != null) {
                             response.answer.push(getResponse(requestedName, questionType));
-                        } catch(e) {
-                            // doesnot exist
                         }
-                    } else if((await regex_utils.testCustom(requestedName)) != null) {
-                        response.answer.push(getResponse(requestedName, questionType));
                     }
                 }
             }
@@ -81,23 +85,23 @@ function start() {
         privileges.drop();
     });
 
-    intercom.subscribe(["dnsChallenges"], (message, id) => {
+    intercom.subscribe(["dnsChallenges"], (message, respond) => {
         let command = message.command, host = message.host, token = message.token;
         switch(command) {
             case "set":
                 if(challenges[host] == undefined) challenges[host] = [];
                 challenges[host].push(token);
-                intercom.respond(id, {error: false});
+                respond({error: false});
                 break;
             case "get":
-                intercom.respond(id, {error: false, token: challenges[host]});
+                respond({error: false, token: challenges[host]});
                 break;
             case "remove":
                 if(challenges[host] != undefined) {
                     challenges[host].splice(challenges[host].indexOf(token), 1);
                     if(challenges[host].length == 0) delete challenges[host];
                 }
-                intercom.respond(id, {error: false});
+                respond({error: false});
                 break;
         }
     });
