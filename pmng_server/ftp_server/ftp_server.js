@@ -18,13 +18,14 @@ function getServerSecureContext() {
 }
 
 let ftpServer;
+const forceTLS = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 async function start() {
     ftpServer = new FtpSrv({
         url: "ftp://" + ftpListenAddr + ":21",
         pasv_url: ftpListenAddr,
         pasv_min: 21001,
         pasv_max: 21999,
-        tls: (process.env.ENABLE_HTTPS.toLowerCase() ? await getServerSecureContext() : false),
+        tls: (forceTLS ? await getServerSecureContext() : false),
         greeting: "Welcome to the Platform Manager storages FTP server!",
         log: blackhole("FTP")
     });    
