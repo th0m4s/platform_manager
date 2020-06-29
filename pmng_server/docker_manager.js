@@ -583,13 +583,13 @@ function getRunningContainers() {
     });
 }
 
-function getContainerDetails(value) {
-    // value is name or id
+function getContainerDetails(reference) {
+    // reference is name or id
 
     // inspect api route is renamed status
-    // if value is name, it will be given to the inspect route that will correctly identify it
+    // if reference is name, it will be given to the inspect route that will correctly identify it
     // but the resulting container will have its name in the container.id field (see container.data.Id for correct id)
-    return docker.container.get(value).status().then((container) => {
+    return docker.container.get(reference).status().then((container) => {
         let data = container.data, networks = [];
         for(let [name, network] of Object.entries(data.NetworkSettings.Networks)) {
             networks.push({
