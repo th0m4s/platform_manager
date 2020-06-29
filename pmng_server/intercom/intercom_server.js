@@ -7,6 +7,8 @@ let responses = {};
 function start() {
     const server = net.createServer();
     server.on("connection", function (connection) {
+        connection.write('stat:{\"msg\":\"welcome\"}\n');
+
         let rcvBuffer = "";
         connection.on("data", (buffer) => {
             for(let c of buffer.toString("utf-8")) {
