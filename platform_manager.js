@@ -49,7 +49,7 @@ async function startPlatform() {
     logger.info("Forking local server...");
     child_process.fork("./pmng_server/local_server");
 
-    // all processes (except root_commands) should have dropped their privileges when started
+    // all processes (except root_commands and web cluster masters for port binding) should have dropped their privileges when started
     // check using ps -aux
 }
 

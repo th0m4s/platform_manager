@@ -2,10 +2,10 @@ const https = require("https");
 const web = require("../web_server");
 const logger = require("../platform_logger").logger();
 const privileges = require("../privileges");
-const intercom = require("../intercom/intercom_client").connect();
 const regex_utils = require("../regex_utils");
 const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
+const cluster = require("cluster");
 
 function start() {
     const https_options = {
@@ -30,14 +30,23 @@ function start() {
         }
     };
     
-    https.createServer(https_options, web.webServe).listen(443, () => {
-        logger.info("https public server started.");
+    let httpsServer = https.createServer(https_options, web.webServe).listen(443, () => {
+        logger.info(`[HTTPS CLUSTER] public server ${process.pid} (worker #${cluster.worker.id}) started.`);
 
-        intercom.send("webStarted", {type: "https"});
+        // intercom.send("webStarted", {type: "https"});
     });
+
+    httpsServer.on("upgrade", web.upgradeRequest);
 
     privileges.drop();
     web.registerPortInfo();
 }
 
-start();
+if(cluster.isMaster) {
+    logger.info("[HTTPS CLUSTER] Master process started.");
+    web.registerClusterMaster(process.env.CLUSTER_MAX_SEC_CONN_HTTPS || process.env.CLUSTER_MAX_SEC_CONN,
+        process.env.CLUSTER_MIN_CHILDREN_HTTPS || process.env.CLUSTER_MIN_CHILDREN,
+        process.env.CLUSTER_MAX_CHILDREN_HTTPS || process.env.CLUSTER_MAX_CHILDREN, "HTTPS CLUSTER");
+} else {
+    start();
+}
