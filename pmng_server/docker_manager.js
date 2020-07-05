@@ -137,6 +137,9 @@ async function maininstance() {
                     clearStarting(projectname).then(() => respond({error: true, message: "Cannot start project " + projectname + ": " + error}));
                 });
                 break;
+            case "requestPorts":
+                respond(portMappings);
+                break;
             case "analyzeRunning":
                 logger.info("Searching for running docker containers...");
                 docker.container.list({filters: {label: ["pmng.containertype=project"]}}).then((containers) => {
@@ -276,42 +279,51 @@ function attachLogs(projectname, container) {
         timestamps: true,
         since: Date.now()/1000
     }).then((stream) => {
+        let lastType = "      ", lastStream = 0;
         stream.on("data", (log) => {
             let data = log.toString("utf-8").split("\n");
-            let lastType = "      ";
             data.forEach((line) => {
                 if(line.length > 0) {
-                    let type = line[7];
-                    line = line.slice(8);
+                    let cstream = line.charCodeAt(0);
+                    line = line.slice(7);
+                    let type = line[0];
+                    line = line.slice(1);
                     switch(type) {
                         case "+":
-                            type = "INFO  ";
+                        case "#":
+                            type = "INF";
                             break;
                         case ",":
-                            type = "WARN  ";
+                        case "'":
+                            type = "WAR";
                             break;
                         case "-":
-                            type = "ERROR ";
+                        case "%":
+                            if(cstream == lastStream) {
+                                type = lastType;
+                            } else if(cstream == 2) type = "ERR";
+                            else type = "INF";
                             break;
                         case "(":
                             type = lastType;
                             break;
                         default:
                             line = type + line;
-                            type = "UNKN  ";
+                            type = "UNK";
                             break;
                     }
 
                     lastType = type;
+                    lastStream = cstream;
 
                     let parts = line.split(" ");
-                    logStream.write(parts[0] + " " + type + " " + parts.slice(1) + "\n");
+                    logStream.write(parts[0] + " " + type + " " + parts.slice(1).join(" ") + "\n");
                 }
             });
         });
 
         stream.on("error", (err) => {
-            logStream.write((new Date().toISOString()) + " SYSERR " + err);
+            logStream.write((new Date().toISOString()) + " SYS " + err);
         });
 
         stream.on("close", () => {
@@ -397,7 +409,19 @@ function startProject(projectname) {
         await docker.network.list({filters: {name: [networkName]}}).then((networks) => {
             let prom = [];
             networks.forEach((network) => { // normally only one exists, but as is this is a total clear, also remove possible duplicates
-                prom.push(network.remove());
+                prom.push(docker.network.get(network.id).status().then((networkDetails) => {
+                    let containersDisc = [];
+
+                    for(let containerId of Object.keys(networkDetails.data.Containers)) {
+                        containersDisc.push(network.disconnect({
+                            Container: containerId
+                        }));
+                    }
+
+                    return Promise.all(containersDisc).then(() => {
+                        network.remove();
+                    });
+                }));
             });
 
             return Promise.all(prom);
@@ -527,7 +551,7 @@ function removePort(projectname) {
 let portMappings = {}, firstPort = 11001, lastPort = 11999/*, firstPluginPort = 12001*/;
 // 11001 is for project
 
-const types = {"node": "pmng/node", "apache-php": "pmng/apache2-php7"};
+const types = {"node": "pmng/node", "apache-php": "pmng/apache2-php7", "nginx-php": "pmng/nginx-php7"};
 function getImageFromType(type) {
     return types[type];
 }
@@ -542,7 +566,11 @@ function clearStarting(projectname) {
 
     let startingFolder = project_manager.getProjectDeployFolder(projectname, true);
     pfs.access(startingFolder).then(() => {
-        prom.push(rmfr(startingFolder));
+        prom.push(new Promise((resolve) => {
+            pfs.access(startingFolder).then(() => {
+                rmfr(startingFolder).then(resolve);
+            }).catch(resolve);
+        }));
     });
 
     return Promise.all(prom);
