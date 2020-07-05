@@ -10,7 +10,7 @@ async function build(projectname, deployFolder, logger) {
         let stats = await pfs.stat(path.resolve(deployFolder, "public"));
         if(!stats.isDirectory()) throw new Error(); // will be catched and rethrown with message
     } catch(error) {
-        throw new Error("Cannot build PHP project. Only files in the public directory are served and no matching directory found.");
+        throw new Error("Cannot build PHP project. Only files in the public directory are served and no matching directory was found.");
     }
 
     let baseContents = await pfs.readdir(deployFolder);
@@ -58,7 +58,7 @@ async function build(projectname, deployFolder, logger) {
         });
     } else logger("No composer.json file found. No package to install.");
 
-    return ["httpd"]; // same as docker defined entrypoint, files are placed into the correct place on container creation
+    return ["/var/start/entrypoint.sh"]; // all php based should use this entrypoint script (except if return is changed in the child buildpack)
 }
 
 
