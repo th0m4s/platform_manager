@@ -18,7 +18,7 @@ function processStorage(message, respond) {
     let project = message.project, action = message.action;
     let baseDir = path.join(process.env.PLUGINS_PATH, "storages");
 
-    if(project.includes(".") || project.contains("&") || project.contains(">") || project.contains("|") || project.contains(";")) {
+    if(project.includes(".") || project.includes("&") || project.includes(">") || project.includes("|") || project.includes(";")) {
         respond({error: true, message: "Security test failed. Project name cannot contain special characters."});
         return;
     }
