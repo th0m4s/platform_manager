@@ -18,8 +18,22 @@ $(document).ready(() => {
     utils.showCookieNotifications();
 });
 
+function showMain() {
+    $("#loading-container").hide();
+    $("#main-container").show();
+}
+
+let noLoadingTimeout = setTimeout(() => {
+    showMain();
+}, 500);
+
 window.loadAndInit = function(script) {
+    if(noLoadingTimeout > 0) {
+        clearTimeout(noLoadingTimeout);
+        noLoadingTimeout = -1;
+    }
     $.getScript("/static/js/" + script + ".dist.js", () => {
+        showMain();
         window[script].init();
     });
 }

@@ -22,3 +22,17 @@
     color: inherit;
     text-decoration: none;
 }
+
+#loading-container .progress {
+    height: 10px;
+}
+
+#loading-container .progress-bar {
+    width: 100%;
+    animation-direction: reverse;
+    animation-duration: 0.3s
+}
+
+#main-container {
+    display: none;
+}
