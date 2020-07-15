@@ -17,8 +17,14 @@ function start() {
         };
     }
 
-    let httpServer = http.createServer(serve).listen(80, () => {
-        logger.info(`[HTTP CLUSTER] public server pid:${process.pid},child:${cluster.worker.id} started.`);
+    let httpServer = http.createServer(/*(req, res) => {
+        req.socket.on("error", (error) => {
+            console.warn("socket error", error);
+        });
+
+        serve(req, res);
+    }*/serve).listen(80, () => {
+        logger.info(`[HTTP CLUSTER] public server ${process.pid} (worker #${cluster.worker.id}) started.`);
 
         // intercom.send("webStarted", {type: "http"});
     });
