@@ -144,7 +144,7 @@ function registerClusterMaster(maxConnPerSec, minFork, maxFork, clusterName) {
                 currentClosing.splice(currentClosing.indexOf(worker.id), 1);
                 logger.info(`[${clusterName}] Worker #${worker.id} exited successfully to reduce usage.`);
             } else {
-                logger.warn(`[${clusterName}] Worker #${worker.id} exited without the master approval (${code}, ${signal}). Restarting a fork...`);
+                logger.warn(`[${clusterName}] Worker #${worker.id} exited unexpectedly (${code}, ${signal}). Restarting a fork...`);
                 cluster.fork();
             }
         });
