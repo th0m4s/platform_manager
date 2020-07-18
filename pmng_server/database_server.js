@@ -159,6 +159,22 @@ function _findUserId(username) {
     });
 } const findUserId = runtime_cache(_findUserId);
 
+function projectAllowHttps(project) {
+    return knex("projects").where("name", project).select("allow_https").then((results) => {
+        if(results.length == 0) return false;
+        else return results[0].allow_https == "true";
+    }).catch(() => false);
+}
+
+// project https allowance should be checked separately
+// TODO: for now, "allow" means "force redirect" from http to https
+function domainAllowHttps(domain) {
+    return knex("domains").where("domain", domain).select("allow_https").then((results) => {
+        if(results.length == 0) return false;
+        else return results[0].allow_https == "true";
+    }).catch(() => false);
+}
+
 const SCOPES = {ADMIN: 1, SYSTEM: 9, DOCKER: 20, USER: 99};
 function checkScope(userScopeId, requestedScope) {
     requestedScope = requestedScope.toUpperCase();
@@ -179,4 +195,6 @@ module.exports.hashPassword = hashPassword;
 module.exports.comparePassword = comparePassword;
 module.exports.generateKey = generateKey;
 module.exports.revokeKey = revokeKey;
+module.exports.projectAllowHttps = projectAllowHttps;
+module.exports.domainAllowHttps = domainAllowHttps;
 module.exports.checkScope = checkScope;
