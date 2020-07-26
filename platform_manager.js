@@ -2,7 +2,7 @@
 const logger_tools = require("./pmng_server/platform_logger");
 const child_process = require('child_process');
 
-async function startPlatform() {
+(async function() {
     const pmng_directory = __dirname;
     process.chdir(pmng_directory);
 
@@ -51,6 +51,4 @@ async function startPlatform() {
 
     // all processes (except root_commands and web cluster masters for port binding) should have dropped their privileges when started
     // check using ps -aux
-}
-
-startPlatform();
+})();
