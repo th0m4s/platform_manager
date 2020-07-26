@@ -1,15 +1,16 @@
-const logger = require("./platform_logger").logger();
 const child_process = require("child_process");
 const net = require("net");
 const regex_utils = require("./regex_utils");
 const database_server = require("./database_server");
-const privileges = require("./privileges");
+// const privileges = require("./privileges");
 const intercom = require("./intercom/intercom_client").connect();
 const runtime_cache_delay = 10000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const httpProxyServer = require("http-proxy").createProxyServer();
 const pfs = require("fs").promises;
 const path = require("path");
 const cluster = require("cluster");
+const logger = require("./platform_logger").logger();
+const subprocess_util = require("./subprocess_util");
 
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 // const countPublic = enable_https ? 2 : 1, runningPublic = [];
@@ -30,24 +31,18 @@ function start() {
     // launching 2 processes to handle both HTTP and HTTPS public requests
     // each process will be the master of a cluster of web servers
     logger.info("Separating public servers into forks:");
-    logger.info("Forking public http master process...");         // path based on platform.js
-    child_process.fork("./pmng_server/public_web/http_public_server");
 
-    if(enable_https) {
-        logger.info("Forking public https master process...");
-        child_process.fork("./pmng_server/public_web/https_public_server");
-    }
+    subprocess_util.forkNamed("./pmng_server/public_web/http_public_server", "http_public_server", "public http master server");
 
-    privileges.drop();
+    if(enable_https)
+        subprocess_util.forkNamed("./pmng_server/public_web/https_public_server", "https_public_server", "public https master server");
 
-    logger.info("Forking admin web server...");
-    child_process.fork("./pmng_server/admin_panel/admin_server");
+    // privileges.drop();
+    // privileges are not dropped from main process, but in all subprocesses
 
-    logger.info("Forking git web server...");
-    child_process.fork("./pmng_server/git_server");
-
-    logger.info("Forking error web server...");
-    child_process.fork("./pmng_server/error_panel/error_server");
+    subprocess_util.forkNamed("./pmng_server/admin_panel/admin_server", "admin_web_server", "admin web server");
+    subprocess_util.forkNamed("./pmng_server/git_server", "git_web_server", "git web server");
+    subprocess_util.forkNamed("./pmng_server/error_panel/error_server", "error_web_server", "error web server");
 }
 
 async function prepareSocketError() {
