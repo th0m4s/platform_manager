@@ -98,6 +98,7 @@ function refreshPlugins() {
                 let statusDom = $("#plugin-usage-" + plugin);
                 switch(usage.type) {
                     case "measure_error":
+                        console.warn(usage.error);
                         statusDom.html("Unable to measure usage for this plugin.");
                         break;
                     case "unlimited":
