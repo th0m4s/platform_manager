@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const logger = require("../platform_logger").logger();
 const path = require("path");
+const privileges = require("../privileges");
 
 const stylePath = path.join(__dirname, "static/style.css");
 app.get("/style.css", (req, res) => {
@@ -14,6 +15,8 @@ app.all("*", (req, res) => {
 });
 
 function start() {
+    privileges.drop();
+
     app.listen(8099, () => {
         logger.info("Error server started.");
     });

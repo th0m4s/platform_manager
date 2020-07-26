@@ -3,6 +3,7 @@ const express = require("express"), admin = express(), bodyParser = require("bod
 const passport = require('passport');
 const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
+const privileges = require("../privileges");
 
 admin.set('view engine', 'ejs');
 admin.set('views', path.join(__dirname, '/views'));
@@ -32,6 +33,8 @@ admin.all("/", function(req, res) {
 });
 
 function start() {
+    privileges.drop();
+
     admin.listen(8080, () => {
         logger.info("Admin server started.");
     });

@@ -6,6 +6,7 @@ const project_manager = require("./project_manager");
 const database_server = require("./database_server");
 const logger = require("./platform_logger").logger();
 const auth = require("basic-auth");
+const privileges = require("./privileges");
 
 const server = http.createServer(function (req, res) {
     let repo = req.url.split('/')[1].trim();
@@ -56,6 +57,8 @@ function unauthorized(res) {
 }
 
 function start() {
+    privileges.drop();
+
     server.listen(8081, () => {
         logger.info("Git server started.");
     });

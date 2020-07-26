@@ -10,6 +10,7 @@ const database_server = require("./database_server");
 const plugins_manager = require("./plugins_manager");
 const child_process = require("child_process");
 const regex_utils = require("./regex_utils");
+const privileges = require("./privileges");
 const treekill = require("tree-kill");
 
 const docker = new Docker(process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)});
@@ -359,7 +360,7 @@ function startProject(projectname) {
         let rotateConf = path.join(logFolder, "rotate.conf"), rotateStatus = path.join(logFolder, "rotate.status");
 
         await pfs.writeFile(rotateConf, logFile + " {\n\tsize 1\n\trotate 7\n\tcompress\n\tdelaycompress\n\tmissingok\n}");
-        child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf);
+        child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf, privileges.droppingOptions());
 
         // if starting folder exists, delete it
         let startingFolder = project_manager.getProjectDeployFolder(projectname, true);

@@ -10,10 +10,13 @@ const database_server = require("./database_server");
 const docker_manager = require("./docker_manager");
 const intercom = require("./intercom/intercom_client").connect();
 const string_utils = require("./string_utils");
+const privileges = require("./privileges");
 
 const LINE = "\n-----> ", SPACES = "       ";
 
 function start() {
+    privileges.drop();
+
     let server = net.createServer();
     server.on("connection", function (connection) {
         let command = "", isProcessing = false;
