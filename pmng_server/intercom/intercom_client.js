@@ -32,13 +32,18 @@ function connect() {
             waitingResp[id] = responseCallback || (() => {});
             connection.write("send:" + JSON.stringify({subject: subject, message: message, id: id}) + "\n");
         },
-        sendPromise: function(subject, message) {
-            return new Promise((resolve, reject) => {
+        sendPromise: function(subject, message, options = {timeout: 20, autoReject: true}) {
+            let respProm = new Promise((resolve, reject) => {
                 this.send(subject, message, (response) => {
-                    if(response.error !== undefined && response.error === true) return reject(response.message);
+                    if(autoReject && response.error !== undefined && response.error === true) return reject(response.message);
                     else return resolve(response.message || response);
                 });
             });
+            return options.timeout > 0 ? Promise.race([new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    reject("Intercom response timed out.");
+                }, options.timeout*1000);
+            }), respProm]) : respProm;
         }/*,
         respond: function(id, message) {
             connection.write("resp:" + JSON.stringify({id: id, message: message}) + "\n");
