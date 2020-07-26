@@ -3,9 +3,10 @@ const child_process = require("child_process");
 const intercom = require("./intercom/intercom_client").connect();
 
 function fork(file, id, onForking, onExited) {
-    let subp, shouldRestart = true;
-    let startProcess = (restart) => {
-        if(restart) onExited(code, signal);
+    let subp, shouldRestart = true, restarting = false;
+    let startProcess = (restart, code, signal) => {
+        if(restart && !restarting) onExited(code, signal);
+        restarting = false;
 
         onForking();
         subp = child_process.fork(file);
@@ -14,7 +15,7 @@ function fork(file, id, onForking, onExited) {
     startProcess(false);
 
     subp.addListener("exit", (code, signal) => {
-        if(shouldRestart) startProcess(true);
+        if(shouldRestart) startProcess(true, code, signal);
         else subp = undefined;
     });
 
@@ -22,8 +23,9 @@ function fork(file, id, onForking, onExited) {
         let command = message.command;
         switch(command) {
             case "restart":
-                startProcess(true);
-                respond({error: false, message: "Restart signal sent. Check for isRunning if necessary."});
+                restarting = true;
+                subp.kill(); // restart process by killing it (on exit will be called)
+                respond({error: false, message: "Restart signal sent. Wait and check for isRunning if necessary."});
                 break;
             case "isRunning":
                 respond({error: false, running: subp != undefined && subp.exitCode === null});
