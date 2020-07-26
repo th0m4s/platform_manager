@@ -178,7 +178,7 @@ function confirmDelete() {
     let currentDelete = lastDeleteProject;
     lastDeleteProject = undefined;
 
-    utils.showInfiniteLoading("Deleting the project...");
+    utils.showInfiniteLoading("Deleting project " + currentDelete + "...");
     $.getJSON("/api/v1/projects/delete/" + currentDelete).fail((xhr, status, err) => {
         console.warn(err);
         $.notify({message: "Unable to delete this project (server error). See console for details."}, {type: "danger"});
@@ -198,7 +198,7 @@ function confirmDelete() {
 function updateState(projectname) {
     let actualState = $("#line-project-" + projectname).attr("data-state");
     if(actualState == "running") {
-        utils.showInfiniteLoading("Stopping project...");
+        utils.showInfiniteLoading("Stopping project " + projectname + "...");
         $.getJSON("/api/v1/projects/stop/" + projectname).fail((xhr, status, err) => {
             console.warn(err);
             $.notify({message: "Unable to stop this project (server error). See console for details."}, {type: "danger"});
@@ -216,7 +216,7 @@ function updateState(projectname) {
             utils.hideLoading();
         });
     } else if(actualState == "stopped") {
-        utils.showInfiniteLoading("Starting project...");
+        utils.showInfiniteLoading("Starting project " + projectname + "...");
         $.getJSON("/api/v1/projects/start/" + projectname).fail((xhr, status, err) => {
             console.warn(err);
             $.notify({message: "Unable to start this project (server error). See console for details."}, {type: "danger"});
@@ -248,7 +248,7 @@ function setCanRestart(projectname, canRestart) {
 function restartProject(projectname) {
     let actualState = $("#line-project-" + projectname).attr("data-state");
     if(actualState == "running") {
-        utils.showInfiniteLoading("Restarting project...");
+        utils.showInfiniteLoading("Restarting project " + projectname + "...");
         $.getJSON("/api/v1/projects/stop/" + projectname).fail((xhr, status, err) => {
             console.warn(err);
             $.notify({message: "Unable to restart this project (stopping server error). See console for details."}, {type: "danger"});
