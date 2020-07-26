@@ -42,7 +42,7 @@ function processCommand(connection, command, value) {
                 subscriptions[sub].push(connection);
             });
 
-            connection.write("stat:" + JSON.stringify({error: false, message: "subscribed"}) + "\n");
+            if(!connection.destroyed) connection.write("stat:" + JSON.stringify({error: false, message: "subscribed"}) + "\n");
             break;
         case "send":
             let subject = value.subject;
@@ -53,16 +53,16 @@ function processCommand(connection, command, value) {
 
                 responses[value.id] = connection;
 
-                connection.write("stat:" + JSON.stringify({error: false, message: "sent"}) + "\n");
-            } else connection.write("stat:" + JSON.stringify({error: false, message: "no subscriptions"}) + "\n");
+                if(!connection.destroyed) connection.write("stat:" + JSON.stringify({error: false, message: "sent"}) + "\n");
+            } else if(!connection.destroyed) connection.write("stat:" + JSON.stringify({error: false, message: "no subscriptions"}) + "\n");
             break;
         case "resp":
             let id = value.id;
             if(responses.hasOwnProperty(id)) {
                 responses[id].write("resp:" + JSON.stringify(value) + "\n");
                 delete responses[id];
-                connection.write("stat:" + JSON.stringify({error: false, message: "sent"}) + "\n");
-            } else connection.write("stat:" + JSON.stringify({error: true, message: "no response id"}) + "\n");
+                if(!connection.destroyed) connection.write("stat:" + JSON.stringify({error: false, message: "sent"}) + "\n");
+            } else if(!connection.destroyed) connection.write("stat:" + JSON.stringify({error: true, message: "no response id"}) + "\n");
             break;
     }
 }
