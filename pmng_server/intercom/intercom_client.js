@@ -35,7 +35,7 @@ function connect() {
         sendPromise: function(subject, message, options = {timeout: 20, autoReject: true}) {
             let respProm = new Promise((resolve, reject) => {
                 this.send(subject, message, (response) => {
-                    if(autoReject && response.error !== undefined && response.error === true) return reject(response.message);
+                    if(options.autoReject && response.error !== undefined && response.error === true) return reject(response.message);
                     else return resolve(response.message || response);
                 });
             });
