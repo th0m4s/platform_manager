@@ -549,7 +549,7 @@ function removePort(projectname) {
     }
 }
 
-let portMappings = {}, firstPort = 11001, lastPort = 11999/*, firstPluginPort = 12001*/;
+let portMappings = {}, firstPort = 49152, lastPort = 49999/*, firstPluginPort = 12001*/;
 // 11001 is for project
 
 const types = {"node": "pmng/node", "apache-php": "pmng/apache2-php7", "nginx-php": "pmng/nginx-php7"};
