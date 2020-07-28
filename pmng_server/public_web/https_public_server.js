@@ -5,10 +5,13 @@ const privileges = require("../privileges");
 const regex_utils = require("../regex_utils");
 const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
-const cluster = require("cluster");
+
+const wantCluster = false;
+const cluster = wantCluster ? require("cluster") : undefined;
 
 function start() {
     const https_options = {
+        trace: true,
         SNICallback: (serverName, cb) => {
             regex_utils.testCustom(serverName).then((project) => {
                 let serverFile = serverName;
@@ -29,12 +32,20 @@ function start() {
             });
         }
     };
-    
-    let httpsServer = https.createServer(https_options, web.webServe).listen(443, () => {
-        logger.info(`[HTTPS CLUSTER] public server ${process.pid} (worker #${cluster.worker.id}) started.`);
+
+    let httpsServer = https.createServer(https_options, (req, res) => {console.log(req.socket.remoteAddress + " : " + req.headers.host + req.url); web.webServe(req, res)}).listen(443, () => {
+        if(wantCluster) logger.info(`[HTTPS CLUSTER] public server ${process.pid} (worker #${cluster.worker.id}) started.`);
+        else logger.info("[HTTPS CLUSTER] public only server started.");
 
         // intercom.send("webStarted", {type: "https"});
     });
+
+    // let fs = require("fs")
+    // let testServer = https.createServer({key: fs.readFileSync("/etc/pmng/pmng_server/https/greenlock.d/live/tomanager.ml/privkey.pem", "utf-8"), cert: fs.readFileSync("/etc/pmng/pmng_server/https/greenlock.d/live/tomanager.ml/fullchain.pem", "utf-8")}, function (req, res) {res.writeHead(200);res.end("hello world\n");}).listen(8001, () => logger.info("Test HTTPS server started."));
+
+    // httpsServer.on("tlsClientError", (err) => console.warn("tlsClientError", err));
+    // httpsServer.on("clientError", (err) => console.warn("clientError", err));
+    process.on("uncaughtException", (err, origin) => console.warn("uncaughtException", err, origin));
 
     httpsServer.on("upgrade", web.upgradeRequest);
 
@@ -42,7 +53,7 @@ function start() {
     web.registerPortInfo();
 }
 
-if(cluster.isMaster) {
+if(wantCluster && cluster.isMaster) {
     logger.info("[HTTPS CLUSTER] Master process started.");
     web.registerClusterMaster(process.env.CLUSTER_MAX_SEC_CONN_HTTPS || process.env.CLUSTER_MAX_SEC_CONN,
         process.env.CLUSTER_MIN_CHILDREN_HTTPS || process.env.CLUSTER_MIN_CHILDREN,
