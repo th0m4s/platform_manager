@@ -118,5 +118,7 @@ module.exports.projectContainerCreated = projectContainerCreated;
 module.exports.installPlugin = installPlugin;
 module.exports.uninstallPlugin = uninstallPlugin;
 module.exports.getUsage = getUsage;
+module.exports.prepareRouter = () => {};
+module.exports.getConfigForm = () => [];
 
 module.exports.getDefaultConfig = getDefaultConfig;
