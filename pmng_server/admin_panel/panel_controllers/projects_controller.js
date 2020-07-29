@@ -3,6 +3,7 @@ const database_server = require("../../database_server");
 const passport = require('passport');
 const project_manager = require("../../project_manager");
 const logger = require("../../platform_logger").logger();
+const plugins_manager = require("../../plugins_manager");
 
 router.all("*", async function(req, res, next) {
     if(!(await database_server.isInstalled())) {
@@ -24,9 +25,8 @@ router.get("/create", function(req, res) {
     res.render("projects/manage");
 });
 
-// TODO: check manage perm
 router.get("/edit/:projectname", function(req, res) {
-    project_manager.canAccessProject(req.params.projectname, req.user.id, true).then((hasAccess) => {
+    project_manager.canAccessProject(req.params.projectname, req.user.id, true).then(() => {
         project_manager.getProject(req.params.projectname, true).then((project) => {
             Promise.all([database_server.database("domains").where("projectname", req.params.projectname).select("*"), database_server.database("collabs").where("projectname", req.params.projectname).select("*")]).then(([domains, collabs]) => {
                 let domainsRes = [];
@@ -64,46 +64,95 @@ router.get("/edit/:projectname", function(req, res) {
 });
 
 router.get("/details/:projectname", function(req, res) {
-    project_manager.getProject(req.params.projectname, true).then((project) => {
-        Promise.all([database_server.database("domains").where("projectname", req.params.projectname).select("*"), database_server.database("collabs").where("projectname", req.params.projectname).select("*")]).then(([domains, collabs]) => {
-            let domainsRes = [];
-            domains.forEach((domain) => {
-                domainsRes.push({domain: domain.domain, enablesub: domain.enablesub == "true", domainid: domain.id});
-            });
-
-            let collabsProm = [], collabsMode = {}, collabsIds = {};
-            collabs.forEach((collab) => {
-                collabsProm.push(database_server.database("users").where("id", collab.userid).select("*"));
-                collabsMode[collab.userid] = collab.mode;
-                collabsIds[collab.userid] = collab.id;
-            });
-
-            Promise.all(collabsProm).then((results) => {
-                let collabsRes = [];
-                results.forEach((result) => {
-                    if(result.length == 1) collabsRes.push({name: result[0].name, mode: collabsMode[result[0].id], userid: result[0].id, collabid: collabsIds[result[0].id]});
+    project_manager.canAccessProject(req.params.projectname, req.user.id, false).then(() => {
+        project_manager.getProject(req.params.projectname, true).then((project) => {
+            Promise.all([database_server.database("domains").where("projectname", req.params.projectname).select("*"), database_server.database("collabs").where("projectname", req.params.projectname).select("*")]).then(([domains, collabs]) => {
+                let domainsRes = [];
+                domains.forEach((domain) => {
+                    domainsRes.push({domain: domain.domain, enablesub: domain.enablesub == "true", domainid: domain.id});
                 });
 
-                (req.user.id === project.ownerid ? Promise.resolve("") : (() => {
-                    return database_server.findUserById(project.ownerid).then((user) => {
-                        return user.name;
+                let collabsProm = [], collabsMode = {}, collabsIds = {};
+                collabs.forEach((collab) => {
+                    collabsProm.push(database_server.database("users").where("id", collab.userid).select("*"));
+                    collabsMode[collab.userid] = collab.mode;
+                    collabsIds[collab.userid] = collab.id;
+                });
+
+                Promise.all(collabsProm).then((results) => {
+                    let collabsRes = [];
+                    results.forEach((result) => {
+                        if(result.length == 1) collabsRes.push({name: result[0].name, mode: collabsMode[result[0].id], userid: result[0].id, collabid: collabsIds[result[0].id]});
                     });
-                })()).then((possibleOwner) => {
-                    res.locals.project = project;
-                    res.locals.project.domains = domainsRes;
-                    res.locals.project.collabs = collabsRes;
 
-                    res.locals.owner = possibleOwner;
-        
-                    req.setPage(res, "Project details", "projects", "details");
-                    res.render("projects/details");
+                    (req.user.id === project.ownerid ? Promise.resolve("") : (() => {
+                        return database_server.findUserById(project.ownerid).then((user) => {
+                            return user.name;
+                        });
+                    })()).then((possibleOwner) => {
+                        res.locals.project = project;
+                        res.locals.project.domains = domainsRes;
+                        res.locals.project.collabs = collabsRes;
+
+                        let newPlugins = {};
+                        for(let [plugin, config] of Object.entries(project.plugins)) {
+                            newPlugins[plugin] = {configurable: plugins_manager.isPluginConfigurable(plugin), config};
+                        }
+                        res.locals.project.plugins = newPlugins;
+
+                        res.locals.owner = possibleOwner;
+            
+                        req.setPage(res, "Project details", "projects", "details");
+                        res.render("projects/details");
+                    });
                 });
             });
+        }).catch(() => {
+            req.flash("warn", "Unable to find this project.");
+            res.redirect("/panel/projects/list");
         });
-    }).catch(() => {
-        req.flash("warn", "Unable to find this project.");
+    }).catch((error) => {
+        req.flash("danger", error.message);
         res.redirect("/panel/projects/list");
-    })
+    });
+});
+
+router.get("/details/:projectname/saved", (req, res) => {
+    req.flash("success", "Plugin configuration saved.");
+    res.redirect("./");
+});
+
+router.get("/pluginConfig/:project/:plugin", (req, res) => {
+    let projectname = req.params.project;
+    let pluginname = req.params.plugin;
+
+    project_manager.canAccessProject(projectname, req.user.id, false).then(() => {
+        project_manager.getProject(projectname, true).then((project) => {
+            if(Object.keys(project.plugins).includes(pluginname)) {
+                if(plugins_manager.isPluginConfigurable(pluginname)) {
+                    res.locals.projectname = projectname;
+                    res.locals.pluginname = pluginname;
+                    res.locals.config = project.plugins[pluginname];
+                    res.locals.inputs = plugins_manager.getConfigForm(pluginname);
+
+                    req.setPage(res, "Plugin configuration", "plugin", "edit");
+                    res.render("projects/plugin_config");
+                } else {
+                    req.flash("warn", "This plugin is not configurable.");
+                    res.redirect("/panel/projects/details/" + projectname);
+                }
+            } else {
+                req.flash("warn", "Unable to find the plugin for this project.");
+                res.redirect("/panel/projects/details/" + projectname);
+            }
+        }).catch((error) => {
+            req.flash("warn", "Unable to find the project.");
+            res.redirect("/panel/projects/list");
+        });
+    }).catch((error) => {
+        req.flash("danger", error.message);
+        res.redirect("/panel/projects/list");
+    });
 });
 
 router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/projects/list");});

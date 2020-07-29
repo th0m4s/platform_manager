@@ -1,0 +1,56 @@
+<html>
+    <head>
+        <%- include("../default/head.ejs") %>
+    </head>
+    <body>
+        <%- include("../default/flash.ejs") %>
+        <%- include("../default/api.ejs") %>
+        <script>
+        window.config = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(config)) %>"));
+        window.inputs = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(inputs)) %>"));
+        window.pluginname = "<%- pluginname %>";
+        window.projectname = "<%- projectname %>";
+        </script>
+        <%- startPageScript("plugin_config") %>
+        
+        <header>
+            <%- include("../default/header.ejs") %>
+        </header>
+        <%- include("../default/loading.ejs") %>
+        <div class="container-fluid" id="main-container">
+            <div class="row mt-3 mx-3" id="details-row">
+                <div class="w-100">
+                    <h3 class="d-inline">Edition of plugin <i><%- pluginname %></i> for project <i><%- projectname %></i> :</h3>
+                    <a href="../../details/<%- projectname %>" class="my-1 btn btn-sm btn-secondary float-right"><i class="fas fa-arrow-left"></i> Back</a>
+                </div>
+
+                <form class="mt-3 w-100" onsubmit="return plugin_config.save();">
+                    <div id="inputs">
+                        Loading configuration...
+                    </div>
+                    <button type="submit" disabled id="save-button" class="btn btn-primary btn-lg btn-block mt-5">Save this configuration</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Save confirmation</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="confirmModal-content">
+                        
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="button-confirm-save" onclick="plugin_config.confirmSave()">Confirm save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

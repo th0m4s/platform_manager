@@ -2,7 +2,7 @@ let forbidden_names = [];
 let containerRunning = 0; // 0 no info, 1 running, -1 stopped
 // only for edit
 function init() {
-    const plugins = ["mariadb", "redis", "persistent-storage"];
+    const plugins = ["mariadb", "redis", "persistent-storage", "custom-port"];
 
     let inputCollabs = $("#input-collaborators");
     inputCollabs.tagsinput({ tagClass: "badge-secondary tagsbadge" });
@@ -273,6 +273,9 @@ function confirm() {
                     } else if(item == "mariadb") {
                         needDelay = true;
                         specialTexts.push("<i class='fas fa-exclamation-triangle'></i> Warning: By removing the mariadb plugin, you are removing all the contents of the database of this project.")
+                    } else if(item == "custom-port") {
+                        needDelay = true;
+                        specialTexts.push("<i class='fas fa-exclamation-triangle'></i> Warning: By removing the custom-port plugin, your project will not be accessible through the customized por, and this port will be available for another project.")
                     }
                 });
                 text += "</ul>";
@@ -284,6 +287,11 @@ function confirm() {
                 needRestart = true;
                 differences.plugins.add.forEach((item) => {
                     text += "<li>" + item + "</li>";
+                    if(item == "custom-port") {
+                        needDelay = true;
+                        if(count == 1) needRestart = false;
+                        specialTexts.push("<i class='fas fa-info-circle'></i> Information: The custom-port plugin will not be initialized and will not be bound to any port until you select one from the Details page of the project.");
+                    }
                 });
                 text += "</ul>";
                 diffTexts.push(text);

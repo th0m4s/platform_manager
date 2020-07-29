@@ -41,7 +41,7 @@ function projectContainerCreated(projectname, containerconfig, networkname, plug
     
 }
 
-function installPlugin(projectname, pluginconfig) {
+async function installPlugin(projectname, pluginconfig) {
 
 }
 
