@@ -2,6 +2,19 @@ const logger = require("./platform_logger").logger();
 const child_process = require("child_process");
 const intercom = require("./intercom/intercom_client").connect();
 
+/**
+ * @callback OnExited
+ * @param {number} code The exit code of the process (if applicable).
+ * @param {string} signal The exit signal of the process.
+ */
+
+/**
+ * Forks a process from a JS file, restart it automatically when necessary and uses callbacks events.
+ * @param {string} file The JS file to fork.
+ * @param {string} id The process internal name
+ * @param {function} onForking Callback executed when a new fork is created.
+ * @param {OnExited} onExited Callback executed when the fork closed unexpectedly.
+ */
 function fork(file, id, onForking, onExited) {
     let subp, shouldRestart = true, restarting = false;
     let startProcess = (restart, code, signal) => {
@@ -36,6 +49,12 @@ function fork(file, id, onForking, onExited) {
     return {getProcess: () => subp};
 }
 
+/**
+ * Forks a JS file, restart it automatically and displays status messages.
+ * @param {string} file The JS file to fork.
+ * @param {string} id The process internal name.
+ * @param {string} name The process display name for status messages.
+ */
 function forkNamed(file, id, name) {
     return fork(file, id, () => {
         logger.info("Forking " + name + "...");

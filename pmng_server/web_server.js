@@ -1,5 +1,6 @@
 const child_process = require("child_process");
 const net = require("net");
+const http = require("http");
 const regex_utils = require("./regex_utils");
 const database_server = require("./database_server");
 // const privileges = require("./privileges");
@@ -15,6 +16,9 @@ const subprocess_util = require("./subprocess_util");
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 // const countPublic = enable_https ? 2 : 1, runningPublic = [];
 
+/**
+ * Starts all required web servers (public HTTP, HTTPS if enabled and private git, error and admin subservers).
+ */
 function start() {
     /*intercom.subscribe(["webStarted"], function(message) {
         if(!runningPublic.includes(message.type)) {
@@ -45,6 +49,10 @@ function start() {
     subprocess_util.forkNamed("./pmng_server/error_panel/error_server", "error_web_server", "error web server");
 }
 
+/**
+ * Caches the error page to send when a socket error is encountered.
+ * Must be called by each public subprocess server.
+ */
 async function prepareSocketError() {
     let style = (await pfs.readFile(path.join(__dirname, "./error_panel/static/style.css"))).toString();
     errorPageCache = (await pfs.readFile(path.join(__dirname, "./error_panel/static/socket_error.html"))).toString();
@@ -101,7 +109,9 @@ async function _getPort(host) {
 }*/
 
 let portMappings = {};
-// called by each process using portMappings
+/**
+ * Registers intercom ports subscription to associate each host with a port given by docker_manager.js.
+ */
 function registerPortInfo() {
     intercom.subscribe(["portBroadcast"], function(message) {
         switch(message.command) {
@@ -125,7 +135,14 @@ function registerPortInfo() {
 }
 
 let secConnInterval = -1, connCount = 0;
-// called by each cluster master process
+/**
+ * Manages a cluster of servers based on the number of connections per second.
+ * @param {number} maxConnPerSec The maximum number of connections per second for a single process. The master will attempt
+ * to spawn or kill processes while they meet the *minFork* and *maxFork* guidelines.
+ * @param {number} minFork The minimum number of processes.
+ * @param {number} maxFork The maximum number of processes. Servers will not spawn if this limit is reached.
+ * @param {string} clusterName The name of the cluster for logging purposes.
+ */
 function registerClusterMaster(maxConnPerSec, minFork, maxFork, clusterName) {
     if(secConnInterval == -1) {
         let intervalSeconds = 10;
@@ -147,6 +164,15 @@ function registerClusterMaster(maxConnPerSec, minFork, maxFork, clusterName) {
 }
 
 let currentClosing = [];
+/**
+ * Called by registerClusterMaster. Method responsible for spawning and killing processes.
+ * Should not be called directly!
+ * @param {*} maxConnPerSec The maximum number of connections per second for a single process.
+ * @param {*} minFork The minimum number of spawned servers.
+ * @param {*} maxFork The maximum number of available running servers.
+ * @param {*} seconds The elasped time in seconds since the last call of this function.
+ * Used to calculate the number of connections per second for the cluster.
+ */
 function updateCluster(maxConnPerSec, minFork, maxFork, seconds) {
     let workersForConn = connCount / maxConnPerSec / seconds;
     connCount = 0;
@@ -168,12 +194,23 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds) {
     }
 }
 
-async function webServe(req, res) {
+/**
+ * Handles a single connection from a public server.
+ * @param {http.IncomingMessage} req The client incoming message.
+ * @param {http.ServerResponse} res The server response to be sent back.
+ */
+function webServe(req, res) {
     connCount++;
     httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
 }
 
-async function upgradeRequest(req, socket, head) {
+/**
+ * Upgrades a standart HTTP connection to a WebSocket connection.
+ * @param {http.IncomingMessage} req The client incoming message.
+ * @param {net.Socket} socket The associated socket for this connection.
+ * @param {Buffer} head The current head of the connection.
+ */
+function upgradeRequest(req, socket, head) {
     connCount++;
     httpProxyServer.ws(req, socket, head, {xfwd: true, target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
 }

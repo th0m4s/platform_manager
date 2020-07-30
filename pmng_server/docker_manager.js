@@ -12,29 +12,55 @@ const child_process = require("child_process");
 const regex_utils = require("./regex_utils");
 const privileges = require("./privileges");
 const treekill = require("tree-kill");
+const DockerContainer = require("node-docker-api/lib/container").Container;
 
 const docker = new Docker(process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)});
 
+/**
+ * Gets the name of the main container for a specific project.
+ * @param {string} projectname The project name for the container.
+ * @returns {string} The full container name for that project.
+ */
 function getProjectMainContainer(projectname) {
     return "pmng_" + projectname + "_main";
 }
 
-// a plugin cannot be named main nor net
-// some plugins like persistent-storage don't need a container
+/**
+ * Gets the name of a specific plugin container for a specific project.
+ * @param {string} projectname The project name associated with the plugin.
+ * @param {string} plugin The plugin name for the container.
+ * Cannot be main nor net (reserved for main container and project network).
+ * @returns {string} The container name for this combination of plugin and project.
+ */
 function getProjectPluginContainer(projectname, plugin) {
     return "pmng_" + projectname + "_" + plugin;
 }
 
+/**
+ * Gets the network name of a specific project.
+ * @param {string} projectname The project name for the network.
+ * @returns {string} The network name for that project.
+ */
 function getProjectNetworkName(projectname) {
     return "pmng_" + projectname + "_net";
 }
 
+/**
+ * Tests if a project is currently running in a Docker container.
+ * @param {string} projectname The project to test.
+ * @returns {Promise<boolean>} A promise resolved with *true* if this project is running, *false* otherwise.
+ */
 function isProjectContainerRunning(projectname) {
     return docker.container.list({filters: {name: [getProjectMainContainer(projectname)]}}).then((containers) => {
         return containers.length > 0 && containers[0].data.State == "running";
     });
 }
 
+/**
+ * Tests if multiple projects are running inside their own Docker container.
+ * @param {string[]} projects An array of projects names to test.
+ * @returns {Promise<Object>} A promise resolved with an object including each project as a property. *true* if the project is running, *false* otherwise.
+ */
 function areProjectContainersRunning(projects) {
     return docker.container.list().then((containers) => {
         let byName = {};
@@ -59,6 +85,10 @@ function areProjectContainersRunning(projects) {
 }
 
 let startingProjects = [], stoppingProjects = [], intervalId = -1;
+/**
+ * Registers all the Docker intercom callbacks on the main thread.
+ * @returns {Promise} A promise resolved when the Docker manager is fully enabled on the main thread.
+ */
 async function maininstance() {
     let delayWaited = 0, delayNeeded = parseInt(process.env.DOCKER_START_DELAY), intervalDelay = 500, messageSent = false;
     while(true) {
@@ -226,7 +256,12 @@ async function maininstance() {
     }, 60*1000); // check containers every minute
 }
 
-// only for maininstance
+/**
+ * Only for main thread. Stops a project and clears all the associated resources (plugins containers and network).
+ * @param {string} projectname The project name to stop.
+ * @param {boolean} force If set to *true*, forces the stop even if the prechecks failed.
+ * @returns {Promise} A promise resolved when the project is stopped and all the the associated plugins containers and network are removed.
+ */
 function stopProject(projectname, force = false) {
     return (force ? Promise.resolve(true) : isProjectContainerRunning(projectname)).then((result) => {
         if(!result) return Promise.reject("Cannot stop a stopped project.");
@@ -270,7 +305,12 @@ function stopProject(projectname, force = false) {
 }
 
 const LOGFILE_NAME = "project.log";
-// only for maininstance
+/**
+ * Attachs to the logs of a container and writes them to a project specific file.
+ * @param {string} projectname The name of the project for the file path.
+ * @param {DockerContainer} container The container object to attach to.
+ * @returns {Promise} A resolved promise when the logs are successfully attached.
+ */
 function attachLogs(projectname, container) {
     let logFile = path.resolve(project_manager.getProjectLogsFolder(projectname), LOGFILE_NAME);
     let logStream = fs.createWriteStream(logFile, {flags: "a"});
@@ -343,7 +383,11 @@ function attachLogs(projectname, container) {
     });
 }
 
-// only for maininstance
+/**
+ * Only for main thread. Starts a project container and its plugins.
+ * @param {string} projectname The project to start.
+ * @returns {Promise} A promise resolved when the project and all its resources (plugins, network) are created and started.
+ */
 function startProject(projectname) {
     return isProjectContainerRunning(projectname).then(async (result) => {
         if(result) return Promise.reject("Cannot start a running project.");
@@ -517,7 +561,11 @@ function startProject(projectname) {
     });
 }
 
-// only for maininstance
+/**
+ * Requests a free port on the host machine and broadcasts it to all the public webservers.
+ * @param {string} projectname The project to request a port for.
+ * @returns {number} The attributed port for this project.
+ */
 function requestPort(projectname) {
     let wantPort = firstPort;
     let usedPorts = Object.values(portMappings).sort();
@@ -537,13 +585,21 @@ function requestPort(projectname) {
     return wantPort;
 }
 
-// only for maininstance
+
+/**
+ * Caches a port for a specific project and broadcasts it to all the webservers.
+ * @param {string} projectname The project to associate the port with.
+ * @param {number} port The port to broadcast.
+ */
 function addPort(projectname, port) {
     portMappings[projectname] = port;
     intercom.send("portBroadcast", {command: "addPort", project: projectname, port: port});
 }
 
-// only for mainstance
+/**
+ * Removes a port for a specific project from all the cached webservers.
+ * @param {string} projectname The project to remove the port for.
+ */
 function removePort(projectname) {
     if(portMappings.hasOwnProperty(projectname)) {
         delete portMappings[projectname];
@@ -556,10 +612,20 @@ let portMappings = {}, firstPort = 49152, lastPort = 49999/*, firstPluginPort = 
 // 11001 is for project
 
 const types = {"node": "pmng/node", "apache-php": "pmng/apache2-php7", "nginx-php": "pmng/nginx-php7"};
+/**
+ * Gets the Docker image name from a project type.
+ * @param {string} type The project type.
+ * @returns {string} The associated Docker image name.
+ */
 function getImageFromType(type) {
     return types[type];
 }
 
+/**
+ * Clears the filesystem start resources for a specific project.
+ * @param {string} projectname The project name of which to clear the start resources.
+ * @returns {Promise} A promise resolved when all the start resources are cleared.
+ */
 function clearStarting(projectname) {
     startingProjects.splice(startingProjects.indexOf(projectname), 1);
     let prom = []
@@ -580,6 +646,12 @@ function clearStarting(projectname) {
     return Promise.all(prom);
 }
 
+/**
+ * Gets a list of all the running containers on the platform, sorted by projects, plugins and unknown type.
+ * @returns {{projects: {name: string, id: string, projectname: string}[],
+ * platform: {name: string, id: string, kind: string, pluginname: string, projectname: string | undefined}[],
+ * others: {name: string, id: string, kind: string, image: string}[]}} A sorted list of all the containers.
+ */
 function getRunningContainers() {
     return docker.container.list().then((containers) => {
         let sorted = {projects: [], platform: [], others: []};
@@ -615,9 +687,12 @@ function getRunningContainers() {
     });
 }
 
+/**
+ * Returns the details about a specific container;
+ * @param {string} reference Reference of the container (name or id).
+ * @returns The container's details
+ */
 function getContainerDetails(reference) {
-    // reference is name or id
-
     // inspect api route is renamed status
     // if reference is name, it will be given to the inspect route that will correctly identify it
     // but the resulting container will have its name in the container.id field (see container.data.Id for correct id)
@@ -646,6 +721,10 @@ function getContainerDetails(reference) {
     });
 }
 
+/**
+ * Lists all networks of the Docker host.
+ * @returns An array of networks name and id.
+ */
 function listNetworks() {
     // only list names and ids
     return docker.network.list().then((networks) => {
@@ -662,9 +741,12 @@ function listNetworks() {
     });
 }
 
+/**
+ * Gets the details about a specific network.
+ * @param {string} reference The network reference (name or id).
+ * @return The details of this network.
+ */
 function getNetworkDetails(reference) {
-    // reference is name or id like container details
-
     return docker.network.get(reference).status().then((network) => {
         let data = network.data, containers = [];
         for(let [id, container] of Object.entries(data.Containers)) {

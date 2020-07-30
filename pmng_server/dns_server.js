@@ -79,6 +79,9 @@ dns_server.on("request", async function(request, response) {
     response.send();
 });
 
+/**
+ * Starts the DNS server and subscribes to the intercom DNS challenges.
+ */
 function start() {
     dns_server.serve(parseInt(process.env.DNS_PORT), "0.0.0.0", () => {
         logger.info("DNS server started.");

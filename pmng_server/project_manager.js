@@ -9,7 +9,18 @@ const intercom = require("./intercom/intercom_client").connect();
 const pfs = require("fs").promises;
 const PROJECTS_PATH = process.env.PROJECTS_PATH;
 
+// TODO: change Project to a class
+/**
+ * Represents a user fetched from the database.
+ * @typedef{{id: number, name: string, ownerid: number, userenv: Object, type: string | null, version: number, plugins: Object, autostart: false}} Project
+*/
 
+/**
+ * Fetches a project from the database.
+ * @param {string} project_name The name of the project to find.
+ * @param {boolean} check Checks if the project exists before fetching it (result is also rejected if set *false* and if project doesn't exist).
+ * @return {Promise<Project>} A promise resolved with the project if it exists.
+ */
 function _getProject(project_name, check = true) {
     return (check ? projectExists(project_name) : Promise.resolve()).then(() => {
         return database_server.database("projects").where("name", project_name).select("*").then((lines) => {
@@ -25,6 +36,12 @@ function _getProject(project_name, check = true) {
     });
 }
 
+/**
+ * Fetches a project from the cache or the database.
+ * @param {string} project_name 
+ * @param {boolean} check Checks if the project exists before fetching it (result is also rejected if set *false* and if project doesn't exist).
+ * @returns {Promise<Project>} A promise resolved with the project if it exists.
+ */
 function getProject(project_name, check = true) {
     if(projects_cache.has(project_name)) return Promise.resolve(projects_cache.get(project_name));
     else return _getProject(project_name, check).then(project => {
@@ -33,6 +50,14 @@ function getProject(project_name, check = true) {
     });
 }
 
+/**
+ * Creates a project, installing all corresponding plugins and prepares the filesystem (including git repository).
+ * @param {string} projectname The name of the project to create.
+ * @param {number} ownerid The id of the owner that will own that project.
+ * @param {Object} env An object with properties corresponding to the project environment variables.
+ * @param {string[]} plugins An array of plugins names.
+ * @returns {Promise} A promise resolved when the project is successfully and completely created.
+ */
 function addProject(projectname, ownerid, env, plugins) {
     let configs = {}, pluginProm = [];
     plugins.forEach((plugin) => {
@@ -58,6 +83,11 @@ function addProject(projectname, ownerid, env, plugins) {
     });
 }
 
+/**
+ * Gets the project name associated with a custom domain.
+ * @param {string} custom_domain A custom domain to check
+ * @returns {Promise<string>} A promise resolved with the project name (or a rejection if not found). 
+ */
 function _getProjectFromCustomDomain(custom_domain) {
     return database_server.database("domains").where("domain", custom_domain).select("projectname").then((results) => {
         if(results == null || results.length != 1) return Promise.reject("Invalid domain: No corresponding project found");
@@ -65,6 +95,12 @@ function _getProjectFromCustomDomain(custom_domain) {
     });
 }
 
+/**
+ * Gets the project associated with a custom domain (like *_getProjectFromCustomDomain()*) but can require subs to be enabled.
+ * @param {string} custom_domain The custom domain to check.
+ * @param {boolean} useSub Check if subs are enabled.
+ * @returns {Promise<string | boolean>} A promise resolved with a project name or *false* if the domain is not found or doesn't have subs enabled (and they were required with *useSub* = *true*).
+ */
 function _checkCustomDomain(custom_domain, useSub) {
     return database_server.database("domains").where("domain", custom_domain).select(["projectname", "enablesub"]).then((results) => {
         if(results == null || results.length != 1) return false
@@ -73,6 +109,12 @@ function _checkCustomDomain(custom_domain, useSub) {
     });
 }
 
+/**
+ * Gets the project associated with a custom domain (like *getProjectFromCustomDomain()*) but can require subs to be enabled (with cached results).
+ * @param {string} custom_domain The custom domain to check.
+ * @param {boolean} useSub Check if subs are enabled.
+ * @returns {Promise<string | boolean>} A promise resolved with a project name or *false* if the domain is not found or doesn't have subs enabled (and they were required with *useSub* = *true*).
+ */
 function checkCustomDomain(custom_domain, useSub) {
     let search = custom_domain + "_" + (useSub ? "true" : "false");
     if(domains_valid_cache.has(search)) return domains_valid_cache.get(search);
@@ -83,17 +125,37 @@ function checkCustomDomain(custom_domain, useSub) {
     }
 }
 
+/**
+ * Adds a custom domain for a project into the database.
+ * @param {string} projectname The project name to add the domain to.
+ * @param {string} custom_domain The custom domain to add.
+ * @param {boolean} enablesub Whether enable the subdomains for the domain.
+ * @returns {Promise} A promise resolved when the domain is added to the database (HTTPS might not be enabled instantly). 
+ */
 function addCustomDomain(projectname, custom_domain, enablesub) {
     intercom.send("greenlock", {command: "addCustom", domain: custom_domain}) // if https not enabled, no greenlock callback will be executed
     return database_server.database("domains").insert({domain: custom_domain, projectname: projectname, enablesub: enablesub ? "true" : "false"});
 }
 
-function addCollaborator(projectname, username, mode) {
+/**
+ * Adds a collaborator to a project into the database.
+ * @param {string} projectname The project name to add the collaborator to.
+ * @param {string} username The username of the collaborator.
+ * @param {"view" | "manage"} mode The collaboration mode (*view* or *manage*).
+ * @returns {Promise} A promise resolved when the collaborator is added into the database.
+ */
+function addCollaborator(projectname, username, mode = "view") {
     return database_server.findUserId(username).then((id) => {
         return database_server.database("collabs").insert({projectname: projectname, userid: id, mode: mode});
     });
 }
 
+/**
+ * Gets the project associated with a custom domain with cached results.
+ * @param {string} custom_domain The custom domain to check.
+ * @param {boolean} useSub Check if subs are enabled.
+ * @returns {Promise<string | boolean>} A promise resolved with a project name or rejected if the domain is not found.
+ */
 function getProjectFromCustomDomain(custom_domain) {
     if(domains_cache.has(custom_domain)) return Promise.resolve(domains_cache.get(custom_domain));
     else return _getProjectFromCustomDomain(custom_domain).then(project => {
@@ -102,6 +164,12 @@ function getProjectFromCustomDomain(custom_domain) {
     });
 }
 
+/**
+ * Gets multiple projects from the cache or the database (like *getProject()*).
+ * @param {string[]} names The project names to fetch. 
+ * @param {boolean} check Check if projects exist before fetching.
+ * @returns {Object} Returns an object with a property for each project. 
+ */
 function getMultipleProjects(names, check = true) {
     let promises = [];
     names.forEach((name) => { promises.push(getProject(name, false)); });
@@ -115,11 +183,19 @@ function getMultipleProjects(names, check = true) {
 }
 
 // public function that broadcasts the command
+/**
+ * Invalidates the cache of all the processes about a project.
+ * @param {string} project_name The project name to invalidate.
+ */
 function invalidateCachedProject(project_name) {
     intercom.send("projectsmng", {command: "invalidateProject", project: project_name});
 }
 
 // public function that broadcasts the command
+/**
+ * Invalidates the cache of all the processes about a custom domain.
+ * @param {string} custom_domain The custom domain to invalidate.
+ */
 function invalidCachedDomain(custom_domain) {
     intercom.send("projectsmng", {command: "invalidateDomains", domain: custom_domain})
 }
@@ -138,6 +214,11 @@ intercom.subscribe(["projectsmng"], (message) => {
     }
 }); 
 
+/**
+ * Checks if a project exists.
+ * @param {string} project_name The project name to check.
+ * @returns {Promise<true>} A promise resolved with *true* if the project exists, else rejected with an error message.
+ */
 function projectExists(project_name) {
     return Promise.all([
         pfs.access(getProjectFolder(project_name)).then(() => {return true;}).catch(() => {return Promise.reject("Project does not exists: Unable to access project foler.")}),
@@ -150,6 +231,12 @@ function projectExists(project_name) {
     });
 }
 
+/**
+ * Sets the configuration of all plugins for a specific project.
+ * @param {string} project_name The project name to save the configuration for.
+ * @param {Object} allConfig The plugins configurations.
+ * @returns {Promise} A promise resolved when the configuration is saved.
+ */
 function setPluginsConfig(project_name, allConfig) {
     return database_server.database("projects").where("name", project_name).update({plugins: JSON.stringify(allConfig)}).then(() => {
         invalidateCachedProject(project_name);
@@ -180,12 +267,26 @@ function _getProjectStorage(project_name) {
     return path.join(process.env.PLUGINS_PATH, "storages", "mounts", project_name);
 }; const getProjectStorage = runtime_cache(_getProjectStorage);
 
+/**
+ * Gets an array of owned projects.
+ * @param {number} userId The owner of the projects to find.
+ * @param {number} after The last fetched project (exclusive).
+ * @param {number} limit The maximum amount of projects to fetch.
+ * @returns {{projects: Project[], hasMore: boolean}} An object with the projects and a hasMore property to indicate if more projects are available for a next call.
+ */
 function listOwnedProjects(userId, after, limit) {
     return database_server.database("projects").where("ownerid", userId).andWhere("id", ">", after).select("*").then((results) => {
         return {projects: results.slice(0, limit), hasMore: results.length > limit};
     });
 }
 
+/**
+ * Gets an array of projects where a user is a collaborator.
+ * @param {number} userId The user with the collaborations.
+ * @param {number} after The last fetched project (exclusive).
+ * @param {number} limit The maximum amount of projects to fetch.
+ * @returns {{projects: Project[], hasMore: boolean}} An object with the projects and a hasMore property to indicate if more projects are available for a next call.
+ */
 function listCollabProjects(userId, after, limit) {
     return database_server.database("collabs").where("userid", userId).andWhere("id", ">", after).select("*").then((results) => {
         let res = {};
@@ -202,6 +303,14 @@ function listCollabProjects(userId, after, limit) {
     });
 }
 
+/**
+ * Checks if a user can access a project.
+ * @param {string} projectname The project to check.
+ * @param {number} userid The id of the user that want the access.
+ * @param {"view" | "manage"} manageMode Check against that mode.
+ * @returns {Promise<string>} A promise resolved with *projectName* if the user has sufficient permissions, else rejected with an error message.
+ * All collaborations can *view* a project, but the *manage* mode requires to be set in the database as it enables modifications on the project.
+ */
 function canAccessProject(projectname, userid, manageMode) {
     return database_server.database("projects").where("name", projectname).select("ownerid").then((results) => {
         if(results == null || results.length != 1) return Promise.reject({error: true, code: 405, message: "Project doesn't exist."});

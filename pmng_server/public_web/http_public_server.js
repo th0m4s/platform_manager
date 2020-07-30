@@ -12,6 +12,11 @@ const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 
 let databaseInstalled = false;
 
+/**
+ * Starts a child server responsible for handling HTTP connections.
+ * 
+ * Acts as a forced redirection is HTTPS is enabled.
+ */
 function start() {
     let serve = web.webServe;
 

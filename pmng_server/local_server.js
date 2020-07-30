@@ -14,6 +14,9 @@ const privileges = require("./privileges");
 
 const LINE = "\n-----> ", SPACES = "       ";
 
+/**
+ * Starts the local platform server.
+ */
 function start() {
     privileges.drop();
 

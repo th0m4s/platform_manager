@@ -5,8 +5,16 @@ const project_manager = require("./project_manager");
 const database_server = require("./database_server");
 const intercom = require("./intercom/intercom_client").connect();
 const api_auth = require("./admin_panel/api_controllers/v1/api_auth");
+const LibPlugin = require("./plugins/lib_plugin");
 
 let loadedPlugins = {};
+/**
+ * Gets a plugin object from its name.
+ * 
+ * Only static methods are available on plugins.
+ * @param {name} plugin The name of the requested plugin.
+ * @returns {LibPlugin} The requested plugin.
+ */
 function getPlugin(plugin) {
     if(!loadedPlugins.hasOwnProperty(plugin)) {
         loadedPlugins[plugin] = require("./plugins/plugin_" + plugin);
@@ -15,23 +23,52 @@ function getPlugin(plugin) {
     return loadedPlugins[plugin];
 }
 
+/**
+ * Gets the default config for a specific plugin.
+ * @param {string} plugin The name of the requested plugin default config.
+ * @returns {Object} The requested plugin default config.
+ */
 function getDefaultConfig(plugin) {
     return getPlugin(plugin).getDefaultConfig();
 }
 
+/**
+ * Installs a plugin for a specific project.
+ * @param {string} plugin The name of the plugin to install.
+ * @param {string} projectname The name of the project to install the project for.
+ * @param {Object} pluginconfig The configuration of that plugin for that project.
+ * @returns {Promise} A promise resolved when the plugin is successfully installed.
+ */
 function install(plugin, projectname, pluginconfig) {
     return getPlugin(plugin).installPlugin(projectname, pluginconfig);
 }
 
+/**
+ * Uninstalls a plugin for a specific project.
+ * @param {string} plugin The name of the plugin to uninstall.
+ * @param {string} projectname The name of the project to uninstall the project for.
+ * @param {Object} pluginconfig The configuration of that plugin for that project.
+ * @returns {Promise} A promise resolved when the plugin is successfully uninstalled.
+ */
 function uninstall(plugin, projectname, pluginconfig) {
     return getPlugin(plugin).uninstallPlugin(projectname, pluginconfig);
 }
 
+/**
+ * Gets the default config form for a specific plugin.
+ * @param {string} plugin The name of the requested plugin config form.
+ * @returns {{config: string, text: string, small: string | undefined, placeholder: string | undefined, type: string, localCheck: function, remoteCheck: string | undefined, configSaved: function}[]} The requested plugin config form.
+ */
 function getConfigForm(plugin) {
     return getPlugin(plugin).getConfigForm();
 }
 
 let configurablePlugins = {};
+/**
+ * Checks if a plugin can be configured by the user.
+ * @param {string} plugin The name of the plugin to check.
+ * @returns {boolean} If the plugin can be configured, *true*, *false* otherwise.
+ */
 function isPluginConfigurable(plugin) {
     if(!configurablePlugins.hasOwnProperty(plugin))
         configurablePlugins[plugin] = getConfigForm(plugin).length > 0;
@@ -39,6 +76,12 @@ function isPluginConfigurable(plugin) {
     return configurablePlugins[plugin];
 }
 
+/**
+ * Gets a router for the plugins API route.
+ * 
+ * It generates a subrouter for each compatible plugin.
+ * @returns {express.Router} The plugins router.
+ */
 function getRouter() {
     let router = express.Router();
 
@@ -122,6 +165,11 @@ function getRouter() {
     return router;
 }
 
+/**
+ * Selects all the configurations of a plugin for each project using it.
+ * @param {string} pluginname The plugin for which to select all the configurations.
+ * @returns {Object} An object with each config as a property, available through the name of each project.
+ */
 function getAllConfigs(pluginname) {
     return database_server.database("projects").select(["plugins", "name"]).then((results) => {
         let configs = {};

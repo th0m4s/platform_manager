@@ -50,12 +50,19 @@ const server = http.createServer(function (req, res) {
     });
 });
 
+/**
+ * Sends an Unauthorized header and message to the git client.
+ * @param {http.ServerResponse} res The response object of the unauthorized connection.
+ */
 function unauthorized(res) {
     res.setHeader("WWW-Authenticate", "Basic realm=\"git repository\"");
     res.statusCode = 401; // respond with 401 and WWW-Authenticate to force git to try again with credentials
     res.end();
 }
 
+/**
+ * Starts the git web subserver. It creates a link between an http server and a git server.
+ */
 function start() {
     privileges.drop();
 

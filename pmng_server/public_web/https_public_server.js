@@ -9,6 +9,9 @@ const greenlock_manager = require("../https/greenlock_manager");
 const wantCluster = false;
 const cluster = wantCluster ? require("cluster") : undefined;
 
+/**
+ * Starts a child server responsible for handling HTTPS connections.
+ */
 function start() {
     const https_options = {
         trace: true,

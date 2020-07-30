@@ -1,7 +1,12 @@
 const LOG_FILE = "/var/log/pmng/pmng.log";
 const fs = require("fs"), pfs = fs.promises, path = require("path");
 const child_process = require("child_process");
+const nodeLogger = require('simple-node-logger');
 
+/**
+ * Prepares the current platform logger by rotating old files and created new ones.
+ * @returns {Promise} A promise resolved when all the preparation has been done.
+ */
 async function prepare() {
     // run as root by maininstance
     let logDir = path.dirname(LOG_FILE);
@@ -31,16 +36,25 @@ async function prepare() {
     }
 }
 
+/**
+ * Sets the correct permissions on the log directory.
+ * @param {string} logDir The log directory.
+ * @returns {Promise} A promise resolved when the permissions are correct.
+ */
 function _setLogPerm(logDir) {
     return new Promise((resolve) => {
         child_process.execSync('chown -R ' + process.env.PROC_UID + ':root "' + logDir + '"');
-        // cannot use string names as uid and gid with (p)fs.chown (and it's sometimes buggy - ie. throw error but set perm)
+        // TODO: why not (p)fs.chown?
         resolve();
     }).then(() => {
         return pfs.chmod(logDir, "700");
     });
 }
 
+/**
+ * Rotates the log files with logrotate and a specific configuration file.
+ * @returns {Promise} A promise resolved when the files are rotated/compressed.
+ */
 function _logrotate() {
     return new Promise((resolve) => {
         child_process.execSync("logrotate /etc/logrotate.d/pmng");
@@ -50,9 +64,15 @@ function _logrotate() {
 
 let _logger = undefined;
 // simple logger is both file and console
+/**
+ * Returns a logger object used by any thread to write to the console and the platform log file.
+ * 
+ * Only one logger object is available per thread to limit filesystem usage.
+ * @returns {nodeLogger.Logger} A logger object.
+ */
 function logger() {
     // logger stored outside to only open file once per thread
-    if(_logger == undefined) _logger = require('simple-node-logger').createSimpleLogger(LOG_FILE)
+    if(_logger == undefined) _logger = nodeLogger.createSimpleLogger(LOG_FILE)
     return _logger;
 }
 

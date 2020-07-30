@@ -102,4 +102,6 @@ class PersistentStoragePlugin extends Plugin {
     static getUsage = runtime_cache(_getUsage);
 }
 
+PersistentStoragePlugin.getUsage()
+
 module.exports = PersistentStoragePlugin;

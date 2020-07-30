@@ -14,6 +14,11 @@ intercom.subscribe(["rootProcessor"], (message, respond) => {
     }
 });
 
+/**
+ * Process an intercom message specifically crafted with a permanent storage action.
+ * @param {Object} message The original intercom message with storage specific parameters.
+ * @param {function} respond The intercom respond callback.
+ */
 function processStorage(message, respond) {
     let project = message.project, action = message.action;
     let baseDir = path.join(process.env.PLUGINS_PATH, "storages");
