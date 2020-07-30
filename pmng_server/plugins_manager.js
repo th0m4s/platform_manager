@@ -82,7 +82,7 @@ function getRouter() {
                                             project_manager.setPluginsConfig(projectname, project.plugins).then(() => {
                                                 let afterProm = [];
                                                 for(let configInput of inputs) {
-                                                    afterProm.push(configInput.configSaved(projectname, pluginConfig));
+                                                    afterProm.push(configInput.configSaved(projectname, pluginConfig[configInput.config]));
                                                 }
 
                                                 Promise.allSettled(afterProm).then(() => {

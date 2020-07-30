@@ -77,8 +77,8 @@ function startGlobalPlugin(plugindirectory) {
     });
 }
 
-function configSaved(project, pluginConfig) {
-    return intercom.sendPromise("plugin_custom-port", {command: "setPort", project, port: pluginConfig.port});
+function portSaved(project, port) {
+    return intercom.sendPromise("plugin_custom-port", {command: "setPort", project, port: port});
 }
 
 function localCheck(port) {
