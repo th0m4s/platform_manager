@@ -274,13 +274,15 @@ const LOGFILE_NAME = "project.log";
 function attachLogs(projectname, container) {
     let logFile = path.resolve(project_manager.getProjectLogsFolder(projectname), LOGFILE_NAME);
     let logStream = fs.createWriteStream(logFile, {flags: "a"});
-    return pfs.chown(logFile, privileges.getUID(), privileges.getGID()).then(() => {return container.logs({
-        follow: true,
-        stdout: true,
-        stderr: true,
-        timestamps: true,
-        since: Date.now()/1000
-    }); }).then((stream) => {
+    return pfs.chown(logFile, privileges.getUID(), privileges.getGID()).then(() => {
+        return container.logs({
+            follow: true,
+            stdout: true,
+            stderr: true,
+            timestamps: true,
+            since: Date.now()/1000
+        });
+    }).then((stream) => {
         let lastType = "      ", lastStream = 0;
         stream.on("data", (log) => {
             let data = log.toString("utf-8").split("\n");
