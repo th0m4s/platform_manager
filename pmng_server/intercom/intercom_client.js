@@ -3,6 +3,7 @@ const net = require("net");
 function connect() {
     let connection = net.createConnection(8043);
     let subs = {}, waitingResp = {};
+    let defaultConfig = {timeout: 20, autoReject: true};
 
     let rcvBuffer = "";
     connection.on("data", (buffer) => {
@@ -32,8 +33,8 @@ function connect() {
             waitingResp[id] = responseCallback || (() => {});
             connection.write("send:" + JSON.stringify({subject: subject, message: message, id: id}) + "\n");
         },
-        sendPromise: function(subject, message, options = {timeout: 20, autoReject: true}) {
-            options = Object.assign({timeout: 20, autoReject: true}, options);
+        sendPromise: function(subject, message, options = defaultConfig) {
+            options = Object.assign(defaultConfig, options);
             let respProm = new Promise((resolve, reject) => {
                 this.send(subject, message, (response) => {
                     if(options.autoReject && response.error !== undefined && response.error === true) return reject(response.message);
@@ -48,7 +49,10 @@ function connect() {
         }/*,
         respond: function(id, message) {
             connection.write("resp:" + JSON.stringify({id: id, message: message}) + "\n");
-        }*/
+        }*/,
+        changeConfig(newConfig = defaultConfig) {
+            defaultConfig = Object.assign(defaultConfig, newConfig);
+        }
     }
 }
 

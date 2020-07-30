@@ -4,6 +4,7 @@ module.exports.create = function () {
     let m = {};
 
     m.init = async function(deps) {
+        intercom.changeConfig({autoReject: false});
         return null;
     },
 
