@@ -29,8 +29,8 @@ function init() {
 
     if(Object.keys(window.project.plugins).length > 0) {
         let pluginsList = $("#plugins-list");
-        for(let plugin in window.project.plugins) {
-            pluginsList.append(getPluginLineHtml(plugin));
+        for(let [plugin, details] of Object.entries(window.project.plugins)) {
+            pluginsList.append(getPluginLineHtml(plugin, details, !owned));
         }
 
         let pluginCheckIntervalId = setInterval(refreshPlugins, 30*1000);
@@ -67,9 +67,10 @@ function getDomainLineHtml(domainid, domain, subs, disabled) {
     + (!disabled ? `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-danger" onclick="project_details.removeDomain('${domain}', ${domainid}, this)"><i class="fas fa-trash-alt"></i> Remove</button></div></span>` : "") + '</li>';
 }
 
-function getPluginLineHtml(plugin) {
+function getPluginLineHtml(plugin, details, disabled) {
     return `<li class="list-group-item" id="line-plugin-${plugin}">`
-    + `<b>Plugin ${plugin} : </b> <span id="plugin-usage-${plugin}">Loading usage...</span></li>`;
+    + `<b>Plugin ${plugin} : </b> <span id="plugin-usage-${plugin}">Loading usage...</span>`
+    + ((details.configurable && !disabled) ? `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-primary" onclick="project_details.editPlugin('${plugin}')"><i class="fas fa-edit"></i> Edit plugin configuration</button></div></span>` : "") + `</li>`;
 }
 
 function setCollabModeButton(collabid, mode) {  // texts are inverted
@@ -104,6 +105,9 @@ function refreshPlugins() {
                     case "unlimited":
                     case "limited":
                         statusDom.html(usage.formatted);
+                        break;
+                    case "custom_text":
+                        statusDom.html(usage.text);
                         break;
                     case "not_measurable":
                         statusDom.html("Usage not measurable for this plugin.");
@@ -143,6 +147,10 @@ function invertCollabMode(collabid) {
             utils.enableButton(btn);
         }
     });
+}
+
+function editPlugin(plugin) {
+    location.href = "../pluginConfig/" + window.project.name + "/" + plugin;
 }
 
 let lastRemoveId = undefined, lastRemoveMode = undefined, lastRemoveBtn = undefined;
@@ -209,4 +217,4 @@ function confirmDelete() {
     }
 }
 
-window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete};
+window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete, editPlugin};

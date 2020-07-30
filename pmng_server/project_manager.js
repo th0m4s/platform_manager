@@ -150,6 +150,12 @@ function projectExists(project_name) {
     });
 }
 
+function setPluginsConfig(project_name, allConfig) {
+    return database_server.database("projects").where("name", project_name).update({plugins: JSON.stringify(allConfig)}).then(() => {
+        invalidateCachedProject(project_name);
+    });
+}
+
 function _getProjectFolder(project_name) {
     return path.join(PROJECTS_PATH, project_name);
 }; const getProjectFolder = runtime_cache(_getProjectFolder);
@@ -226,4 +232,5 @@ module.exports.checkCustomDomain = checkCustomDomain;
 module.exports.projectExists = projectExists;
 module.exports.listOwnedProjects = listOwnedProjects;
 module.exports.listCollabProjects = listCollabProjects;
+module.exports.setPluginsConfig = setPluginsConfig;
 module.exports.canAccessProject = canAccessProject;

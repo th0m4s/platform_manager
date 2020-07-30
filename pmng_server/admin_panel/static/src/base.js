@@ -15,6 +15,7 @@ $.notifyDefaults({
 });
 
 $(document).ready(() => {
+    if(location.href.endsWith("/")) window.history.replaceState(null, "", location.href.substring(0, location.href.length-1));
     utils.showCookieNotifications();
 });
 

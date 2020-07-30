@@ -1,5 +1,6 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../database_server");
+const plugins_manager = require("../plugins_manager");
 //const nocache = require("nocache");
 
 //router.use(nocache());
@@ -34,6 +35,8 @@ router.use("/v1", (function() {
     v1.use("/projects", require("./api_controllers/v1/projects_api"));
     v1.use("/users", require("./api_controllers/v1/users_api"));
     v1.use("/docker", require("./api_controllers/v1/docker_api"));
+
+    v1.use("/plugins", plugins_manager.getRouter());
 
     return v1;
 })());
