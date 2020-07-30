@@ -478,7 +478,7 @@ function startProject(projectname) {
         // each plugin can modify the main container and can create another container based on the given name and correctly set label pmng.containertype to plugin
         let plugins = project.plugins;
         for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
-            containerConfig = await plugins_manager.getPlugin(pluginName).startProjectPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
+            containerConfig = await plugins_manager.getPlugin(pluginName).startProjectPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig) || containerConfig;
         }
 
         // create container

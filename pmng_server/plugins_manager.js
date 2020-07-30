@@ -46,7 +46,7 @@ function getRouter() {
 
     // path from main script, not like in require
     for(let filename of fs.readdirSync("./pmng_server/plugins")) {
-        if(filename.length > 7 && filename.endsWith(".js")) {
+        if(filename.length > 7 && filename.endsWith(".js") && filename.startsWith("plugin_")) {
             let pluginname = filename.split(".")[0].substring(7);
 
             let pluginrouter = express.Router();
