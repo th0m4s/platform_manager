@@ -6,7 +6,7 @@ const Plugin = require("./lib_plugin");
 
 let invalidPorts = [33306, 3306];
 async function isPortValid(port) {
-    return !(port < 1024 || port > 65535 || (port >= 8000 && port <= 8999) || (port >= 49152 && port <= 49999) || invalidPorts.includes(port)
+    return !(port < 1024 || port > 65535 || (port >= 8000 && port <= 8999) || (port >= 21001 && port <= 21999) || (port >= 49152 && port <= 49999) || invalidPorts.includes(port)
         || (await intercom.sendPromise("plugin_custom-port", {command: "checkPort", port}).then((response) => response.used)));
 }
 
