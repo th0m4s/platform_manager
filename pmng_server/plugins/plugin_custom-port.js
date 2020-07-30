@@ -1,12 +1,12 @@
 const project_manager = require("../project_manager");
 const plugins_manager = require("../plugins_manager");
+const database_server = require("../database_server");
 const intercom = require("../intercom/intercom_client").connect();
 
 function projectContainerCreated(projectname, containerconfig, networkname, plugincontainername, pluginconfig) { }
 
 async function stopProjectPlugin(projectname) { }
 async function installPlugin(projectname, pluginconfig) { }
-async function uninstallPlugin(projectname, pluginconfig) { }
 
 function startProjectPlugin(projectname, containerconfig, network, plugincontainername, pluginconfig) {
     let port = pluginconfig.port;
@@ -57,9 +57,13 @@ async function isPortValid(port) {
 
 let customPortsCache = {};
 function startGlobalPlugin(plugindirectory) {
-    plugins_manager.getAllConfigs("custom-port").then((configs) => {
-        for(let [project, config] of Object.entries(configs)) {
-            if(config.port > 0) customPortsCache[project] = config.port
+    database_server.isInstalled().then((installed) => {
+        if(installed) {
+            plugins_manager.getAllConfigs("custom-port").then((configs) => {
+                for(let [project, config] of Object.entries(configs)) {
+                    if(config.port > 0) customPortsCache[project] = config.port
+                }
+            });
         }
     });
 
@@ -69,6 +73,8 @@ function startGlobalPlugin(plugindirectory) {
             case "setPort":
                 if(port == 0) delete customPortsCache[project];
                 else customPortsCache[project] = port;
+
+                respond({error: false}); // force respond because portSaved and uninstallPlugin require promise
                 break;
             case "checkPort":
                 respond({used: Object.values(customPortsCache).includes(port)});
@@ -81,6 +87,10 @@ function portSaved(project, port) {
     return intercom.sendPromise("plugin_custom-port", {command: "setPort", project, port: port});
 }
 
+function uninstallPlugin(projectname, pluginconfig) {
+    return intercom.sendPromise("plugin_custom-port", {command: "setPort", project: projectname, port: 0});
+}
+
 function localCheck(port) {
     port = parseInt(port);
     return isPortValid(port).then((result) => {
@@ -91,7 +101,7 @@ function localCheck(port) {
 
 function getConfigForm() {
     return [
-        {config: "port", text: "Custom port", small: "With a custom port, a second port is bound from the server to your project via the CUSTOM_PORT environment variable.", placeholder: "Enter a custom port or 0 to disable the plugin", type: "number", localCheck, remoteCheck: "/checkPort/", configSaved}
+        {config: "port", text: "Custom port", small: "With a custom port, a second port is bound from the server to your project via the CUSTOM_PORT environment variable.", placeholder: "Enter a custom port or 0 to disable the plugin", type: "number", localCheck, remoteCheck: "/checkPort/", configSaved: portSaved}
     ];
 }
 
