@@ -199,7 +199,7 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds) {
  * @param {http.IncomingMessage} req The client incoming message.
  * @param {http.ServerResponse} res The server response to be sent back.
  */
-function webServe(req, res) {
+async function webServe(req, res) {
     connCount++;
     httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
 }
@@ -210,7 +210,7 @@ function webServe(req, res) {
  * @param {net.Socket} socket The associated socket for this connection.
  * @param {Buffer} head The current head of the connection.
  */
-function upgradeRequest(req, socket, head) {
+async function upgradeRequest(req, socket, head) {
     connCount++;
     httpProxyServer.ws(req, socket, head, {xfwd: true, target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
 }
