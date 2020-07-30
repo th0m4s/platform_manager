@@ -274,7 +274,7 @@ const LOGFILE_NAME = "project.log";
 function attachLogs(projectname, container) {
     let logFile = path.resolve(project_manager.getProjectLogsFolder(projectname), LOGFILE_NAME);
     let logStream = fs.createWriteStream(logFile, {flags: "a"});
-    return pfs.chown(logFile, privileges.getUID(), privileges.getGID()).then(() => {
+    return pfs.chown(logFile, ...privileges.droppingOptions(false)).then(() => {
         return container.logs({
             follow: true,
             stdout: true,
@@ -363,7 +363,7 @@ function startProject(projectname) {
         let rotateConf = path.join(logFolder, "rotate.conf"), rotateStatus = path.join(logFolder, "rotate.status");
 
         await pfs.writeFile(rotateConf, logFile + " {\n\tsize 1\n\trotate 7\n\tcompress\n\tdelaycompress\n\tmissingok\n}");
-        child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf, privileges.droppingOptions());
+        child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf, privileges.droppingOptions(true));
 
         // if starting folder exists, delete it
         let startingFolder = project_manager.getProjectDeployFolder(projectname, true);

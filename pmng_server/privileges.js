@@ -3,11 +3,11 @@ function drop() {
     process.setuid(getUID());
 }
 
-function droppingOptions() {
-    return {
+function droppingOptions(asObject = true) {
+    return asObject ? {
         uid: getUID(),
         gid: getGID()
-    }
+    } : [getUID(), getGID()];
 }
 
 function getUID() {
@@ -21,5 +21,3 @@ function getGID() {
 
 module.exports.drop = drop;
 module.exports.droppingOptions = droppingOptions;
-module.exports.getUID = getUID;
-module.exports.getGID = getGID;
