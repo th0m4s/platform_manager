@@ -35,6 +35,12 @@ function refreshNetworks() {
             } else {
                 $("#networks-status").hide();
                 let list = $("#networks-list").html("");
+                let sortProp = "name";
+                networks = networks.sort((a, b) => {
+                    if(a[sortProp] < b[sortProp]) return -1;
+                    else if(a[sortProp] > b[sortProp]) return 1;
+                    else return 0;
+                });
                 for(let network of networks) {
                     let content = `<li class="list-group-item" id="line-network-${network.name}">`
                         + `<b>Network ${getNDetailsLink(network.name)}</b> <i>(id ${getNDetailsLink(network.networkId)})</i>`
