@@ -1,73 +1,45 @@
 const docker_manager = require("../docker_manager");
+const Plugin = require("./lib_plugin");
 
-function startGlobalPlugin(plugindirectory) {
-
-}
-
-function startProjectPlugin(projectname, containerconfig, network, plugincontainername, pluginconfig) {
-    return docker_manager.docker.container.create({
-        Image: "redis:alpine",
-        Hostname: "redis",
-        name: plugincontainername,
-        Labels: {
-            "pmng.containertype": "plugin",
-            "pmng.projectname": projectname,
-            "pmng.pluginname": "redis"
-        },
-        Env: ["discovery.type=" + pluginconfig.discoveryType],
-        HostConfig: {
-            AutoRemove: true,
-            NetworkMode: network
-        },
-        NetworkingConfig: {
-            EndpointsConfig: {
-                [network]: {
-                    Aliases: ["redis"] // same as hostname   
+class RedisPlugin extends Plugin {
+    static startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig) {
+        return docker_manager.docker.container.create({
+            Image: "redis:alpine",
+            Hostname: "redis",
+            name: plugincontainername,
+            Labels: {
+                "pmng.containertype": "plugin",
+                "pmng.projectname": projectname,
+                "pmng.pluginname": "redis"
+            },
+            Env: ["discovery.type=" + pluginconfig.discoveryType],
+            HostConfig: {
+                AutoRemove: true,
+                NetworkMode: network
+            },
+            NetworkingConfig: {
+                EndpointsConfig: {
+                    [network]: {
+                        Aliases: ["redis"] // same as hostname   
+                    }
                 }
             }
-        }
-    }).then((container) => {
-        return container.start();
-    }).then(() => {
-        return containerconfig;
-    });
+        }).then((container) => {
+            return container.start();
+        }).then(() => {
+            return containerconfig;
+        });
+    }
+
+    static getDefaultConfig() {
+        return {
+            discoveryType: "single-node"
+        };
+    }
+
+    static async getUsage() {
+        return {type: "not_measurable"};
+    }
 }
 
-async function stopProjectPlugin(projectname) {
-    // per-project plugin container auto stopped
-}
-
-function projectContainerCreated(projectname, containerconfig, networkname, plugincontainername, pluginconfig) {
-    
-}
-
-async function installPlugin(projectname, pluginconfig) {
-
-}
-
-function uninstallPlugin(projectname, pluginconfig) {
-
-}
-
-async function getUsage(projectname) {
-    return {type: "not_measurable"};
-}
-
-function getDefaultConfig() {
-    return {
-        discoveryType: "single-node"
-    };
-}
-
-
-module.exports.startGlobalPlugin = startGlobalPlugin;
-module.exports.startProjectPlugin = startProjectPlugin;
-module.exports.stopProjectPlugin = stopProjectPlugin;
-module.exports.projectContainerCreated = projectContainerCreated;
-module.exports.installPlugin = installPlugin;
-module.exports.uninstallPlugin = uninstallPlugin;
-module.exports.getUsage = getUsage;
-module.exports.prepareRouter = () => {};
-module.exports.getConfigForm = () => [];
-
-module.exports.getDefaultConfig = getDefaultConfig;
+module.exports = RedisPlugin;
