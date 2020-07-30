@@ -21,3 +21,5 @@ function getGID() {
 
 module.exports.drop = drop;
 module.exports.droppingOptions = droppingOptions;
+module.exports.getUID = getUID;
+module.exports.getGID = getGID;
