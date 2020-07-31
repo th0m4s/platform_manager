@@ -5,17 +5,14 @@ const child_process = require("child_process");
 const Buildpack = require("../lib_pack");
 
 class BasePHPBuildpack extends Buildpack {
-    static async build(projectname, deployFolder, logger) {
+    static async build(projectname, utils, logger) {
         logger("Analyzing project...");
     
-        try {
-            let stats = await pfs.stat(path.resolve(deployFolder, "public"));
-            if(!stats.isDirectory()) throw new Error(); // will be catched and rethrown with message
-        } catch(error) {
-            throw new Error("Cannot build PHP project. Only files in the public directory are served and no matching directory was found.");
+        if(!utils.exists("d", "public")) {
+            throw "Cannot build PHP project. Only files in the public directory are served and no matching directory was found.";
         }
     
-        let baseContents = await pfs.readdir(deployFolder);
+        let baseContents = (await utils.execCommand("ls -1")).out.split("\n");
         if(baseContents.some((name) => {
             return name.endsWith(".php");
         })) {
@@ -23,41 +20,22 @@ class BasePHPBuildpack extends Buildpack {
         }
     
         // check vendor for composer packages
-        try {
-            let vendorPath = path.resolve(deployFolder, "vendor");
-            await pfs.access(vendorPath);
+        if(await utils.exists("d", "vendor")) {
             logger("Removing vendor...");
-            await rmfr(vendorPath);
-            logger("User-provided vendor directory removed.");
-        } catch(error) {
-            // no vendor dir is normal
+            if((await utils.execCommand("rm -rf ./vendor")).err.length > 0) {
+                logger("vendor cannot be deleted.")
+                logger("The buildpack will try to override these files.");
+            } else logger("User-provided vendor removed.");
         }
     
-        let hasComposer = false;
-        try {
-            await pfs.access(path.resolve(deployFolder, "composer.json"));
-            hasComposer = true;
-        } catch(error) {}
-    
+        let hasComposer = await utils.exists("f", "composer.json");
     
         if(hasComposer) {
             logger("Installing dependencies using composer...");
-            let install_process = child_process.spawn("/bin/bash", ["-c", "composer install --no-dev -o"], {cwd: deployFolder});
-            await new Promise((resolve, reject) => {
-                let error = "";
-                install_process.stderr.on("data", (data) => {
-                    error += data;
-                });
-    
-                install_process.on("exit", (exitcode, signal) => {
-                    if(exitcode === null || exitcode > 0) { // composer echoes everything on stderr, so check by using exitcode or termsign
-                        reject("Error during composer installation (" + exitcode + ", " + signal + "): " + error);
-                    } else {
-                        logger("Project installed.");
-                        resolve();
-                    }
-                });
-            });
+            let {out, err, code} = await utils.execCommand("composer install --no-dev -o");
+            if(code > 0) {
+                throw "Error during composer installation (exitcode: " + code + "): " + err; 
+            } else logger("Project installed.")
         } else logger("No composer.json file found. No package to install.");
     
         return ["/var/start/entrypoint.sh"]; // all php based should use this entrypoint script (except if return is changed in the child buildpack)

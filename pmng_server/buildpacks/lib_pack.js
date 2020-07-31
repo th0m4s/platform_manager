@@ -1,5 +1,5 @@
 class Buildback {
-    static async build(projectname, deployFolder, logger) { return ["bash"] }
+    static async build(projectname, utils, logger) { return ["bash"] }
 }
 
 module.exports = Buildback;

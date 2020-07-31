@@ -15,11 +15,11 @@ class RedisPlugin extends Plugin {
             Env: ["discovery.type=" + pluginconfig.discoveryType],
             HostConfig: {
                 AutoRemove: true,
-                NetworkMode: network
+                NetworkMode: networkname
             },
             NetworkingConfig: {
                 EndpointsConfig: {
-                    [network]: {
+                    [networkname]: {
                         Aliases: ["redis"] // same as hostname   
                     }
                 }

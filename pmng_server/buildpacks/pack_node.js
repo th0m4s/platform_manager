@@ -5,67 +5,47 @@ const child_process = require("child_process");
 const Buildpack = require("./lib_pack");
 
 class NodeBuildpack extends Buildpack {
-    static async build(projectname, deployFolder, logger) {
+    static async build(projectname, utils, logger) {
         let pkg = {};
-        // TODO: build in a container and get result with archive
-    
+
         logger("Analyzing package.json...");
         try {
-            // do not use require as it caches the file
-            pkg = JSON.parse(await pfs.readFile(path.resolve(deployFolder, "package.json")));
+            pkg = JSON.parse(await utils.readFile("package.json"));
         } catch(error) {
-            throw new Error("Cannot build NodeJS project. package.json not found.");
+            throw "Cannot build NodeJS project. package.json not found.";
         }
     
         let mainscript = pkg.main || "index.js";
-        try {
-            await pfs.access(path.resolve(deployFolder, mainscript));
-        } catch(error) {
-            throw new Error("Cannot find main file.");
+        if(!(await utils.exists("f", mainscript))) {
+            throw "Cannot find main file, please check your package.json.";
         }
     
         // check node_modules
-        try {
-            let modulesPath = path.resolve(deployFolder, "node_modules");
-            await pfs.access(modulesPath);
+        if(await utils.exists("d", "node_modules")) {
             logger("Removing node_modules...");
-            await rmfr(modulesPath);
-            logger("User-provided modules removed.");
-        } catch(error) {
-            // no modules dir is normal
+            if((await utils.execCommand("rm -rf ./node_modules")).err.length > 0) {
+                logger("node_modules cannot be deleted.")
+                logger("The buildpack will try to override these files.");
+            } else logger("User-provided modules removed.");
         }
     
         let npm = true;
-        try {
-            await pfs.access(path.resolve(deployFolder, "yarn.lock"));
+        if(await utils.exists("f", "yarn.lock")) {
             npm = false;
-        } catch(error) {}
+        }
     
         let cmd = "";
         if(npm) {
             logger("Installing node modules from npm (please wait)...");
-            cmd = "npm install --production";
+            cmd = "npm install --production && npm cache clean --force";
         } else {
             logger("Installing node modules from yarn (please wait)...");
             cmd = "yarn install --production --frozen-lockfile";
         }
-    
-        let install_process = child_process.spawn("/bin/bash", ["-c", cmd], {cwd: deployFolder});
-        await new Promise((resolve, reject) => {
-            let error = "";
-            install_process.stderr.on("data", (data) => {
-                error += data;
-            });
-    
-            install_process.on("exit", (exitcode, signal) => {
-                if(exitcode === null || exitcode > 0) {
-                    reject("Error during modules installation (" + exitcode + ", " + signal + "): " + error);
-                } else {
-                    logger("Project installed.");
-                    resolve();
-                }
-            });
-        });
+
+        let {out, err, code} = await utils.execCommand(cmd);
+        if(code > 0) throw "Error during modules installation (" + code + "): " + err;
+        else logger("Project installed.");
     
         return ["node", mainscript];
     }

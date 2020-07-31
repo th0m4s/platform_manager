@@ -26,10 +26,19 @@ function getProjectMainContainer(projectname) {
 }
 
 /**
+ * Gets the name of the deploy container for a specific project.
+ * @param {string} projectname The project name for the container.
+ * @returns {string} The full container name for that project.
+ */
+function getProjectDeployingContainer(projectname) {
+    return "pmng_" + projectname + "_deploying";
+}
+
+/**
  * Gets the name of a specific plugin container for a specific project.
  * @param {string} projectname The project name associated with the plugin.
  * @param {string} plugin The plugin name for the container.
- * Cannot be main nor net (reserved for main container and project network).
+ * Cannot be main, net nor deploying (reserved for main container and project network).
  * @returns {string} The container name for this combination of plugin and project.
  */
 function getProjectPluginContainer(projectname, plugin) {
@@ -423,12 +432,13 @@ function startProject(projectname) {
             cwd: startingFolder
         });
 
-        let settings = JSON.parse(await pfs.readFile(path.resolve(startingFolder, "settings.json"))).project;
+        let fullSettings = JSON.parse(await pfs.readFile(path.resolve(startingFolder, "settings.json"))), settings = fullSettings.project;
+        let buildVersion = fullSettings.buildVersion || 1;
         let type = settings.type;
         let entrypoint = settings.entrypoint;
         
         let imageName = getImageFromType(type);
-        if(imageName == undefined) throw new Error("Unknown image for project");
+        if(imageName == undefined) throw "Unknown image for project.";
 
         let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"];
         for(let [key, value] of Object.entries(project.userenv)) {
@@ -528,7 +538,7 @@ function startProject(projectname) {
         // create container
         let container = await docker.container.create(containerConfig);
 
-        let projectFilesFolder = path.resolve(startingFolder, "deploying");
+        let projectFilesFolder = path.resolve(startingFolder, buildVersion == 1 ? "deploying" : "project");
         let projectArchive = path.resolve(startingFolder, "archive.tar");
         
         // archive without gzip project
@@ -778,4 +788,6 @@ module.exports.getRunningContainers = getRunningContainers;
 module.exports.getContainerDetails = getContainerDetails;
 module.exports.listNetworks = listNetworks;
 module.exports.getNetworkDetails = getNetworkDetails;
+module.exports.getImageFromType = getImageFromType;
+module.exports.getProjectDeployingContainer = getProjectDeployingContainer;
 module.exports.maininstance = maininstance;
