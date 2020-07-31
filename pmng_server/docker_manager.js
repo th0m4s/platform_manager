@@ -629,8 +629,8 @@ const types = {
         "14": "pmng/node:14.7.0",
         "13.4.0": "pmng/node:13.14.0",
         "13": "pmng/node:13.14.0",
-        "12.18.0": "pmng/node:12.18.0",
-        "12": "pmng/node:12.18.0"
+        "12.18.3": "pmng/node:12.18.3",
+        "12": "pmng/node:12.18.3"
     }, 
     "apache-php": {
         "latest": "pmng/apache2-php7:latest"
