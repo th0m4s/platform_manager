@@ -432,15 +432,16 @@ function startProject(projectname) {
             cwd: startingFolder
         });
 
-        let fullSettings = JSON.parse(await pfs.readFile(path.resolve(startingFolder, "settings.json"))), settings = fullSettings.project;
-        let buildVersion = fullSettings.buildVersion || 1;
-        let type = settings.type;
-        let entrypoint = settings.entrypoint;
+        let fullSettings = JSON.parse(await pfs.readFile(path.resolve(startingFolder, "settings.json")));
+        let projectSettings = fullSettings.project, buildSettings = fullSettings.build || {};
+        let buildVersion = buildSettings.version || (fullSettings.buildVersion || 1), buildMode = buildSettings.mode || "archive";
+        let type = projectSettings.type, typeVersion = projectSettings.version || "latest";
+        let entrypoint = projectSettings.entrypoint;
         
-        let imageName = getImageFromType(type);
+        let imageName = getImageFromType(type, typeVersion);
         if(imageName == undefined) throw "Unknown image for project.";
 
-        let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"];
+        let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "CUSTOM_PORT"];
         for(let [key, value] of Object.entries(project.userenv)) {
             if(!specialEnv.includes(key.toUpperCase())) env.push(key + "=" + value);
         }
@@ -621,14 +622,32 @@ function removePort(projectname) {
 let portMappings = {}, firstPort = 49152, lastPort = 49999/*, firstPluginPort = 12001*/;
 // 11001 is for project
 
-const types = {"node": "pmng/node", "apache-php": "pmng/apache2-php7", "nginx-php": "pmng/nginx-php7"};
+const types = {
+    "node": {
+        "latest": "pmng/node:latest",
+        "14.7.0": "pmng/node:14.7.0",
+        "14": "pmng/node:14.7.0",
+        "13.4.0": "pmng/node:13.14.0",
+        "13": "pmng/node:13.14.0",
+        "12.18.0": "pmng/node:12.18.0",
+        "12": "pmng/node:12.18.0"
+    }, 
+    "apache-php": {
+        "latest": "pmng/apache2-php7:latest"
+    },
+    "nginx-php": {
+        "latest": "pmng/nginx-php7:latest"
+    }
+};
+
 /**
  * Gets the Docker image name from a project type.
  * @param {string} type The project type.
+ * @param {string} version A specific version for this type.
  * @returns {string} The associated Docker image name.
  */
-function getImageFromType(type) {
-    return types[type];
+function getImageFromType(type, version = "latest") {
+    return types[type][version];
 }
 
 /**

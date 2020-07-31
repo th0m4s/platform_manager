@@ -105,13 +105,13 @@ function start() {
                                     throw "Cannot find the required project.json. Please create this file and push it to deploy the project.";
                                 }
 
-                                let type = projectData.type.replace(/\./g, "");
+                                let type = projectData.type.replace(/\./g, ""), typeVersion = projectData.version;
                                 if(type !== undefined && type.length > 0) {
                                     try {
                                         let buildpack = require("./buildpacks/pack_" + type);
 
                                         connection.write(LINE + "Starting deployment container...");
-                                        let image = docker_manager.getImageFromType(type);
+                                        let image = docker_manager.getImageFromType(type, typeVersion);
 
                                         let container = null;
                                         try {
@@ -209,7 +209,7 @@ function start() {
                                             throw "Buildpack error: " + e;
                                         }
 
-                                        await pfs.writeFile(settingsFile, JSON.stringify({project: {type: type, entrypoint: startCmd}, buildVersion: 2}));
+                                        await pfs.writeFile(settingsFile, JSON.stringify({project: {type: type, entrypoint: startCmd, version: typeVersion}, build: {version: 2, mode: "archive"}}));
                                         connection.write(SPACES + "Project built.\n");
 
                                         connection.write(LINE + "Stopping deployment container...");
@@ -240,7 +240,7 @@ function start() {
                                 await rmfr(buildFolder);
                                 connection.write(SPACES + "Temporary files removed.\n");
 
-                                connection.write(LINE + "Updating database...\n");
+                                connection.write(LINE + "Updating database...");
                                 let newVersion = 0;
                                 await new Promise((resolve, reject) => {
                                     database_server.database("projects").where("name", projectname).select("version").then((results) => {
@@ -254,7 +254,7 @@ function start() {
 
                                 project_manager.invalidateCachedProject(projectname);
 
-                                connection.write(SPACES + "Database updated.\n");
+                                connection.write(" Database updated.\n");
                                 connection.write(SPACES + "Project version v" + newVersion + " deployed.\n");
                             
                                 if(await docker_manager.isProjectContainerRunning(projectname)) {
