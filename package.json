@@ -50,6 +50,8 @@
     "runtime-caching": "^1.0.1",
     "simple-git": "^1.132.0",
     "simple-node-logger": "^18.12.24",
+    "socket.io": "^2.3.0",
+    "socketio-auth": "^0.1.1",
     "tar": "^6.0.1",
     "tree-kill": "^1.2.2",
     "zlib": "^1.0.5"

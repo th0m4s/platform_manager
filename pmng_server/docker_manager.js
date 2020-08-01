@@ -691,41 +691,41 @@ function clearStarting(projectname) {
  * others: {name: string, id: string, kind: string, image: string}[]}} A sorted list of all the containers.
  */
 function getRunningContainers() {
-    return docker.container.list().then((containers) => {
+    return docker.container.list({filters: {status: ["running"]}}).then((containers) => {
         let sorted = {projects: [], platform: [], others: []};
         for(let container of containers) {
-            let labels = container.data.Labels, type = labels["pmng.containertype"], cid = container.data.Id.slice(0, 12);
-            
-            let names = container.data.Names, name = "";
-            if(names !== undefined & names.length > 0) name = names[0].slice(1); // remove first slash in name
-
-            if(type == undefined) {
-                sorted.others.push({name: name, id: cid, kind: "not_pmng", image: container.data.Image});
-            } else {
-                let projectname = labels["pmng.projectname"], pluginname = labels["pmng.pluginname"];
-                // can be undefined, but can only declare one time the variables with these names
-                switch(type) {
-                    case "project":
-                        sorted.projects.push({name: name, id: cid, projectname: projectname});
-                        break;
-                    case "plugin":
-                        sorted.platform.push({name: name, id: cid, projectname: projectname, kind: "plugin", pluginname: pluginname});
-                        break;
-                    case "deployment":
-                        sorted.platform.push({name: name, id: cid, projectname: projectname, kind: "deployment"});
-                        break;
-                    case "globalplugin":
-                        sorted.platform.push({name: name, id: cid, kind: "globalplugin", pluginname: pluginname});
-                        break;
-                    default:
-                        sorted.others.push({name: name, id: cid, kind: "not_reco", image: container.data.Image});
-                        break;
-                }
-            }
+            let name = "";
+            if(container.data.Names != undefined && container.data.Names.length > 0) name = container.data.Names[0].slice(1);
+            let sortResult = sortContainer(container.data.Id, name, container.data.Labels, container.data.Image);
+            sorted[sortResult.category].push(sortResult.result);
         }
 
         return sorted;
     });
+}
+
+function sortContainer(id, name, labels, image) {
+    let type = labels["pmng.containertype"];
+    id = id.slice(0, 12);
+
+    if(type == undefined) {
+        return {category: "others", result: {name: name, id, kind: "not_pmng", image}};
+    } else {
+        let projectname = labels["pmng.projectname"], pluginname = labels["pmng.pluginname"];
+        // can be undefined, but can only declare one time the variables with these names
+        switch(type) {
+            case "project":
+                return {category: "projects", result: {name, id, projectname}};
+            case "plugin":
+                return {category: "platform", result: {name, id, projectname, kind: "plugin", pluginname}};
+            case "deployment":
+                return {category: "platform", result: {name, id, projectname, kind: "deployment"}};
+            case "globalplugin":
+                return {category: "platform", result: {name, id, kind: "globalplugin", pluginname}};
+            default:
+                return {category: "others", result: {name, id, kind: "not_reco", image}};
+        }
+    }
 }
 
 /**
@@ -811,6 +811,12 @@ function getNetworkDetails(reference) {
     });
 }
 
+function registerEvents(callback, since = new Date().getTime()/1000) {
+    docker.events({since}).then((stream) => {
+        stream.on("data", (data) => callback(JSON.parse(data.toString())));
+    });
+}
+
 
 module.exports.docker = docker;
 module.exports.isProjectContainerRunning = isProjectContainerRunning;
@@ -821,4 +827,6 @@ module.exports.listNetworks = listNetworks;
 module.exports.getNetworkDetails = getNetworkDetails;
 module.exports.getImageFromType = getImageFromType;
 module.exports.getProjectDeployingContainer = getProjectDeployingContainer;
+module.exports.registerEvents = registerEvents;
+module.exports.sortContainer = sortContainer;
 module.exports.maininstance = maininstance;

@@ -35,9 +35,14 @@ admin.all("/", function(req, res) {
 function start() {
     privileges.drop();
 
-    admin.listen(8080, () => {
+    let server = admin.listen(8080, () => {
         logger.info("Admin server started.");
     });
+
+    let io = require('socket.io')(server);
+    require('socketio-auth')(io, require("./socket_controllers/socket_auth"));
+
+    require("./socket_controllers/v1/docker_socket").initializeNamespace(io.of("/v1/docker"));
 
     if(process.env.ENABLE_HTTPS.toLowerCase() == "true") greenlock_manager.init();
 }
