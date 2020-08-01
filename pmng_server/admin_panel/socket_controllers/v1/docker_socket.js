@@ -73,7 +73,7 @@ function processContainerAction(namespace, eventData) {
             }
             break;
         case "stop":
-            namespace.to("list_containers").emit("container_action", {action: "remove", item: eventData.id});
+            namespace.to("list_containers").emit("container_action", {action: "remove", item: eventData.Actor.Attributes.name});
             if(eventData.Actor.Attributes["pmng.containertype"] == "project") {
                 let projectName = eventData.Actor.Attributes["pmng.projectname"];
                 namespace.to("project_" + projectName).emit("project_action", {action: "stop", project: projectName});
@@ -86,10 +86,10 @@ function processNetworkAction(namespace, eventData) {
     // also connect and disconnect for details
     switch(eventData.Action) {
         case "create":
-            namespace.to("list_networks").emit("network_action", {action: "remove", item: {id: eventData.Actor.ID, name: eventData.Actor.Attributes.name}});
+            namespace.to("list_networks").emit("network_action", {action: "add", item: {networkId: eventData.Actor.ID, name: eventData.Actor.Attributes.name}});
             break;
         case "destroy": // remove? only destroy is sent
-            namespace.to("list_networks").emit("network_action", {action: "add", item: eventData.Actor.ID});
+            namespace.to("list_networks").emit("network_action", {action: "remove", item: eventData.Actor.Attributes.name});
             break;
     }
 }

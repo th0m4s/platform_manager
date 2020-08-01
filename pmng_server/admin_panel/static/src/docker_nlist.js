@@ -1,62 +1,110 @@
+let socket = undefined;
+
 function init() {
     utils.showInfiniteLoading("Loading networks..."),
-    window.refreshInterval = setInterval(refreshNetworks, 10*1000);
-    refreshNetworks();
+    socket = io("/v1/docker");
+
+    socket.on("connect", function(){
+        console.log("Socket connected.")
+        socket.emit("authentication", {key: API_KEY});
+        socket.on("authenticated", function() {
+            console.log("Socket authenticated.");
+            socket.emit("setup", {type: "networks"});
+
+            listNetworks();
+        });
+        socket.on("unauthorized", function(err) {
+            utils.hideLoading();
+            $.notify({message: "Unable to authenticate to the socket. Please reload the page."}, {type: "danger"});
+
+            console.log("Unauthorized from the socket", err);
+        });
+    });
+
+    socket.on("error", (err) => {
+        utils.hideLoading();
+        $.notify({message: "Connection with the socket lost. Please reload the page."}, {type: "danger"});
+
+        console.log("Socket error", err);
+    });
+
+    socket.on("network_action", (message) => {
+        let item = message.item;
+        switch(message.action) {
+            case "add":
+                addNetwork(item);
+                break;
+            case "remove":
+                $("#line-" + item).remove();
+                break;
+        }
+    });
 }
 
-let fetchError = false, loadHidden = false;
-function refreshNetworks() {
-    $.getJSON("/api/v1/docker/networks/list").fail((xhr, status, error) => {
-        if(!fetchError) {
-            $.notify({message: `Unable to list networks because of a server error.`}, {type: "danger"});
-            fetchError = true;
-            clearInterval(window.refreshInterval);
+function setStatusMessage(hasNetworks) {
+    if(!hasNetworks) {
+        $("#networks-status").html("No network found (check your Docker installation for bridge, none and host networks).").show();
+        $("#networks-card").hide();
+    } else {
+        $("#networks-status").hide();
+        $("#networks-card").show();
+    }
+}
 
-            $(".status-msg").html("An error occured while the list was retrieved by the server. Please try again." + (xhr.status == 403 ? "<br/>Unauthorized access." : ""));
-        }
+function addNetwork(network) {
+    let content = `<li class="list-group-item line-network" data-sort="${network.name}" id="line-${network.name}">`
+    + `<b>Network ${getNDetailsLink(network.name)}</b> <i>(id ${getNDetailsLink(network.networkId)})</i>`
+    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_nlist.showNetworkDetails('${network.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
+
+    $("#networks-list").append(content);
+
+    updateNetworksOrder();
+}
+
+function listNetworks() {
+    $.getJSON("/api/v1/docker/networks/list").fail((xhr, status, error) => {
+        $.notify({message: `Unable to list networks because of a server error.`}, {type: "danger"});
         console.warn(error);
+
+        $(".status-msg").html("An error occured while the list was retrieved by the server. Please reload the page.");
     }).done((response) => {
         if(response.error) {
-            if(!fetchError) {
-                $.notify({message: `Unable to list networks because of an application error.`}, {type: "danger"});
-                fetchError = true;
-                clearInterval(window.refreshInterval);
-
-                $(".status-msg").html("An error occured while the list was processed by the platform. Please try again.");
-            }
+            $.notify({message: `Unable to list networks because of an application error.`}, {type: "danger"});
             console.warn(response.code, response.message);
+
+            $(".status-msg").html("An error occured while the list was processed by the platform. Please reload the page.");
         } else {
             let networks = response.networks;
 
             if(networks.length == 0) {
-                $("#networks-card").hide();
-                // should never happen because you always have the 3 default networks
-                $("#networks-status").html("No network found (check your Docker installation for bridge, none and host networks).").show();
+                setStatusMessage(false);
             } else {
+                setStatusMessage(true);
                 $("#networks-status").hide();
-                let list = $("#networks-list").html("");
-                let sortProp = "name";
-                networks = networks.sort((a, b) => {
-                    if(a[sortProp] < b[sortProp]) return -1;
-                    else if(a[sortProp] > b[sortProp]) return 1;
-                    else return 0;
-                });
                 for(let network of networks) {
-                    let content = `<li class="list-group-item" id="line-network-${network.name}">`
-                        + `<b>Network ${getNDetailsLink(network.name)}</b> <i>(id ${getNDetailsLink(network.networkId)})</i>`
-                        + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_nlist.showNetworkDetails('${network.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
-
-                    list.append(content);
+                    addNetwork(network);
                 }
-                list.parent().show();
-                $("#networks-status").html();
             }
         }
     }).always(() => {
-        if(!loadHidden) {
-            loadHidden = true;
-            utils.hideLoading();
-        }
+        utils.hideLoading();
+    });
+}
+
+function updateNetworksOrder() {
+    let list = $("#networks-list");
+    let array = $.makeArray(list.children(".line-network"));
+
+    array = array.sort((a, b) => {
+        let valA = $(a).attr("data-sort"), valB = $(b).attr("data-sort");
+        if(valA < valB) return -1;
+        else if(valA > valB) return 1;
+        else return 0;
+    });
+
+    list.html("");
+    $.each(array, function() {
+        list.append(this);
     });
 }
 

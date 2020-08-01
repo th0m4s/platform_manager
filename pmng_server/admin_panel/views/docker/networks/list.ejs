@@ -5,7 +5,7 @@
     <body>
         <%- include("../../default/flash.ejs") %>
         <%- include("../../default/api.ejs") %>
-        <%- startPageScript("docker_nlist") %>
+        <%- startPageScript("docker_nlist", ["/socket.io/socket.io.js"]) %>
         
         <header>
             <%- include("../../default/header.ejs") %>

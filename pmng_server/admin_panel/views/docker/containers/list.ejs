@@ -5,7 +5,7 @@
     <body>
         <%- include("../../default/flash.ejs") %>
         <%- include("../../default/api.ejs") %>
-        <%- startPageScript("docker_clist") %>
+        <%- startPageScript("docker_clist", ["/socket.io/socket.io.js"]) %>
         
         <header>
             <%- include("../../default/header.ejs") %>
@@ -23,7 +23,7 @@
                 </div>
                 <p class="w-100 status-msg" id="projects-status">Loading...</p>
                 <div class="card w-100 mt-1" style="display: none;" id="projects-card">
-                    <ul class="list-group list-group-flush" id="projects-list">
+                    <ul class="list-group list-group-flush containers-list" id="projects-list">
                         
                     </ul>
                 </div>
@@ -35,7 +35,7 @@
                 </div>
                 <p class="w-100 status-msg" id="platform-status">Loading...</p>
                 <div class="card w-100 mt-1" style="display: none;" id="platform-card">
-                    <ul class="list-group list-group-flush" id="platform-list">
+                    <ul class="list-group list-group-flush containers-list" id="platform-list">
                         
                     </ul>
                 </div>
@@ -47,7 +47,7 @@
                 </div>
                 <p class="w-100 status-msg" id="others-status">Loading...</p>
                 <div class="card w-100 mt-1" style="display: none;" id="others-card">
-                    <ul class="list-group list-group-flush" id="others-list">
+                    <ul class="list-group list-group-flush containers-list" id="others-list">
                         
                     </ul>
                 </div>
