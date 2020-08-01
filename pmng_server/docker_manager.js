@@ -281,12 +281,15 @@ function stopProject(projectname, force = false) {
     return (force ? Promise.resolve(true) : isProjectContainerRunning(projectname)).then((result) => {
         if(!result) return Promise.reject("Cannot stop a stopped project.");
         stoppingProjects.push(projectname);
-        return docker.container.list({filters: {label: ["pmng.projectname=" + projectname]}}).then((containers) => {
+        return docker.container.list({filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
             let prom = [];
             containers.forEach((container) => {
-                prom.push(container.stop().catch((err) => {
-                    if(!force) return Promise.reject("Cannot stop " + container.data.Names[0] + ": " + err);
-                })); // delete is automatic
+                // check if deployment instead of listing only plugins because must stop main container
+                if(container.data.Labels["pmng.containertype"] != "deployment") {
+                    prom.push(container.stop().catch((err) => {
+                        if(!force) return Promise.reject("Cannot stop " + container.data.Names[0] + ": " + err);
+                    })); // delete is automatic
+                }
             });
 
             // updating database
@@ -707,6 +710,9 @@ function getRunningContainers() {
                         break;
                     case "plugin":
                         sorted.platform.push({name: name, id: cid, projectname: projectname, kind: "plugin", pluginname: pluginname});
+                        break;
+                    case "deployment":
+                        sorted.platform.push({name: name, id: cid, projectname: projectname, kind: "deployment"});
                         break;
                     case "globalplugin":
                         sorted.platform.push({name: name, id: cid, kind: "globalplugin", pluginname: pluginname});

@@ -119,6 +119,10 @@ function start() {
                                                 Image: image,
                                                 name: docker_manager.getProjectDeployingContainer(projectname),
                                                 Tty: true,
+                                                Labels: {
+                                                    "pmng.containertype": "deployment",
+                                                    "pmng.projectname": projectname
+                                                },
                                                 HostConfig: {
                                                     AutoRemove: true,
                                                     Binds: [projectCodeFolder + ":/var/project"]
