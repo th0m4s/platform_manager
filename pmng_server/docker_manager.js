@@ -226,7 +226,11 @@ async function maininstance() {
                                     results.forEach((result) => {
                                         if(!alreadyRunning.includes(result.name)) {
                                             logger.info("Autostarting " + result.name + "...");
-                                            prom.push(startProject(result.name));
+                                            prom.push(startProject(result.name).then(() => {
+                                                return result.name;
+                                            }).catch((reason) => {
+                                                throw {project: result.name, message: reason};
+                                            }));
                                         }
                                     });
 
@@ -235,9 +239,11 @@ async function maininstance() {
                                             let successes = 0;
                                             states.forEach((state) => {
                                                 if(state.status == "fulfilled") {
+                                                    clearStarting(state.value);
                                                     successes++;
                                                 } else {
-                                                    logger.warn("Error during autostart: " + state.reason);
+                                                    clearStarting(state.reason.project);
+                                                    logger.warn("Error during autostart: " + state.reason.message);
                                                 }
                                             });
 
