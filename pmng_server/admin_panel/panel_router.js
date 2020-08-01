@@ -65,11 +65,6 @@ router.get("*", function(req, res, next) {
     req.setPage = function(r, title, active, sub) { r.locals.page = {title: title, active: active || "none", sub: sub || "none"}; }
     res.locals.site = {title: "Platform Manager"};
     res.locals.user = req.user;
-    let alphabet = "abcdefghijklmopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    res.locals.randomNames = [
-        string_utils.generatePassword(6, 12, alphabet),
-        string_utils.generatePassword(6, 12, alphabet)
-    ];
     
     res.locals.isActive = function(page, sub) {
         sub = sub || "*";
@@ -80,8 +75,8 @@ router.get("*", function(req, res, next) {
         return database_server.checkScope(this.user.scope, access);
     }
 
-    res.locals.startPageScript = function(script) {
-        return "<script>$(document).ready(() => {loadAndInit(\"" + script + "\");});</script>";
+    res.locals.startPageScript = function(script, requirements = []) {
+        return "<script>$(document).ready(() => {loadAndInit(\"" + script + "\"" + (requirements.length > 0 ? ", " + JSON.stringify(requirements) : "") + ");});</script>";
     }
 
     res.locals.isEdit = function() {

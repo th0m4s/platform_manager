@@ -1,6 +1,4 @@
-<script id="<%= randomNames[1] %>">
-const <%= randomNames[0] %> = ["<%= user.key %>"];
-$.ajaxSetup({headers:{'Authorization': "Api-Key " + <%= randomNames[0] %>[0]}});
-delete <%= randomNames[0] %>[0];
-$("#<%= randomNames[1] %>").remove();
+<script>
+const API_KEY = "<%= user.key %>";
+$.ajaxSetup({headers:{'Authorization': "Api-Key " + API_KEY}});
 </script>

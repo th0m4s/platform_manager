@@ -4,6 +4,8 @@ const passport = require('passport');
 const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
 const privileges = require("../privileges");
+const socket_auth = require("./socket_controllers/socket_auth");
+const socketio_auth = require("socketio-auth");
 
 admin.set('view engine', 'ejs');
 admin.set('views', path.join(__dirname, '/views'));
@@ -32,6 +34,11 @@ admin.all("/", function(req, res) {
     res.redirect("/panel");
 });
 
+function authNamespace(namespace) {
+    socketio_auth(namespace, socket_auth);
+    return namespace;
+}
+
 function start() {
     privileges.drop();
 
@@ -40,9 +47,7 @@ function start() {
     });
 
     let io = require('socket.io')(server);
-    require('socketio-auth')(io, require("./socket_controllers/socket_auth"));
-
-    require("./socket_controllers/v1/docker_socket").initializeNamespace(io.of("/v1/docker"));
+    require("./socket_controllers/v1/docker_socket").initializeNamespace(authNamespace(io.of("/v1/docker")));
 
     if(process.env.ENABLE_HTTPS.toLowerCase() == "true") greenlock_manager.init();
 }
