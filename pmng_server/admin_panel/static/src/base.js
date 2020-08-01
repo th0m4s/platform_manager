@@ -28,15 +28,24 @@ let noLoadingTimeout = setTimeout(() => {
     showMain();
 }, 500);
 
-window.loadAndInit = function(script) {
+function load(nextScripts) {
+    let script = nextScripts.shift(), isRequirement = nextScripts.length > 0;
+    $.getScript(isRequirement ? script : "/static/js/" + script + ".dist.js", () => {
+        if(isRequirement) {
+            load(nextScripts);
+        } else {
+            showMain();
+            window[script].init();
+        }
+    });
+}
+
+window.loadAndInit = function(script, requirements = []) {
     if(noLoadingTimeout > 0) {
         clearTimeout(noLoadingTimeout);
         noLoadingTimeout = -1;
     }
-    $.getScript("/static/js/" + script + ".dist.js", () => {
-        showMain();
-        window[script].init();
-    });
+    load(requirements.concat(script));
 }
 
 console.log("%cStop! Developper console ahead!", "color: red; font-size: 30px; font-weight: bold;");
