@@ -262,17 +262,21 @@ function start() {
                                 connection.write(SPACES + "Project version v" + newVersion + " deployed.\n");
                             
                                 if(await docker_manager.isProjectContainerRunning(projectname)) {
+                                    let stopped = false;
                                     try {
 
                                         connection.write(LINE + "Stopping current project container...\n");
                                         await intercom.sendPromise("dockermng", {command: "stopProject", project: projectname});
+                                        stopped = true;
 
                                         connection.write(SPACES + "Stopped. Restarting project to apply changes...\n");
                                         await intercom.sendPromise("dockermng", {command: "startProject", project: projectname});
                                         
                                         connection.write(LINE + "Project successfully deployed and restarted into a container.\n");
                                     } catch(error) {
-                                        connection.write("Cannot stop or restart the project container: " + error + "\n");
+                                        if(stopped)
+                                            connection.write("Cannot restart the project container: " + error + "\n");
+                                        else connection.write("Cannot stop the project container: " + error + "\n");
                                     }
                                 } else {
                                     connection.write(LINE + "Run pmng project:start or click Start from your admin panel to start this project.\n")
