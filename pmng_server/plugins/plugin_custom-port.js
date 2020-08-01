@@ -53,9 +53,11 @@ class CustomPortPlugin extends Plugin {
 
     static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig) {
         let port = pluginconfig.port;
-        containerconfig.Env = containerconfig.Env.concat(["CUSTOM_PORT=" + port]);
-        containerconfig.HostConfig.PortBindings[port + "/tcp"] = [{HostPort: port.toString()}];
-        containerconfig.ExposedPorts[port + "/tcp"] = {};
+        if(port > 0) {
+            containerconfig.Env = containerconfig.Env.concat(["CUSTOM_PORT=" + port]);
+            containerconfig.HostConfig.PortBindings[port + "/tcp"] = [{HostPort: port.toString()}];
+            containerconfig.ExposedPorts[port + "/tcp"] = {};
+        }
     
         return containerconfig
     }
