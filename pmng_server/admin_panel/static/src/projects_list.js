@@ -1,25 +1,56 @@
+let socket = undefined;
+
 function init() {
     utils.showInfiniteLoading("Loading projects...");
-    requestOwned(requestLimit).always(() => {
-        requestCollab(requestLimit).always(() => {
+    socket = io("/v1/docker");
+
+    socket.on("connect", function(){
+        console.log("Socket connected.")
+        socket.emit("authentication", {key: API_KEY});
+        socket.on("authenticated", function() {
+            console.log("Socket authenticated.");
+            socket.emit("setup", {type: "projects_list"});
+
+            requestOwned(requestLimit).always(() => {
+                requestCollab(requestLimit).always(() => {
+                    utils.hideLoading();
+                });
+            });
+        });
+        socket.on("unauthorized", function(err) {
             utils.hideLoading();
-            startIntervalChecking();
+            for(let projectname of allProjects) {
+                setProjectWarning(projectname);
+            }
+            $.notify({message: "Unable to authenticate to the socket. Please reload the page."}, {type: "danger"});
+
+            console.log("Unauthorized from the socket", err);
+        });
+
+        socket.on("project_action", (message) => {
+            let projectname = message.project;
+            switch(message.action) {
+                case "start":
+                    setCanRestart(projectname, true);
+                    setProjectState(projectname, "dark", "stop", "Stop", false, "running");
+                    break;
+                case "stop":
+                    setCanRestart(projectname, false);
+                    setProjectState(projectname, "success", "play", "Start", false, "stopped");
+                    break;
+            }
         });
     });
-}
 
-let checkIntervalId = -1;
-function stopChecking() {
-    if(checkIntervalId > 0) {
-        clearInterval(checkIntervalId);
-        checkIntervalId = -1;
-    } 
-}
+    socket.on("error", (err) => {
+        utils.hideLoading();
+        for(let projectname of allProjects) {
+            setProjectWarning(projectname);
+        }
+        $.notify({message: "Connection with the socket lost. Please reload the page."}, {type: "danger"});
 
-function startIntervalChecking() {
-    checkIntervalId = setInterval(() => {
-        checkStates(allProjects, true);
-    }, 10*1000);
+        console.log("Socket error", err);
+    });
 }
 
 let allProjects = [];
@@ -27,6 +58,7 @@ function addOwnedProjects(projects) {
     let list = $("#owned-list");
     let names = [];
     projects.forEach((project) => {
+        socket.emit("listen_project", {project: project.name});
         names.push(project.name);
         lastOwnedProjectId = Math.max(lastOwnedProjectId, project.id);
         list.append(getProjectHtml(project, false));
@@ -35,7 +67,7 @@ function addOwnedProjects(projects) {
     if(projects.length > 0) {
         list.parent().show();
         allProjects = allProjects.concat(names);
-        checkStates(names, false);
+        checkStates(names);
     }
 }
 
@@ -43,6 +75,7 @@ function addCollabProjects(results) {
     let list = $("#collab-list");
     let names = [];
     results.forEach((result) => {
+        socket.emit("listen_project", {project: project.name});
         names.push(result.project.name);
         lastCollabId = Math.max(lastCollabId, result.id);
         list.append(getProjectHtml(result.project, result.mode !== "manage"));
@@ -51,7 +84,7 @@ function addCollabProjects(results) {
     if(results.length > 0) {
         list.parent().show();
         allProjects = allProjects.concat(names);
-        checkStates(names, false);
+        checkStates(names);
     }
 }
 
@@ -63,17 +96,20 @@ function getProjectHtml(project, disabled) {
     + `<button class="btn btn-sm btn-secondary" id="button-restart-${project.name}" onclick="projects_list.restartProject('${project.name}')" ${disabled ? 'data-perm="no"' : ""} disabled><i class="fas fa-undo-alt"></i> Restart</button><button class="btn btn-sm btn-danger" onclick="projects_list.deleteProject('${project.name}')"${d}><i class="fas fa-trash-alt"></i> Delete</button></div></span></li>`;
 }
 
-function checkStates(projects, canStop) {
+function setProjectWarning(projectname) {
+    setCanRestart(projectname, false);
+    setProjectState(projectname, "warning", null, "Unknown", true, "unknown");
+}
+
+function checkStates(projects) {
     $.getJSON("/api/v1/projects/arerunning/" + projects.join(",")).done((response) => {
         if(response.error) {
             projects.forEach((projectname) => {
-                setCanRestart(projectname, false);
-                setProjectState(projectname, "warning", null, "Unknown", true, "unknown");
+                setProjectWarning(projectname);
             });
 
             console.warn(response.message);
-            $.notify({message: "Unable to check states (application error). See console for details."}, {type: "danger"});
-            if(canStop) stopChecking();
+            $.notify({message: "Unable to check states, please reload the page or open the console for details."}, {type: "danger"});
         } else {
             for(let [projectname, state] of Object.entries(response.results)) {
                 if(state) {
@@ -87,13 +123,11 @@ function checkStates(projects, canStop) {
         }
     }).fail((xhr, status, error) => {
         projects.forEach((projectname) => {
-            setCanRestart(projectname, false);
-            setProjectState(projectname, "warning", null, "Unknown", true, "unknown");
+            setProjectWarning(projectname);
         });
 
         console.warn(error);
-        $.notify({message: "Unable to check states (server error). See console for details."}, {type: "danger"});
-        if(canStop) stopChecking();
+        $.notify({message: "Unable to check states, please reload the page or open the console for details"}, {type: "danger"});
     });
 }
 
@@ -188,6 +222,7 @@ function confirmDelete() {
             $.notify({message: "Unable to delete this project (application error). See console for details."}, {type: "danger"});
         } else {
             $("#line-project-" + currentDelete).remove();
+            allProjects.splice(allProjects.indexOf(currentDelete));
             $.notify({message: "The project was successfully deleted."}, {type: "success"});
         }
     }).always(() => {
@@ -208,9 +243,9 @@ function updateState(projectname) {
                 $.notify({message: "Unable to stop this project (application error). See console for details."}, {type: "danger"});
             } else {
                 $.notify({message: "The project was successfully stopped."}, {type: "success"});
-                setProjectState(projectname, "success", "play", "Start", false, "stopped");
-                setCanRestart(projectname, false);
-                if(checkIntervalId == -1) startIntervalChecking();
+                // setProjectState(projectname, "success", "play", "Start", false, "stopped");
+                // setCanRestart(projectname, false);
+                // if(checkIntervalId == -1) startIntervalChecking();
             }
         }).always(() => {
             utils.hideLoading();
@@ -226,9 +261,9 @@ function updateState(projectname) {
                 $.notify({message: "Unable to start this project (application error). See console for details."}, {type: "danger"});
             } else {
                 $.notify({message: "The project was successfully started."}, {type: "success"});
-                setProjectState(projectname, "dark", "stop", "Stop", false, "running");
-                setCanRestart(projectname, true);
-                if(checkIntervalId == -1) startIntervalChecking();
+                // setProjectState(projectname, "dark", "stop", "Stop", false, "running");
+                // setCanRestart(projectname, true);
+                // if(checkIntervalId == -1) startIntervalChecking();
             }
         }).always(() => {
             utils.hideLoading();
@@ -252,39 +287,38 @@ function restartProject(projectname) {
         $.getJSON("/api/v1/projects/stop/" + projectname).fail((xhr, status, err) => {
             console.warn(err);
             $.notify({message: "Unable to restart this project (stopping server error). See console for details."}, {type: "danger"});
-            setCanRestart(projectname, false);
+            // setCanRestart(projectname, false);
             utils.hideLoading();
         }).done((response) => {
             if(response.error) {
                 console.warn(response.message);
                 $.notify({message: "Unable to restart this project (stopping application error). See console for details."}, {type: "danger"});
-                setCanRestart(projectname, false);
+                // setCanRestart(projectname, false);
                 utils.hideLoading();
             } else {
-                setProjectState(projectname, "success", "play", "Start", false, "stopped");
-                setCanRestart(projectname, false);
-                if(checkIntervalId == -1) startIntervalChecking();
+                // setProjectState(projectname, "success", "play", "Start", false, "stopped");
+                // setCanRestart(projectname, false);
+                // if(checkIntervalId == -1) startIntervalChecking();
 
                 // restart automacally
                 $.getJSON("/api/v1/projects/start/" + projectname).fail((xhr, status, err) => {
                     console.warn(err);
-                    $.notify({message: "Unable to restart this project (starting server error). See console for details."}, {type: "danger"});
+                    $.notify({message: "Unable to restart this project. See console for details."}, {type: "danger"});
                     $.notify({message: "The project was stopped during the process. You will need to restart it manually."}, {type: "warning"});
                     utils.hideLoading();
                 }).done((response) => {
                     if(response.error) {
                         console.warn(response.message);
-                        $.notify({message: "Unable to restart this project (starting application error). See console for details."}, {type: "danger"});
+                        $.notify({message: "Unable to restart this project. See console for details."}, {type: "danger"});
                         $.notify({message: "The project was stopped during the process. You will need to restart it manually."}, {type: "warning"});
-                        utils.hideLoading();
                     } else {
                         $.notify({message: "The project was successfully restarted."}, {type: "success"});
-                        setProjectState(projectname, "dark", "stop", "Stop", false, "running");
-                        setCanRestart(projectname, true);
-                        if(checkIntervalId == -1) startIntervalChecking();
-
-                        utils.hideLoading();
+                        // setProjectState(projectname, "dark", "stop", "Stop", false, "running");
+                        // setCanRestart(projectname, true);
+                        // if(checkIntervalId == -1) startIntervalChecking();
                     }
+
+                    utils.hideLoading();
                 });
             }
         });

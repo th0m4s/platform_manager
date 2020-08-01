@@ -5,7 +5,7 @@
     <body>
         <%- include("../default/flash.ejs") %>
         <%- include("../default/api.ejs") %>
-        <%- startPageScript("projects_list") %>
+        <%- startPageScript("projects_list", ["/socket.io/socket.io.js"]) %>
         
         <header>
             <%- include("../default/header.ejs") %>
