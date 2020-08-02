@@ -21,6 +21,10 @@ admin.all("/check", (req, res) => {
     res.json({server: "adminpanel"});
 });
 
+admin.all("/pid", (req, res) => {
+    res.json({pid: process.pid});
+});
+
 admin.use("/static", express.static(path.join(__dirname, "static", "dist")));
 const favicon = path.join(__dirname, "static", "images", "favicon.ico");
 admin.get("/favicon.ico", function(req, res) {
