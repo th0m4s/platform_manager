@@ -61,7 +61,12 @@ function addNetwork(network) {
     updateNetworksOrder();
 }
 
+function clearLists() {
+    $("#networks-list").html("");
+}
+
 function listNetworks() {
+    clearLists();
     $.getJSON("/api/v1/docker/networks/list").fail((xhr, status, error) => {
         $.notify({message: `Unable to list networks because of a server error.`}, {type: "danger"});
         console.warn(error);

@@ -74,7 +74,7 @@ function setCardState(card, hasItem) {
 }
 
 function clearLists() {
-    $(".containers-list").html("");
+    $("#projects-list").html("");
 }
 
 function addProjectContainer(container) {
