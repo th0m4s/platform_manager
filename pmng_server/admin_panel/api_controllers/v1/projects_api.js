@@ -141,13 +141,17 @@ router.post("/create", function(req, res) {
         let collaborators = req.body.collaborators || [];
         let customdomains = req.body.customdomains || [];
 
-        projects_manager.addProject(projectname, user.id, userenv, pluginnames).then(() => {
+        projects_manager.addProject(projectname, user.id, userenv, pluginnames).then((id) => {
             let prom = [];
             customdomains.forEach((domain) => {
                 if(domain !== "") prom.push(projects_manager.addCustomDomain(projectname, domain.domain, domain.enablesub == true || domain.enablesub == "true"));
             });
             collaborators.forEach((collaborator) => {
-                if(collaborator.trim().length > 0) prom.push(projects_manager.addCollaborator(projectname, collaborator, "view"));
+                if(collaborator.trim().length > 0) {
+                    prom.push(projects_manager.addCollaborator(projectname, collaborator, "view").then((collaboratorId) => {
+                        intercom.send("projectsevents", {event: "add_collab", collaboratorId, manageable: false, project: {name: projectname, id, type: null, version: 0}, running: false});
+                    }));
+                }
             });
 
             (prom.length > 0 ? Promise.all(prom) : Promise.resolve()).then(() => {
@@ -169,14 +173,17 @@ router.post("/edit/:projectname", function(req, res) {
                 let differences = JSON.parse(req.body.differences);
                 let needRestart = req.body.restart == "true", needStart = needRestart;
                 let promises = [];
+
+                let currentRunning = false;
     
-                (needRestart ? docker_manager.isProjectContainerRunning(projectname).then((running) => {
-                    return running ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.reject();
+                docker_manager.isProjectContainerRunning(projectname).then((running) => {
+                    currentRunning = running;
+                    return running && needRestart ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.reject();
                     //                                                                          do not start container at the end because it would not be a restart
                 }).catch(() => {
                     // could not stop project, will require a manual restart
                     needStart = false; 
-                }) : Promise.resolve()).then(() => {
+                }).then(() => {
                     if(differences.plugins.add.length > 0 || differences.plugins.remove.length > 0) {
                         differences.plugins.add.forEach((item) => {
                             originalproject.plugins[item] = plugins_manager.getDefaultConfig(item);
@@ -208,11 +215,14 @@ router.post("/edit/:projectname", function(req, res) {
                     }
         
                     differences.collabs.add.forEach((item) => {
-                        promises.push(projects_manager.addCollaborator(projectname, item, "view"));
+                        promises.push(projects_manager.addCollaborator(projectname, item, "view").then((collaboratorId) => {
+                            intercom.send("projectsevents", {event: "add_collab", collaboratorId, manageable: false, running: currentRunning, project: {name: projectname, id: originalproject.id, type: originalproject.type, version: originalproject.version}});
+                        }));
                     });
         
                     differences.collabs.remove.forEach((item) => {
                         promises.push(database_server.findUserId(item).then((id) => {
+                            intercom.send("projectsevents", {event: "update_collab", project: projectname, mode: "remove", collaboratorId: id});
                             return database_server.database("collabs").where("projectname", projectname).andWhere("userid", id).delete();
                         }));
                     });
@@ -296,6 +306,10 @@ router.post("/updatecollab/:collabid/:collabmode", function(req, res) {
                         let projectname = results[0].projectname;
                         projects_manager.canAccessProject(projectname, user.id, true).then(() => {
                             database_server.database("collabs").where("id", collabid).update({mode: newmode}).then(() => {
+                                database_server.database("collabs").where("id", collabid).select("userid").then((collabResults) => {
+                                    if(collabResults.length == 1) intercom.send("projectsevents", {event: "update_collab", project: projectname, mode: newmode, collaboratorId: collabResults[0].userid});
+                                });
+
                                 res.status(200).json({error: false, code: 200, message: "Collaboration mode changed."});
                             }).catch((error) => {
                                 res.status(500).json({error: true, code: 500, message: "Unable to edit this collaboration: " + error});
@@ -327,10 +341,16 @@ router.post("/removecollab/:collabid", function(req, res) {
                     } else {
                         let projectname = results[0].projectname;
                         projects_manager.canAccessProject(projectname, user.id, true).then(() => {
-                            database_server.database("collabs").where("id", collabid).delete().then(() => {
-                                res.status(200).json({error: false, code: 200, message: "Collaboration removed."});
+                            database_server.database("collabs").where("id", collabid).select("userid").then((collabResults) => {
+                                database_server.database("collabs").where("id", collabid).delete().then(() => {
+                                    if(collabResults.length == 1) intercom.send("projectsevents", {event: "update_collab", project: projectname, mode: "remove", collaboratorId: collabResults[0].userid});
+
+                                    res.status(200).json({error: false, code: 200, message: "Collaboration removed."});
+                                }).catch((error) => {
+                                    res.status(500).json({error: true, code: 500, message: "Unable to remove this collaboration: " + error});
+                                });
                             }).catch((error) => {
-                                res.status(500).json({error: true, code: 500, message: "Unable to remove this collaboration: " + error});
+                                res.status(500).json({error: true, code: 500, message: "Unable to access this collaboration: " + error});
                             });
                         }).catch(() => {
                             res.status(403).json({error: true, code: 403, message: "Not authorized to remove this collaboration."});

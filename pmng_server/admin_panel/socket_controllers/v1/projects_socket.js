@@ -1,5 +1,6 @@
 const docker_manager = require("../../../docker_manager");
 const project_manager = require("../../../project_manager");
+const database_server = require("../../../database_server");
 const intercom = require("../../../intercom/intercom_client").connect();
 
 function initializeNamespace(namespace) {
@@ -12,7 +13,7 @@ function initializeNamespace(namespace) {
             let projectName = projectMessage.project;
             if(await project_manager.projectExists(projectName)) {
                 try {
-                    await project_manager.canAccessProject(projectName, socket.user.id, "view");
+                    await project_manager.canAccessProject(projectName, socket.user.id, false);
                     socket.join("project_" + projectName);
                 } catch(error) {
                     socket.emit("error_message", {message: "Cannot attach to the project " + projectName + ": " + error.message});
@@ -26,6 +27,15 @@ function initializeNamespace(namespace) {
         switch(eventMessage.event) {
             case "delete":
                 namespace.to("project_" + project.name).emit("project_action", {action: "delete", project: project.name});
+                break;
+            case "add":
+                namespace.to("user_" + eventMessage.owner).emit("project_action", {action: "add", project, id: eventMessage.id, type: "owned"});
+                break;
+            case "add_collab":
+                namespace.to("user_" + eventMessage.collaboratorId).emit("project_action", {action: "add", type: "collab", project, manageable: eventMessage.manageable, running: eventMessage.running});
+                break;
+            case "update_collab":
+                namespace.to("user_" + eventMessage.collaboratorId).emit("project_action", {action: "update_collab", project, collabmode: eventMessage.mode});
                 break;
         }
     });

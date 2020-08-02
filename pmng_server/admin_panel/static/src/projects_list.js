@@ -1,4 +1,4 @@
-let socket = undefined;
+let socket = undefined, loaded = 0;
 
 function init() {
     utils.showInfiniteLoading("Loading projects...");
@@ -28,24 +28,66 @@ function init() {
         });
 
         socket.on("project_action", (message) => {
-            let projectname = message.project;
+            let project = message.project;
             switch(message.action) {
                 case "start":
-                    setCanRestart(projectname, true);
-                    setProjectState(projectname, "dark", "stop", "Stop", false, "running");
+                    setCanRestart(project, true);
+                    setProjectState(project, "dark", "stop", "Stop", false, "running");
                     break;
                 case "stop":
-                    setCanRestart(projectname, false);
-                    setProjectState(projectname, "success", "play", "Start", false, "stopped");
+                    setCanRestart(project, false);
+                    setProjectState(project, "success", "play", "Start", false, "stopped");
                     break;
                 case "delete":
-                    if(projectname != lastDeleteProject) {
-                        let line = $("#line-project-" + projectname);
+                    if(project != lastDeleteProject) {
+                        let line = $("#line-project-" + project);
                         if(line.length > 0) {
                             line.remove();
-                            $.notify({message: `The project <i>${projectname}</i> was deleted from another session.`}, {type: "info"});
+                            $.notify({message: `The project <i>${project}</i> was deleted from another session.`}, {type: "info"});
                         }
                     }
+                case "add":
+                    if(message.type == "owned") {
+                        allProjects.push(project);
+                        socket.emit("listen_project", {project});
+                        $("#owned-list").append(getProjectHtml({name: project, id: message.id, mode: null, version: 0}, false));
+                        setProjectState(project, "success", "play", "Start", true, "stopped");
+                        showHasProjects(true, true);
+                    } else if(message.type == "collab") {
+                        allProjects.push(project);
+                        socket.emit("listen_project", {project: project.name});
+                        $("#collab-list").append(getProjectHtml(project, !message.manageable));
+                        if(message.running) {
+                            setCanRestart(project.name, true);
+                            setProjectState(project.name, "dark", "stop", "Stop", false, "running");
+                        } else {
+                            setCanRestart(project.name, false);
+                            setProjectState(project.name, "success", "play", "Start", true, "stopped");
+                        }
+                        showHasProjects(false, true);
+                    }
+                    break;
+                case "update_collab": // can be used to remove a collab
+                    let collabmode = message.collabmode;
+                    if(collabmode == "remove") {
+                        $("#line-project-" + project).remove();
+
+                        showHasProjects(true, $("#owned-list li").length > 0);
+                        showHasProjects(false, $("#collab-list li").length > 0);
+                    } else {
+                        let stateBtn = $("#button-state-" + project);
+                        let manageable = collabmode == "manage";
+                        let running = stateBtn.attr("data-current") == "dark", projectId = stateBtn.attr("data-id"), version = stateBtn.attr("data-version"), type = version > 0 ? stateBtn.attr("data-type") : null;
+                        $("#line-project-" + project).replaceWith(getProjectHtml({name: project, type, version, id: projectId}, !manageable));
+                        if(running) {
+                            setCanRestart(project, true);
+                            setProjectState(project, "dark", "stop", "Stop", !manageable, "running");
+                        } else {
+                            setCanRestart(project, false);
+                            setProjectState(project, "success", "play", "Start", !manageable, "stopped");
+                        }
+                    }
+                    break;
             }
         });
     });
@@ -61,6 +103,26 @@ function init() {
     });
 }
 
+function showHasProjects(owned, hasProjects) {
+    if(owned) {
+        if(hasProjects) {
+            $("#owned-status").hide();
+            $("#owned-card").show();
+        } else {
+            $("#owned-status").html("No projects found.").show();
+            $("#owned-card").hide();
+        }
+    } else {
+        if(hasProjects) {
+            $("#collab-status").hide();
+            $("#collab-card").show();
+        } else {
+            $("#collab-status").html("No projects found.").show();
+            $("#collab-card").hide();
+        }
+    }
+}
+
 let allProjects = [];
 function addOwnedProjects(projects) {
     let list = $("#owned-list");
@@ -73,7 +135,6 @@ function addOwnedProjects(projects) {
     });
 
     if(projects.length > 0) {
-        list.parent().show();
         allProjects = allProjects.concat(names);
         checkStates(names);
     }
@@ -83,14 +144,13 @@ function addCollabProjects(results) {
     let list = $("#collab-list");
     let names = [];
     results.forEach((result) => {
-        socket.emit("listen_project", {project: project.name});
+        socket.emit("listen_project", {project: result.project.name});
         names.push(result.project.name);
         lastCollabId = Math.max(lastCollabId, result.id);
         list.append(getProjectHtml(result.project, result.mode !== "manage"));
     });
 
     if(results.length > 0) {
-        list.parent().show();
         allProjects = allProjects.concat(names);
         checkStates(names);
     }
@@ -100,7 +160,7 @@ function getProjectHtml(project, disabled) {
     let d = disabled ? " disabled" : "";
     return `<li class="list-group-item" id="line-project-${project.name}" data-state="unknown">`
     + `<b>Project #${project.id} : </b>${project.name} (v${project.version})<span class="text-secondary d-block d-md-inline"><samp class="ml-4">${project.version > 0 ? project.type : "No version deployed"}</samp></span>`
-    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="projects_list.details('${project.name}')"><i class="fas fa-info-circle"></i> Details</button><button class="btn btn-sm btn-primary" onclick="projects_list.editProject('${project.name}')"${d}><i class="fas fa-edit"></i> Edit</button><button class="btn btn-sm btn-info" data-current="info" id="button-state-${project.name}" onclick="projects_list.updateState('${project.name}')" ${disabled ? 'data-perm="no"' : ""} data-version="${project.version}" disabled><i class="fas fa-sync fa-spin"></i> Syncing...</button>`
+    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="projects_list.details('${project.name}')"><i class="fas fa-info-circle"></i> Details</button><button class="btn btn-sm btn-primary" onclick="projects_list.editProject('${project.name}')"${d}><i class="fas fa-edit"></i> Edit</button><button class="btn btn-sm btn-info" data-current="info" id="button-state-${project.name}" onclick="projects_list.updateState('${project.name}')" ${disabled ? 'data-perm="no"' : ""} data-version="${project.version}" data-id="${project.id}" data-type="${project.type}" disabled><i class="fas fa-sync fa-spin"></i> Syncing...</button>`
     + `<button class="btn btn-sm btn-secondary" id="button-restart-${project.name}" onclick="projects_list.restartProject('${project.name}')" ${disabled ? 'data-perm="no"' : ""} disabled><i class="fas fa-undo-alt"></i> Restart</button><button class="btn btn-sm btn-danger" onclick="projects_list.deleteProject('${project.name}')"${d}><i class="fas fa-trash-alt"></i> Delete</button></div></span></li>`;
 }
 
@@ -161,8 +221,10 @@ function requestOwned(limit) {
             console.warn("Unable to fetch owned projects (application error):", error);
         } else {
             let results = data.results;
-            if(results.projects.length > 0) $("#owned-status").hide();
-            else $("#owned-status").html("No projects found.");
+            if(loaded < 2) {
+                showHasProjects(true, results.projects.length > 0);
+                loaded++;
+            }
             addOwnedProjects(results.projects);
             if(results.hasMore) {
                 utils.enableButton($("#owned-more").show(), "Load more projects");
@@ -183,8 +245,10 @@ function requestCollab(limit) {
             console.warn("Unable to fetch collab projects (application error):", error);
         } else {
             let results = data.results;
-            if(results.projects.length > 0) $("#collab-status").hide();
-            else $("#collab-status").html("No projects found.");
+            if(loaded < 2) {
+                showHasProjects(false, results.projects.length > 0);
+                loaded++;
+            }
             addCollabProjects(results.projects);
             if(results.hasMore) {
                 utils.enableButton($("#collab-more").show(), "Load more projects");
