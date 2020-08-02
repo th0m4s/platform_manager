@@ -17,9 +17,12 @@ function initializeNamespace(namespace) {
                     socket.on("listen_project", async (projectMessage) => {
                         let projectName = projectMessage.project;
                         if(await project_manager.projectExists(projectName)) {
-                            if(await project_manager.canAccessProject(projectName, socket.user.id, "view")) {
+                            try {
+                                await project_manager.canAccessProject(projectName, socket.user.id, "view");
                                 socket.join("project_" + projectName);
-                            } else socket.emit("error_message", {message: "Insufficient permissions to attach to the project " + projectName + "."});
+                            } catch(error) {
+                                socket.emit("error_message", {message: "Cannot attach to the project " + projectName + ": " + error.message});
+                            }
                         } else socket.emit("error_message", {message: "Cannot find the requested project " + projectName + "."});
                     });
                     break;
