@@ -9,6 +9,7 @@ function init() {
         socket.emit("authentication", {key: API_KEY});
         socket.on("authenticated", function() {
             console.log("Socket authenticated.");
+            socket.emit("setup");
 
             requestOwned(requestLimit).always(() => {
                 requestCollab(requestLimit).always(() => {

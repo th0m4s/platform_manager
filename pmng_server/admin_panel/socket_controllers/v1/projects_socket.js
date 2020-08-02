@@ -3,6 +3,10 @@ const project_manager = require("../../../project_manager");
 
 function initializeNamespace(namespace) {
     namespace.on("connection", (socket) => {
+        socket.on("setup", () => {
+            socket.join("user_" + socket.user.id);
+        });
+
         socket.on("listen_project", async (projectMessage) => {
             let projectName = projectMessage.project;
             if(await project_manager.projectExists(projectName)) {
