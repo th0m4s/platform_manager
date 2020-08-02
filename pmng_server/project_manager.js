@@ -5,6 +5,8 @@ const path = require("path");
 const plugins_manager = require("./plugins_manager");
 const simpleGit = require("simple-git/promise");
 const intercom = require("./intercom/intercom_client").connect();
+const docker_manager = require("./docker_manager");
+const rmfr = require("rmfr");
 
 const pfs = require("fs").promises;
 const PROJECTS_PATH = process.env.PROJECTS_PATH;
@@ -80,6 +82,44 @@ function addProject(projectname, ownerid, env, plugins) {
                 });
             });
         });
+    });
+}
+
+function deleteProject(projectname) {
+    let project = undefined;
+    return docker_manager.isProjectContainerRunning(projectname).then((isrunning) => {
+        return (isrunning ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.resolve());
+    }).then(() => {
+        invalidateCachedProject(projectname);
+        return getProject(projectname);
+    }).then((dbProject) => {
+        project = dbProject;
+        // save project ouside of promise to be used later in projectsevents
+
+        let prom = [];
+        for(let [key, value] of Object.entries(project.plugins)) {
+            prom.push(plugins_manager.uninstall(key, projectname, value));
+        }
+
+        return Promise.all(prom);
+    }).then(() => {
+        return database_server.database("domains").where("projectname", projectname).select("*");
+    }).then((domains_results) => {
+        // remove domains from greenlock (removed from database in next then);
+        for(let result of domains_results) {
+            intercom.send("greenlock", {command: "removeCustom", domain: result.domain});
+        }
+    }).then(() => {
+        return Promise.all([
+            database_server.database("projects").where("name", projectname).delete(),
+            database_server.database("domains").where("projectname", projectname).delete(),
+            database_server.database("collabs").where("projectname", projectname).delete(),
+            rmfr(getProjectFolder(projectname))
+        ]);
+    }).then(() => {
+        invalidCachedDomain(projectname);
+        invalidateCachedProject(projectname);
+        intercom.send("projectsevents", {event: "delete", project: project});
     });
 }
 
@@ -326,6 +366,7 @@ function canAccessProject(projectname, userid, manageMode) {
 
 module.exports.getProject = getProject;
 module.exports.addProject = addProject;
+module.exports.deleteProject = deleteProject;
 module.exports.addCustomDomain = addCustomDomain;
 module.exports.addCollaborator = addCollaborator;
 module.exports.getProjectRepository = getProjectRepository;

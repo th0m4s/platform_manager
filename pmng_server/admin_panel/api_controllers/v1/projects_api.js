@@ -4,9 +4,7 @@ const projects_manager = require("../../../project_manager");
 const plugins_manager = require("../../../plugins_manager");
 const docker_manager = require("../../../docker_manager");
 const api_auth = require("./api_auth");
-const rmfr = require("rmfr");
 const intercom = require("../../../intercom/intercom_client").connect();
-const logger = require("../../../platform_logger").logger();
 
 const forbidden_names = ["www", "git", "admin", "ftp", "ns1", "ns2"];
 // same values as in regex_utils
@@ -45,36 +43,8 @@ router.get("/delete/:projectname", function(req, res) {
     api_auth(req, res, function(user) {
         let projectname = req.params.projectname;
         projects_manager.canAccessProject(projectname, user.id, true).then(() => {
-            return docker_manager.isProjectContainerRunning(projectname);
-        }).then((isrunning) => {
-            return (isrunning ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.resolve());
+            return projects_manager.deleteProject(projectname);
         }).then(() => {
-            projects_manager.invalidateCachedProject(projectname);
-            return projects_manager.getProject(projectname);
-        }).then((project) => {
-            let prom = [];
-            for(let [key, value] of Object.entries(project.plugins)) {
-                prom.push(plugins_manager.uninstall(key, projectname, value));
-            }
-
-            return Promise.all(prom);
-        }).then(() => {
-            return database_server.database("domains").where("projectname", projectname).select("*");
-        }).then((domains_results) => {
-            // remove domains from greenlock (removed from database in next then);
-            for(let result of domains_results) {
-                intercom.send("greenlock", {command: "restoreCustom", domain: result.domain});
-            }
-        }).then(() => {
-            return Promise.all([
-                database_server.database("projects").where("name", projectname).delete(),
-                database_server.database("domains").where("projectname", projectname).delete(),
-                database_server.database("collabs").where("projectname", projectname).delete(),
-                rmfr(projects_manager.getProjectFolder(projectname))
-            ]);
-        }).then(() => {
-            projects_manager.invalidCachedDomain(projectname);
-            projects_manager.invalidateCachedProject(projectname);
             res.status(200).json({error: false, code: 200, message: "Project successfully deleted."});
         }).catch((err) => {
             res.json({error: true, code: 500, message: "Unable to delete project: " + err});
