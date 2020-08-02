@@ -3,7 +3,7 @@ FROM pmng/base
 
 ENV NODE_VERSION 13.14.0
 
-RUN apk add --no-cache \
+RUN apk update && apk add --no-cache \
         libstdc++ \
     && apk add --no-cache --virtual .build-deps \
         curl \
