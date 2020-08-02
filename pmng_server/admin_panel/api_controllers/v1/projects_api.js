@@ -19,7 +19,7 @@ router.get("/list/owned/:after/:limit", function(req, res) {
         if(isNaN(after) || isNaN(limit)) {
             res.status(405).json({error: true, code: 405, message: "after and limit parameters should be integers."});
         } else {
-            projects_manager.listOwnedProjects(user.id, after, limit).then((results) => {
+            projects_manager.listOwnedProjects(user.id, after, limit, true).then((results) => {
                 res.status(200).json({error: false, code: 200, results: results});
             });
         }        
@@ -32,7 +32,7 @@ router.get("/list/collabs/:after/:limit", function(req, res) {
         if(isNaN(after) || isNaN(limit)) {
             res.status(405).json({error: true, code: 405, message: "after and limit parameters should be integers."});
         } else {
-            projects_manager.listCollabProjects(user.id, after, limit).then((results) => {
+            projects_manager.listCollabProjects(user.id, after, limit, true).then((results) => {
                 res.status(200).json({error: false, code: 200, results: results});
             });
         }        

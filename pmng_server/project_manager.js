@@ -307,16 +307,21 @@ function _getProjectStorage(project_name) {
     return path.join(process.env.PLUGINS_PATH, "storages", "mounts", project_name);
 }; const getProjectStorage = runtime_cache(_getProjectStorage);
 
+function sanitizeProject(project) {
+    return {id: project.id, version: project.version, name: project.name, type: project.type};
+}
+
 /**
  * Gets an array of owned projects.
  * @param {number} userId The owner of the projects to find.
  * @param {number} after The last fetched project (exclusive).
  * @param {number} limit The maximum amount of projects to fetch.
+ * @param {boolean} sanitize Whether or not sanitize projects by removing unecessary informations.
  * @returns {{projects: Project[], hasMore: boolean}} An object with the projects and a hasMore property to indicate if more projects are available for a next call.
  */
-function listOwnedProjects(userId, after, limit) {
+function listOwnedProjects(userId, after, limit, sanitize = true) {
     return database_server.database("projects").where("ownerid", userId).andWhere("id", ">", after).select("*").then((results) => {
-        return {projects: results.slice(0, limit), hasMore: results.length > limit};
+        return {projects: results.slice(0, limit).map(sanitize ? sanitizeProject : (x) => x), hasMore: results.length > limit};
     });
 }
 
@@ -325,9 +330,10 @@ function listOwnedProjects(userId, after, limit) {
  * @param {number} userId The user with the collaborations.
  * @param {number} after The last fetched project (exclusive).
  * @param {number} limit The maximum amount of projects to fetch.
+ * @param {boolean} sanitize Whether or not sanitize projects by removing unecessary informations.
  * @returns {{projects: Project[], hasMore: boolean}} An object with the projects and a hasMore property to indicate if more projects are available for a next call.
  */
-function listCollabProjects(userId, after, limit) {
+function listCollabProjects(userId, after, limit, sanitize = true) {
     return database_server.database("collabs").where("userid", userId).andWhere("id", ">", after).select("*").then((results) => {
         let res = {};
         results.forEach((result) => {
@@ -336,7 +342,7 @@ function listCollabProjects(userId, after, limit) {
         return getMultipleProjects(Object.keys(res), false).then((objects) => {
             let projects = [];
             for(let [key, value] of Object.entries(objects)) {
-                projects.push({project: value, mode: res[key].mode, id: res[key].id});
+                projects.push({project: sanitize ? sanitizeProject(value) : value, mode: res[key].mode, id: res[key].id});
             }
             return {projects: projects.slice(0, limit), hasMore: results.length > limit};
         });
