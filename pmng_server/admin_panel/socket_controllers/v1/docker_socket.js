@@ -72,7 +72,7 @@ function processContainerAction(namespace, eventData) {
                 namespace.to("project_" + projectName).emit("project_action", {action: "start", project: projectName});
             }
             break;
-        case "stop":
+        case "die": // stop only send if specifically stopped via api
             namespace.to("list_containers").emit("container_action", {action: "remove", item: eventData.Actor.Attributes.name});
             if(eventData.Actor.Attributes["pmng.containertype"] == "project") {
                 let projectName = eventData.Actor.Attributes["pmng.projectname"];
