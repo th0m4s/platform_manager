@@ -9,13 +9,19 @@ const intercom = require("./intercom/intercom_client").connect();
  */
 
 /**
+ * @typedef{{getProcess: function, restart: function, isRunning: Function<boolean>}} Subfork
+ */
+
+/**
  * Forks a process from a JS file, restart it automatically when necessary and uses callbacks events.
  * @param {string} file The JS file to fork.
  * @param {string} id The process internal name
  * @param {function} onForking Callback executed when a new fork is created.
  * @param {OnExited} onExited Callback executed when the fork closed unexpectedly.
+ * @param {function} onRestart Callback executed when a restart is requested.
+ * @returns {Subfork} An object representing the running process and util functions.
  */
-function fork(file, id, onForking, onExited) {
+function fork(file, id, onForking, onExited, onRestart) {
     let subp, shouldRestart = true, restarting = false;
     let startProcess = (restart, code, signal) => {
         if(restart && !restarting) onExited(code, signal);
@@ -23,30 +29,39 @@ function fork(file, id, onForking, onExited) {
 
         onForking();
         subp = child_process.fork(file);
+
+        subp.addListener("exit", (code, signal) => {
+            if(shouldRestart) startProcess(true, code, signal);
+            else subp = undefined;
+        });
     }
 
     startProcess(false);
 
-    subp.addListener("exit", (code, signal) => {
-        if(shouldRestart) startProcess(true, code, signal);
-        else subp = undefined;
-    });
+    let restart = () => {
+        restarting = true;
+        onRestart();
+        subp.kill(); // restart process by killing it (on exit will be called)
+    }
+
+    let isRunning = () => {
+        return subp != undefined && subp.exitCode === null;
+    }
 
     intercom.subscribe(["subprocess:" + id], (message, respond) => {
         let command = message.command;
         switch(command) {
             case "restart":
-                restarting = true;
-                subp.kill(); // restart process by killing it (on exit will be called)
+                restart();
                 respond({error: false, message: "Restart signal sent. Wait and check for isRunning if necessary."});
                 break;
             case "isRunning":
-                respond({error: false, running: subp != undefined && subp.exitCode === null});
+                respond({error: false, running: isRunning()});
                 break;
         }
     });
 
-    return {getProcess: () => subp};
+    return {getProcess: () => subp, restart, isRunning};
 }
 
 /**
@@ -54,12 +69,15 @@ function fork(file, id, onForking, onExited) {
  * @param {string} file The JS file to fork.
  * @param {string} id The process internal name.
  * @param {string} name The process display name for status messages.
+ * @returns {Subfork} An object representing the running process and util functions.
  */
 function forkNamed(file, id, name) {
     return fork(file, id, () => {
         logger.info("Forking " + name + "...");
     }, (code, signal) => {
         logger.info("Process of " + name + " exited unexpectedly (" + code + ").");
+    }, () => {
+        logger.info("Process of " + name + " is being restarted.");
     });
 }
 
