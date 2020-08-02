@@ -1,10 +1,10 @@
 FROM pmng/base
 # from ulsmith/alpine-apache-php7
 
-RUN apk update && apk upgrade && apk add \
+RUN apk update && apk upgrade && apk add --no-cache \
 	apache2 php7-apache2 curl ca-certificates openssl php7 php7-phar php7-json php7-iconv php7-openssl tzdata openntpd
 
-RUN apk add \
+RUN apk add --no-cache \
 	php7-ftp \
 	php7-xdebug \
 	php7-mcrypt \

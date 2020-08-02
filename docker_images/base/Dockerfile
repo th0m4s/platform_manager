@@ -1,6 +1,6 @@
 FROM alpine:3.11
 
-RUN apk add bash
+RUN apk add bash --no-cache
 RUN addgroup -g 1000 -S project && adduser -u 1000 -D -S -G project project --home /var/project
 
 # RUN mkdir /var/utils

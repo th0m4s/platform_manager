@@ -1,10 +1,10 @@
 FROM pmng/base
 # from trafex/alpine-nginx-php7
 
-RUN apk update && apk upgrade && apk add php7 php7-fpm php7-phar php7-json php7-iconv php7-openssl tzdata openntpd nginx supervisor curl && \
+RUN apk update && apk upgrade && apk add --no-cache php7 php7-fpm php7-phar php7-json php7-iconv php7-openssl tzdata openntpd nginx supervisor curl && \
     rm /etc/nginx/conf.d/default.conf
 
-RUN apk add \
+RUN apk add --no-cache \
 	php7-ftp \
 	php7-xdebug \
 	php7-mcrypt \
