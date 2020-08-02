@@ -38,6 +38,14 @@ function init() {
                     setCanRestart(projectname, false);
                     setProjectState(projectname, "success", "play", "Start", false, "stopped");
                     break;
+                case "delete":
+                    if(projectname != lastDeleteProject) {
+                        let line = $("#line-project-" + projectname);
+                        if(line.length > 0) {
+                            line.remove();
+                            $.notify({message: `The project <i>${projectname}</i> was deleted from another session.`}, {type: "info"});
+                        }
+                    }
             }
         });
     });
@@ -210,7 +218,6 @@ function confirmDelete() {
     $("#deleteModal").modal("hide");
     if(lastDeleteProject == undefined) return;
     let currentDelete = lastDeleteProject;
-    lastDeleteProject = undefined;
 
     utils.showInfiniteLoading("Deleting project " + currentDelete + "...");
     $.getJSON("/api/v1/projects/delete/" + currentDelete).fail((xhr, status, err) => {

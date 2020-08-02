@@ -1,5 +1,6 @@
 const docker_manager = require("../../../docker_manager");
 const project_manager = require("../../../project_manager");
+const intercom = require("../../../intercom/intercom_client").connect();
 
 function initializeNamespace(namespace) {
     namespace.on("connection", (socket) => {
@@ -18,6 +19,15 @@ function initializeNamespace(namespace) {
                 }
             } else socket.emit("error_message", {message: "Cannot find the requested project " + projectName + "."});
         });
+    });
+
+    intercom.subscribe(["projectsevents"], (eventMessage) => {
+        let project = eventMessage.project;
+        switch(eventMessage.event) {
+            case "delete":
+                namespace.to("project_" + project.name).emit("project_action", {action: "delete", project: project.name});
+                break;
+        }
     });
 
     docker_manager.registerEvents((eventData) => {
