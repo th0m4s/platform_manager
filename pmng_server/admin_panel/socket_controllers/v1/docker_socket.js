@@ -1,6 +1,4 @@
 const docker_manager = require("../../../docker_manager");
-const database_server = require("../../../database_server");
-const project_manager = require("../../../project_manager");
 
 function initializeNamespace(namespace) {
     namespace.on("connection", (socket) => {
@@ -11,45 +9,26 @@ function initializeNamespace(namespace) {
                 return;
             }
 
-            setup = true;
-            switch(message.type) {
-                case "projects_list":
-                    socket.on("listen_project", async (projectMessage) => {
-                        let projectName = projectMessage.project;
-                        if(await project_manager.projectExists(projectName)) {
-                            try {
-                                await project_manager.canAccessProject(projectName, socket.user.id, "view");
-                                socket.join("project_" + projectName);
-                            } catch(error) {
-                                socket.emit("error_message", {message: "Cannot attach to the project " + projectName + ": " + error.message});
-                            }
-                        } else socket.emit("error_message", {message: "Cannot find the requested project " + projectName + "."});
-                    });
-                    break;
-                case "networks":
-                    if(socket.hasAccess("DOCKER")) {
+            if(socket.hasAccess("DOCKER")) {
+                setup = true;
+                switch(message.type) {
+                    case "networks":
                         socket.join("list_networks");
-                    } else {
-                        setup = false;
-                        socket.emit("setup", {error: true, message: "Insufficient permissions."});
-                    }
-                    break;
-                case "containers":
-                    if(socket.hasAccess("DOCKER")) {
+                        break;
+                    case "containers":
                         socket.join("list_containers");
-                    } else {
+                        break;
+                    default:
                         setup = false;
-                        socket.emit("setup", {error: true, message: "Insufficient permissions."});
-                    }
-                    break;
-                default:
-                    setup = false;
-                    socket.emit("setup", {error: true, message: "Invalid socket type."});
-                    break;
-            }
+                        socket.emit("setup", {error: true, message: "Invalid socket type."});
+                        break;
+                }
 
-            if(setup) {
-                socket.emit("setup", {error: false, message: "Socket setup."});
+                if(setup) {
+                    socket.emit("setup", {error: false, message: "Socket setup."});
+                }
+            } else {
+                socket.emit("setup", {error: true, message: "Insufficient permissions."});
             }
         });
     });
@@ -70,17 +49,9 @@ function processContainerAction(namespace, eventData) {
     switch(eventData.Action) {
         case "start":
             namespace.to("list_containers").emit("container_action", {action: "add", item: docker_manager.sortContainer(eventData.id, eventData.Actor.Attributes.name || "", eventData.Actor.Attributes, eventData.Actor.Attributes.image)})
-            if(eventData.Actor.Attributes["pmng.containertype"] == "project") {
-                let projectName = eventData.Actor.Attributes["pmng.projectname"];
-                namespace.to("project_" + projectName).emit("project_action", {action: "start", project: projectName});
-            }
             break;
         case "die": // stop only send if specifically stopped via api
             namespace.to("list_containers").emit("container_action", {action: "remove", item: eventData.Actor.Attributes.name});
-            if(eventData.Actor.Attributes["pmng.containertype"] == "project") {
-                let projectName = eventData.Actor.Attributes["pmng.projectname"];
-                namespace.to("project_" + projectName).emit("project_action", {action: "stop", project: projectName});
-            }
             break;
     }
 }

@@ -2,14 +2,13 @@ let socket = undefined;
 
 function init() {
     utils.showInfiniteLoading("Loading projects...");
-    socket = io("/v1/docker");
+    socket = io("/v1/projects");
 
     socket.on("connect", function(){
         console.log("Socket connected.")
         socket.emit("authentication", {key: API_KEY});
         socket.on("authenticated", function() {
             console.log("Socket authenticated.");
-            socket.emit("setup", {type: "projects_list"});
 
             requestOwned(requestLimit).always(() => {
                 requestCollab(requestLimit).always(() => {
