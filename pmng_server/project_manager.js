@@ -353,7 +353,7 @@ function listCollabProjects(userId, after, limit, sanitize = true) {
  * Checks if a user can access a project.
  * @param {string} projectname The project to check.
  * @param {number} userid The id of the user that want the access.
- * @param {"view" | "manage"} manageMode Check against that mode.
+ * @param {boolean} manageMode Check against that mode.
  * @returns {Promise<string>} A promise resolved with *projectName* if the user has sufficient permissions, else rejected with an error message.
  * All collaborations can *view* a project, but the *manage* mode requires to be set in the database as it enables modifications on the project.
  */
