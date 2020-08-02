@@ -811,10 +811,20 @@ function getNetworkDetails(reference) {
     });
 }
 
-function registerEvents(callback, since = new Date().getTime()/1000) {
-    docker.events({since}).then((stream) => {
-        stream.on("data", (data) => callback(JSON.parse(data.toString())));
-    });
+let eventsCallbacks = [];
+function registerEvents(callback) {
+    if(eventsCallbacks.length == 0) {
+        docker.events({since: new Date().getTime()/1000}).then((stream) => {
+            stream.on("data", (data) => {
+                let eventData = JSON.parse(data.toString());
+                for(let eventCb of eventsCallbacks) {
+                    eventCb(eventData);
+                }
+            });
+        });
+    }
+    
+    eventsCallbacks.push(callback);
 }
 
 
