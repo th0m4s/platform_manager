@@ -1,4 +1,4 @@
-const NodeCache = require("node-cache"), projects_cache = new NodeCache(), domains_cache = new NodeCache(), domains_valid_cache = new NodeCache();
+const NodeCache = require("node-cache"), projects_cache = new NodeCache(), domains_cache = new NodeCache(), domains_valid_cache = new NodeCache(), ids_cache = new NodeCache();
 const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const database_server = require("./database_server");
 const path = require("path");
@@ -68,6 +68,7 @@ function addProject(projectname, ownerid, env, plugins) {
             pluginProm.push(plugins_manager.install(plugin, projectname, configs[plugin]));
         }
     });
+
     return Promise.all(pluginProm).then(() => {
         return database_server.database("projects").insert({name: projectname, ownerid: ownerid, userenv: env, version: 0, plugins: configs}).then(() => {
             return pfs.mkdir(getProjectFolder(projectname)).then(() => {
@@ -82,6 +83,25 @@ function addProject(projectname, ownerid, env, plugins) {
                 });
             });
         });
+    }).then(() => {
+        return getIdFromName(projectname);
+    }).then((id) => {
+        intercom.send("projectsevents", {event: "add", project: projectname, owner: ownerid, id});
+
+        return id;
+    });
+}
+
+function getIdFromName(name) {
+    if(ids_cache.has(name)) return Promise.resolve(ids_cache.get(name));
+    else return database_server.database("projects").where("name", name).select("id").then((results) => {
+        if(results.length == 0) return 0;
+        else {
+            let id = results[0].id;
+            ids_cache.set(name, id);
+
+            return id;
+        }
     });
 }
 
@@ -182,11 +202,13 @@ function addCustomDomain(projectname, custom_domain, enablesub) {
  * @param {string} projectname The project name to add the collaborator to.
  * @param {string} username The username of the collaborator.
  * @param {"view" | "manage"} mode The collaboration mode (*view* or *manage*).
- * @returns {Promise} A promise resolved when the collaborator is added into the database.
+ * @returns {Promise} A promise resolved with the user id when the collaborator is added into the database.
  */
 function addCollaborator(projectname, username, mode = "view") {
     return database_server.findUserId(username).then((id) => {
-        return database_server.database("collabs").insert({projectname: projectname, userid: id, mode: mode});
+        return database_server.database("collabs").insert({projectname: projectname, userid: id, mode: mode}).then(() => {
+            return id;
+        });
     });
 }
 
@@ -244,6 +266,7 @@ intercom.subscribe(["projectsmng"], (message) => {
     switch(message.command) {
         case "invalidateProject":
             projects_cache.del(message.project);
+            ids_cache.del(message.project);
             break;
         case "invalidateDomains":
             let custom_domain = message.domain;
@@ -372,6 +395,7 @@ function canAccessProject(projectname, userid, manageMode) {
 
 module.exports.getProject = getProject;
 module.exports.addProject = addProject;
+module.exports.getIdFromName = getIdFromName;
 module.exports.deleteProject = deleteProject;
 module.exports.addCustomDomain = addCustomDomain;
 module.exports.addCollaborator = addCollaborator;
