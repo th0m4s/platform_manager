@@ -194,10 +194,11 @@ function start() {
                                         /**
                                          * Checks if a path exists in the container
                                          * @param {"f" | "d"} type Bash mode: *f* for file, *d* for directory .
-                                         * @param {*} path The container path to check from the root of the project.
+                                         * @param {string} path The container path to check from the root of the project.
                                          */
                                         let exists = (type, name) => {
                                             // TODO: rewrite with local files
+                                            if(!(["f", "d"].includes(type))) throw "Invalid check type.";
                                             let fullpath = path.resolve("/var/project", name);
                                             return execCommand("[[ -" + type + " " + fullpath + " ]]").then(({out, err, code}) => {
                                                 if(err.length > 0) throw err;
