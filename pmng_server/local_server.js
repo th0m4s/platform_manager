@@ -206,7 +206,7 @@ function start() {
 
                                         let startCmd = [];
                                         try {
-                                            startCmd = await buildpack.build(projectname, {execCommand, readFile, exists}, (message) => {
+                                            startCmd = await buildpack.build(projectname, projectData, {execCommand, readFile, exists}, (message) => {
                                                 connection.write(SPACES + "  [BUILDPACK] " + message + "\n");
                                             });
                                         } catch(e) {

@@ -5,7 +5,7 @@ const child_process = require("child_process");
 const Buildpack = require("./lib_pack");
 
 class NodeBuildpack extends Buildpack {
-    static async build(projectname, utils, logger) {
+    static async build(projectName, projectData, utils, logger) {
         let pkg = {};
 
         logger("Analyzing package.json...");
