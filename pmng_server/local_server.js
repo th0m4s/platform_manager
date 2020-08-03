@@ -105,13 +105,17 @@ function start() {
                                     throw "Cannot find the required project.json. Please create this file and push it to deploy the project.";
                                 }
 
-                                let type = projectData.type.replace(/\./g, ""), typeVersion = projectData.version;
+                                let type = projectData.type.replace(/\./g, ""), typeVersion = projectData.version || "latest";
                                 if(type !== undefined && type.length > 0) {
                                     try {
                                         let buildpack = require("./buildpacks/pack_" + type);
 
                                         connection.write(LINE + "Starting deployment container...");
                                         let image = docker_manager.getImageFromType(type, typeVersion);
+
+                                        if(image == undefined) {
+                                            throw "Unknown project type (image not found for this type and version: " + type + ":" + typeVersion + ")";
+                                        }
 
                                         let container = null;
                                         try {

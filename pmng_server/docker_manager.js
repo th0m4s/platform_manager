@@ -658,7 +658,7 @@ const types = {
  * @returns {string} The associated Docker image name.
  */
 function getImageFromType(type, version = "latest") {
-    return types[type][version];
+    return (types[type] || {})[version];
 }
 
 /**
