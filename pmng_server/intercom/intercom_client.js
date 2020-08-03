@@ -3,7 +3,7 @@ const net = require("net");
 function connect() {
     let connection = net.createConnection(8043);
     let subs = {}, waitingResp = {};
-    let defaultConfig = {timeout: 20, autoReject: true};
+    let defaultConfig = {timeout: 20, autoReject: true, autoResolve: true};
 
     let rcvBuffer = "";
     connection.on("data", (buffer) => {
@@ -38,7 +38,7 @@ function connect() {
             let respProm = new Promise((resolve, reject) => {
                 this.send(subject, message, (response) => {
                     if(options.autoReject && response.error !== undefined && response.error === true) return reject(response.message);
-                    else return resolve(response.message || response);
+                    else return resolve(options.autoResolve ? (response.message || response) : response);
                 });
             });
             return options.timeout > 0 ? Promise.race([new Promise((resolve, reject) => {
