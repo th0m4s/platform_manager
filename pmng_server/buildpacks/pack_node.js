@@ -8,6 +8,13 @@ class NodeBuildpack extends Buildpack {
     static async build(projectName, projectData, utils, logger) {
         let pkg = {};
 
+        // version in projectData is not the full number, use command instead (but could have been using dockermng getImageFromType)
+        let nodeVersion = (await utils.execCommand("node --version")).out.trim();
+        if(nodeVersion.startsWith("v13")) {
+            logger("WARNING: You are currently using Node " + nodeVersion + ", which is not still officially supported!");
+            logger("Please switch ASAP to the LTS version (v12), the maintained version (v10) or the latest one (v14).");
+        } else logger("Building using Node " + nodeVersion + ".");
+
         logger("Analyzing package.json...");
         try {
             pkg = JSON.parse(await utils.readFile("package.json"));
