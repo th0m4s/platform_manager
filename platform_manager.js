@@ -16,6 +16,15 @@ const child_process = require('child_process');
     await logger_tools.prepare();
     const logger = logger_tools.logger();
 
+    process.on("uncaughtExceptionMonitor", (exception) => {
+        logger.fatal("PLATFORM MANAGER ENCOUNTERED A FATAL EXCEPTION!");
+        logger.fatal(exception);
+    });
+
+    process.on("unhandledRejection", (reason) => {
+        logger.error("An unhandled rejection occured: " + reason);
+    });
+
     logger.info("PLATFORM MANAGER IS STARTING!");
 
     let subprocess_util = require("./pmng_server/subprocess_util");
