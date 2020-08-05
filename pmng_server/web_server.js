@@ -221,7 +221,7 @@ httpProxyServer.on("error", function (err, req, res) {
         "Content-Type": "text/html"
     });
 
-    if(errorPageCache == "") res.end("Could not connect to server: " + err);
+    if(errorPageCache == "") res.end("<p>Could not connect to server: " + err + "</p>");
     else res.end(errorPageCache.replace("error_message", err));
 });
 
