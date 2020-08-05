@@ -225,6 +225,10 @@ httpProxyServer.on("error", function (err, req, res) {
     else res.end(errorPageCache.replace("error_message", err));
 });
 
+process.on("uncaughtException", (e, l, o) => {
+    process.kill();
+});
+
 module.exports.start = start;
 module.exports.webServe = webServe;
 module.exports.registerPortInfo = registerPortInfo;
