@@ -30,6 +30,9 @@
             <% } %>
 
             <% if(hasAccess('admin')) { %>
+                <li class="nav-item <%= isActive('processes', 'platform') %>">
+                    <a class="nav-link" href="/panel/processes">Processes</a>
+                </li>
                 <li class="nav-item <%= isActive('users', 'all') %>">
                     <a class="nav-link" href="/panel/users/all">Users</a>
                 </li>
