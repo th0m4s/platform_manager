@@ -30,6 +30,9 @@ const child_process = require('child_process');
     logger.info("Starting intercom server...");
     await require("./pmng_server/intercom/intercom_server").start();
 
+    // starting subprocessed responder to centralize commands/timeouts
+    subprocess_util.responder();
+
     subprocess_util.forkNamed("./pmng_server/root_commands", "root_commands", "root commands processor");
 
     // indicating that docker main instance should be on this process

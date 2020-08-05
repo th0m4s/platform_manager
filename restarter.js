@@ -15,14 +15,7 @@ const readline = require('readline').createInterface({
                 process.exit();
             } else {
                 try {
-                    let resp = await Promise.race([
-                        new Promise((resolve, reject) => {
-                            setTimeout(() => {
-                                reject("Timeout exceeded. Please try again (maybe the name is incorrect).");
-                            }, 5000);
-                        }),
-                        intercom.sendPromise("subprocess:" + input, {command: "restart"})
-                    ]);
+                    let resp = await intercom.sendPromise("subprocesses", {id: input, command: "restart"});
     
                     console.log("SUCCESS:", resp);
                 } catch(error) {

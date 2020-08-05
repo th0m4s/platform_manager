@@ -81,6 +81,28 @@ function forkNamed(file, id, name) {
     });
 }
 
+function responder() {
+    intercom.subscribe(["subprocesses"], (message, respond) => {
+        let timeout = new Promise((resolve, reject) => {
+            setTimeout(() => {
+                reject({error: true, message: "Timeout exceeded. Please try again (maybe the name is incorrect)."});
+            }, 5000);
+        });
+
+        let subpId = message.id;
+        switch(message.command) {
+            case "restart":
+                Promise.race([timeout, intercom.sendPromise("subprocess:" + subpId, {command: "restart"}, {autoReject: false, autoResolve: false})]).then(respond).catch(respond);
+                break;
+            case "check": // like api request
+            case "isRunning": // like per project intercom
+                Promise.race([timeout, intercom.sendPromise("subprocess:" + subpId, {command: "isRunning"}, {autoReject: false, autoResolve: false})]).then(respond).catch(respond);
+                break;
+        }
+    });
+}
+
 
 module.exports.fork = fork;
 module.exports.forkNamed = forkNamed;
+module.exports.responder = responder;
