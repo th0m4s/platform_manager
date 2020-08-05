@@ -13,7 +13,8 @@
     "webpack:watch": "webpack --config pmng_server/admin_panel/static/webpack.config.js --watch",
     "lint:ejs": "ejslint",
     "build": "yarn run webpack:build",
-    "run": "node platform.js"
+    "run": "node platform_manager.js",
+    "debug": "sudo node platform_manager.js"
   },
   "dependencies": {
     "basic-auth": "^2.0.1",
