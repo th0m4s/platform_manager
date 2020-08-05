@@ -7,6 +7,8 @@ let responses = {};
 function start() {
     const server = net.createServer();
     server.on("connection", function (connection) {
+        connection.on("error", () => {});
+
         connection.write('stat:{\"msg\":\"welcome\"}\n');
 
         let rcvBuffer = "";
