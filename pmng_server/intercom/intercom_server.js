@@ -56,7 +56,7 @@ function processCommand(connection, command, value) {
                 responses[value.id] = connection;
 
                 if(!connection.destroyed) connection.write("stat:" + JSON.stringify({error: false, message: "sent"}) + "\n");
-            } else if(!connection.destroyed) connection.write("stat:" + JSON.stringify({error: false, message: "no subscriptions"}) + "\n");
+            } else if(!connection.destroyed) connection.write("stat:" + JSON.stringify({error: true, message: "no subscriptions"}) + "\n");
             break;
         case "resp":
             let id = value.id;
