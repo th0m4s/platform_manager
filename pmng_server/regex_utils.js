@@ -46,6 +46,13 @@ async function testCustom(domain) {
     } else return null;
 }
 
+async function testProjectOrCustom(domain) {
+    let project = testProject(domain);
+    if(project != null) return project;
+
+    return testCustom(domain);
+}
+
 /**
  * Checks if a file is a plugin JS file.
  * @param {string} filename The filename to check.
@@ -70,6 +77,7 @@ function testStorageDisk(filename) {
 
 module.exports.testSpecial = testSpecial;
 module.exports.testProject = testProject;
+module.exports.testProjectOrCustom = testProjectOrCustom;
 module.exports.testCustom = testCustom;
 module.exports.testStorageDisk = testStorageDisk;
 module.exports.testPlugin = testPlugin;

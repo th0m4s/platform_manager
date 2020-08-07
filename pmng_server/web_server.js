@@ -87,15 +87,9 @@ async function _getPort(host) {
         if(isInstalled !== true) return errorPort;
     }
 
-    let project = regex_utils.testProject(host);
+    let project = regex_utils.testProjectOrCustom(host);
     if(project !== null) {
         if(portMappings.hasOwnProperty(project)) return portMappings[project];
-        else return errorPort;
-    }
-
-    let custom = await regex_utils.testCustom(host);
-    if(custom != null) {
-        if(portMappings.hasOwnProperty(custom)) return portMappings[custom];
         else return errorPort;
     }
 
