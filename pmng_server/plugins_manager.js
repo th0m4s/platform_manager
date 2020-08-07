@@ -63,6 +63,10 @@ function getConfigForm(plugin) {
     return getPlugin(plugin).getConfigForm();
 }
 
+function getConfigDetails(plugin) {
+    return getPlugin(plugin).getConfigDetails();
+}
+
 let configurablePlugins = {};
 /**
  * Checks if a plugin can be configured by the user.
@@ -106,6 +110,7 @@ function getRouter() {
                                     let pluginConfig = project.plugins[pluginname];
                                     let prom = [];
 
+                                    let configDetails = getConfigDetails(pluginname);
                                     let inputs = getConfigForm(pluginname), formVerif = {};
                                     for(let configInput of inputs) {
                                         formVerif[configInput.config] = configInput.localCheck || ((x) => Promise.resolve(x));
@@ -119,17 +124,12 @@ function getRouter() {
                                     }
 
                                     Promise.all(prom).then(() => {
-                                        (running ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.resolve()).then(() => {
+                                        (running && configDetails.restart ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.resolve()).then(() => {
                                             project.plugins[pluginname] = pluginConfig;
 
                                             project_manager.setPluginsConfig(projectname, project.plugins).then(() => {
-                                                let afterProm = [];
-                                                for(let configInput of inputs) {
-                                                    afterProm.push(configInput.configSaved(projectname, pluginConfig[configInput.config]));
-                                                }
-
-                                                Promise.allSettled(afterProm).then(() => {
-                                                    (running ? intercom.sendPromise("dockermng", {command: "startProject", project: projectname}) : Promise.resolve()).then(() => {
+                                                configDetails.saved(projectname, pluginConfig).then(() => {
+                                                    (running && configDetails.restart ? intercom.sendPromise("dockermng", {command: "startProject", project: projectname}) : Promise.resolve()).then(() => {
                                                         res.json({error: false, message: "Plugin configuration saved."});
                                                     }).catch((error) => {
                                                         res.json({error: true, message: "The configuration was saved, but the project didn't restart. Please start it manually from your panel (" + error + ")."});
@@ -183,12 +183,30 @@ function getAllConfigs(pluginname) {
     });
 }
 
+function waitForHooks() {
+    let requiredHooks = {
+        "dns": false
+    };
+
+    return new Promise((resolve) => {
+        intercom.subscribe(["hookStarted"], (message) => {
+            requiredHooks[message.hook] = true;
+    
+            if(!Object.values(requiredHooks).includes(false)) {
+                resolve();
+            }
+        });
+    });
+}
+
 
 module.exports.getDefaultConfig = getDefaultConfig;
 module.exports.install = install;
 module.exports.uninstall = uninstall;
 module.exports.getConfigForm = getConfigForm;
+module.exports.getConfigDetails = getConfigDetails;
 module.exports.isPluginConfigurable = isPluginConfigurable;
 module.exports.getPlugin = getPlugin;
 module.exports.getRouter = getRouter;
 module.exports.getAllConfigs = getAllConfigs;
+module.exports.waitForHooks = waitForHooks;

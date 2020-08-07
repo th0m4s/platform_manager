@@ -11,14 +11,14 @@ async function isPortValid(port) {
 }
 
 let customPortsCache = {};
-function portSaved(project, port) {
-    return intercom.sendPromise("plugin_custom-port", {command: "setPort", project, port: port});
+function portSaved(project, config) {
+    return intercom.sendPromise("plugin_custom-port", {command: "setPort", project, port: config.port});
 }
 
 function localCheck(port) {
     port = parseInt(port);
     return isPortValid(port).then((result) => {
-        if(!result) throw new Error("Invalid port.");
+        if(!result) throw "Invalid port.";
         else return port;
     });
 }
@@ -47,6 +47,10 @@ class CustomPortPlugin extends Plugin {
                 case "checkPort":
                     respond({used: Object.values(customPortsCache).includes(port)});
                     break;
+                case "getPort":
+                    if(customPortsCache.hasOwnProperty(project)) respond({error: false, port: customPortsCache[project]});
+                    else respond({error: true});
+                    break;
             }
         });
     }
@@ -72,8 +76,15 @@ class CustomPortPlugin extends Plugin {
 
     static getConfigForm() {
         return [
-            {config: "port", text: "Custom port", small: "With a custom port, a second port is bound from the server to your project via the CUSTOM_PORT environment variable.", placeholder: "Enter a custom port or 0 to disable the plugin", type: "number", localCheck, remoteCheck: "/checkPort/", configSaved: portSaved}
+            {config: "port", text: "Custom port", small: "With a custom port, a second port is bound from the server to your project via the CUSTOM_PORT environment variable.", placeholder: "Enter a custom port or 0 to disable the plugin", type: "number", localCheck, remoteCheck: "/checkPort/"}
         ];
+    }
+
+    static getConfigDetails() {
+        return {
+            saved: portSaved,
+            restart: true
+        };
     }
 
     static prepareRouter(router) {
