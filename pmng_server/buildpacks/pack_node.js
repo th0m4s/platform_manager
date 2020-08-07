@@ -5,15 +5,20 @@ const child_process = require("child_process");
 const Buildpack = require("./lib_pack");
 
 class NodeBuildpack extends Buildpack {
-    static async build(projectName, projectData, utils, logger) {
+    static async build(projectName, projectData, utils, logger, hasAddons) {
         let pkg = {};
 
         // version in projectData is not the full number, use command instead (but could have been using dockermng getImageFromType)
         let nodeVersion = (await utils.execCommand("node --version")).out.trim();
         if(nodeVersion.startsWith("v13")) {
-            logger("WARNING: You are currently using Node " + nodeVersion + ", which is not still officially supported!");
+            logger("WARNING: You are currently using Node " + nodeVersion + ", which is no longer officially supported!");
             logger("Please switch ASAP to the LTS version (v12), the maintained version (v10) or the latest one (v14).");
         } else logger("Building using Node " + nodeVersion + ".");
+
+        if(projectData.version == "latest" && !hasAddons) {
+            logger("WARNING: You are using the 'latest' version tag and your project, with timen may not run with");
+            logger("the version it was built with. For more consistency, please switch to a specific version tag.");
+        }
 
         logger("Analyzing package.json...");
         try {
@@ -55,6 +60,10 @@ class NodeBuildpack extends Buildpack {
         else logger("Project installed.");
     
         return ["node", mainscript];
+    }
+
+    static availableAddons(projectData) {
+        return ["openjdk"];
     }
 }
 

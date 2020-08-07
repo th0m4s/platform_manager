@@ -326,6 +326,11 @@ function _getProjectBuild(project_name, save = false) {
     return path.join(getProjectFolder(project_name), "build." + (save ? "save." : "") + "tgz");
 }; const getProjectBuild = runtime_cache(_getProjectBuild);
 
+function _getProjectImage(project_name) {
+    return "pmng/build_" + project_name;
+    // TODO: is cache useful (as no function is called, just strings concat)
+}; const getProjectImage = runtime_cache(_getProjectImage);
+
 function _getProjectStorage(project_name) {
     return path.join(process.env.PLUGINS_PATH, "storages", "mounts", project_name);
 }; const getProjectStorage = runtime_cache(_getProjectStorage);
@@ -404,6 +409,7 @@ module.exports.getProjectFolder = getProjectFolder;
 module.exports.getProjectLogsFolder = getProjectLogsFolder;
 module.exports.getProjectDeployFolder = getProjectDeployFolder;
 module.exports.getProjectBuild = getProjectBuild;
+module.exports.getProjectImage = getProjectImage;
 module.exports.getProjectStorage = getProjectStorage;
 module.exports.getProjectFromCustomDomain = getProjectFromCustomDomain;
 module.exports.invalidateCachedProject = invalidateCachedProject;

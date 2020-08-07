@@ -11,7 +11,6 @@ const docker_manager = require("./docker_manager");
 const intercom = require("./intercom/intercom_client").connect();
 const string_utils = require("./string_utils");
 const privileges = require("./privileges");
-const { build } = require("./buildpacks/lib_pack");
 
 const LINE = "\n-----> ", SPACES = "       ";
 
@@ -23,7 +22,7 @@ function start() {
 
     let server = net.createServer();
     server.on("connection", function (connection) {
-        let command = "", isProcessing = false;
+        let command = "", isProcessing = false, processExit = () => {};
         connection.on("data", async (buffer) => {
             if(isProcessing) return;
             command += buffer.toString("utf-8");
@@ -45,19 +44,40 @@ function start() {
 
                             let currentBuildPath = project_manager.getProjectBuild(projectname, false);
                             let saveBuildPath = project_manager.getProjectBuild(projectname, true);
+                            let buildImageName = project_manager.getProjectImage(projectname);
 
-                            let stopContainerIfError = true;
+                            let stopContainerIfError = true, lastBuildExists = false;
 
                             try {
                                 connection.write("-----> Starting deployment for project " + projectname + "...\n");
+                                connection.write(SPACES + "If you quit the git process, the deployment will continue in the background.\n");
 
                                 try {
                                     await pfs.access(currentBuildPath);
+                                    lastBuildExists = true;
                                     connection.write(LINE + "Saving last build...\n");
                                     await pfs.rename(currentBuildPath, saveBuildPath);
                                     connection.write(SPACES + "Build saved.\n");
-                                } catch(error) {
-                                    // first deploy, no version to save
+                                } catch(moveError) {
+                                    // no archive build
+                                }
+
+                                let restoreSave = async () => {
+                                    try {
+                                        await pfs.access(saveBuildPath);
+                                        await pfs.rename(saveBuildPath, currentBuildPath);
+                                    } catch(error) {/* no save to restore */}
+                                };
+
+                                processExit = async () => {
+                                    await restoreSave();
+                                };
+
+                                let buildImage = undefined;
+                                try {
+                                    buildImage = await docker_manager.docker.image.get(buildImageName).status();
+                                } catch(imageError) {
+                                    // no image
                                 }
 
                                 let buildFolder = project_manager.getProjectDeployFolder(projectname, false);
@@ -97,18 +117,56 @@ function start() {
                                         }
                                     });
                                 });
+
+                                let lastSaveImage = undefined;
+                                if(lastBuildExists) {
+                                    let extractLastSaveFolder = path.join(buildFolder, "lastExtracted");
+                                    await pfs.mkdir(extractLastSaveFolder);
+
+                                    await tar.x({
+                                        file: saveBuildPath,
+                                        cwd: extractLastSaveFolder
+                                    }, ["settings.json"]);
+
+                                    let lastSettings = JSON.parse(await pfs.readFile(path.join(extractLastSaveFolder, "settings.json")));
+                                    if(lastSettings.build.mode == "image") {
+                                        try {
+                                            lastSaveImage = (await docker_manager.docker.image.get(lastSettings.build.image).status()).data.Id;
+                                        } catch(e) {
+                                            // last save image is already deleted if 404
+                                            if(e.statusCode != 404) throw e;
+                                        }
+                                    }
+                                }
                                 
-                                let projectData = {};
+                                let projectData, addons, hasAddons = false;
                                 try {
-                                    projectData = JSON.parse(await pfs.readFile(path.resolve(projectCodeFolder, "project.json"))).project;
+                                    let fileData = JSON.parse(await pfs.readFile(path.resolve(projectCodeFolder, "project.json")));
+                                    projectData = fileData.project;
+                                    addons = fileData.addons || [];
+                                    hasAddons = addons.length > 0;
                                 } catch(error) {
                                     throw "Cannot find the required project.json. Please create this file and push it to deploy the project.";
                                 }
 
-                                let type = projectData.type.replace(/\./g, ""), typeVersion = projectData.version || "latest";
+                                let type = projectData.type.replace(/\./g, "");
+                                projectData.version = projectData.version || "latest";
+                                let typeVersion = projectData.version;
                                 if(type !== undefined && type.length > 0) {
                                     try {
                                         let buildpack = require("./buildpacks/pack_" + type);
+
+                                        let availableAddons = buildpack.availableAddons(projectData);
+                                        for(let addon of addons) {
+                                            if(!(availableAddons.includes(addon.name || ""))) throw "Addon '" + addon.name + "' is not available for this buildpack.";
+                                            try {
+                                                // require to check if exists, and caches for future require
+                                                require("./buildpacks/addons/addon_" + addon.name);
+                                            } catch(e) {
+                                                if(e.code == "MODULE_NOT_FOUND") throw "Addon '" + addon.name + "' doesn't exist.";
+                                                else throw e;
+                                            }
+                                        }
 
                                         connection.write(LINE + "Starting deployment container...");
                                         let image = docker_manager.getImageFromType(type, typeVersion);
@@ -135,20 +193,24 @@ function start() {
                                             });
 
                                             await container.start();
+
+                                            processExit = () => {
+                                                return Promise.all(restoreSave, container.stop);
+                                            };
                                         } catch(error) {
-                                            console.log(error);
-                                            if(error.code == 409) {
+                                            if(error.statusCode == 409) {
                                                 stopContainerIfError = false;
                                                 throw "This project is already being deployed (the deployment container already exists.)";
                                             } else throw error;
                                         }
                                     
 
-                                        let execCommand = async (command, logReceived = undefined, buffer = false) => {
+                                        let execCommand = async (command, logReceived = undefined, buffer = false, user = "project") => {
                                             let exec = await container.exec.create({
                                                 AttachStdin: false,
                                                 AttachStdout: true,
                                                 AttachStderr: true,
+                                                User: user,
                                                 WorkingDir: "/var/project",
                                                 Cmd: ["/bin/bash", "-c", command]
                                             });
@@ -206,25 +268,57 @@ function start() {
                                             });
                                         }
 
+                                        let dockerUtils = {execCommand, readFile, exists};
                                         connection.write(" Started.\n");
-                                        connection.write(SPACES + "Executing buildpack...\n");
+
+                                        if(hasAddons) {
+                                            let addonLogger = (message, newLine = true) => {
+                                                connection.write(SPACES + "  [ADDON] " + message + (newLine ? "\n" : ""));
+                                            };
+
+                                            for(let addonData of addons) {
+                                                let addonName = addonData.name;
+                                                let addon = require("./buildpacks/addons/addon_" + addonName);
+
+                                                try {
+                                                    connection.write(SPACES + "Executing addon " + addonName + "...\n");
+                                                    await addon.addon(projectname, addonData, dockerUtils, addonLogger);
+                                                } catch(e) {
+                                                    throw "Addon error: " + e;
+                                                }
+                                            }
+
+                                            connection.write(SPACES + "Committing project...");
+                                            await container.commit({repo: buildImageName});
+                                            connection.write(" Image exported.\n");
+                                        }
+
+                                        connection.write((hasAddons ? LINE : SPACES) + "Executing buildpack...\n");
 
                                         let startCmd = [];
                                         try {
-                                            startCmd = await buildpack.build(projectname, projectData, {execCommand, readFile, exists}, (message) => {
+                                            startCmd = await buildpack.build(projectname, projectData, dockerUtils, (message) => {
                                                 connection.write(SPACES + "  [BUILDPACK] " + message + "\n");
-                                            });
+                                            }, hasAddons);
                                         } catch(e) {
                                             throw "Buildpack error: " + e;
                                         }
 
-                                        await pfs.writeFile(settingsFile, JSON.stringify({project: {type: type, entrypoint: startCmd, version: typeVersion}, build: {version: 2, mode: "archive"}}));
+                                        let settings = {project: {type: type, entrypoint: startCmd, version: typeVersion}, build: {version: 2, mode: "archive"}};
+
+                                        if(hasAddons) {
+                                            settings.build.mode = "image";
+                                            settings.build.image = buildImageName;
+                                        }
+
+                                        await pfs.writeFile(settingsFile, JSON.stringify(settings));
                                         connection.write(SPACES + "Project built.\n");
 
                                         connection.write(LINE + "Stopping deployment container...");
                                         await container.stop();
                                         connection.write(" Stopped.\n");
                                         stopContainerIfError = false;
+
                                     } catch(e) {
                                         if(e.code == "MODULE_NOT_FOUND") throw "Project type '" + type + "' is incorrect.";
                                         else throw e;
@@ -244,6 +338,9 @@ function start() {
                                 } catch(error) { }
 
                                 connection.write(SPACES + "Done: " + compressedSize + " \n");
+
+                                // new deployment is archive, so delete image if exists
+                                if(!hasAddons && lastSaveImage == undefined && buildImage != undefined) await buildImage.remove({force: true});
 
                                 connection.write(LINE + "Removing temporary deployment files...\n");
                                 await rmfr(buildFolder);
@@ -287,15 +384,22 @@ function start() {
                                     connection.write(LINE + "Run pmng project:start or click Start from your admin panel to start this project.\n")
                                 }
 
+                                if(lastSaveImage != undefined) {
+                                    // everything went well and last version used an image, delete it by id
+                                    try {
+                                        await docker_manager.docker.image.get(lastSaveImage).remove();
+                                    } catch(error) {
+                                        connection.write(SPACES + "Cannot delete old build image with id " + lastSaveImage + ".\n");
+                                    }
+                                }
+
 
                             } catch(error) {
                                 connection.write(LINE + "An error occured during deployment:\n" + error + "\n");
                                 connection.write(SPACES + "Please solve the issue and recommit any change to deploy this project.\n");
 
-                                try {
-                                    await pfs.access(saveBuildPath);
-                                    await pfs.rename(saveBuildPath, currentBuildPath);
-                                } catch(error) {/* no save to restore */}
+                                await processExit();
+                                processExit = () => {};
 
                                 if(stopContainerIfError) {
                                     await docker_manager.docker.container.list({filters: {name: [docker_manager.getProjectDeployingContainer(projectname)]}}).then((containers) => {
@@ -321,6 +425,10 @@ function start() {
 
         connection.on("error", (err) => {
             // maybe voluntarily
+        });
+
+        connection.on("close", (hadError) => {
+            processExit();
         });
     });
 

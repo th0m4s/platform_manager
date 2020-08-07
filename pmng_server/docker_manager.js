@@ -458,7 +458,7 @@ function startProject(projectname) {
         let type = projectSettings.type, typeVersion = projectSettings.version || "latest";
         let entrypoint = projectSettings.entrypoint;
         
-        let imageName = getImageFromType(type, typeVersion);
+        let imageName = buildMode == "archive" ? getImageFromType(type, typeVersion) : buildSettings.image;
         if(imageName == undefined) throw "Unknown image for project.";
 
         let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "CUSTOM_PORT"];

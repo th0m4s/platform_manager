@@ -5,7 +5,7 @@ const child_process = require("child_process");
 const Buildpack = require("../lib_pack");
 
 class BasePHPBuildpack extends Buildpack {
-    static async build(projectName, projectData, utils, logger) {
+    static async build(projectName, projectData, utils, logger, hasAddons) {
         logger("Analyzing project...");
     
         if(!utils.exists("d", "public")) {
