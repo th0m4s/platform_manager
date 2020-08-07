@@ -185,6 +185,9 @@ async function maininstance() {
                     clearStarting(projectname).then(() => respond({error: true, message: "Cannot start project " + projectname + ": " + error}));
                 });
                 break;
+            case "getPort":
+                if(portMappings.hasOwnProperty(projectname)) respond({error: false, port: portMappings[projectname]});
+                else respond({error: true});
             case "requestPorts":
                 respond(portMappings);
                 break;
