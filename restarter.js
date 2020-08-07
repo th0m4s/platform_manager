@@ -16,8 +16,16 @@ const readline = require('readline').createInterface({
             } else {
                 try {
                     let resp = await intercom.sendPromise("subprocesses", {id: input, command: "restart"});
-    
-                    console.log("SUCCESS:", resp);
+                    console.log(resp);
+
+                    await new Promise((resolve) => {
+                        setTimeout(resolve, 1000);
+                    });
+
+                    let checkResp = await intercom.sendPromise("subprocesses", {id: input, command: "check"});
+                    if(checkResp.running) {
+                        console.log("SUCCESS: Process restarted and running (checked via isRunning).");
+                    } else throw "Process restarted but not found running.";
                 } catch(error) {
                     console.log("FAILED:", error);
                 }
