@@ -11,8 +11,11 @@ class Plugin {
     static async installPlugin(projectname, pluginconfig) { }
     static async uninstallPlugin(projectname, pluginconfig) { }
 
+    static initializeHooks() { }
+
     static getDefaultConfig() { return {}; }
     static getConfigForm() { return []; }
+    static getConfigDetails() { return { restart: true, saved: async () => {} }; };
 
     static prepareRouter(router) { return router; }
 

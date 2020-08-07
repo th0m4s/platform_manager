@@ -135,7 +135,7 @@ async function maininstance() {
         config = JSON.parse(config);
 
         return pfs.readdir("./pmng_server/plugins").then((files) => {
-            let prom = [];
+            let prom = [], hooksStarted = [];
             files.forEach((file) => {
                 let pluginname = regex_utils.testPlugin(file);
                 if(pluginname !== null) {
@@ -143,10 +143,18 @@ async function maininstance() {
                         config[pluginname] = {};
                     }
 
-                    prom.push(plugins_manager.getPlugin(pluginname).startGlobalPlugin(path.join(process.env.PLUGINS_PATH, pluginname), config[pluginname], (newConfig) => {
+                    let plugin = plugins_manager.getPlugin(pluginname);
+                    hooksStarted.push(plugin.initializeHooks);
+                    prom.push(plugin.startGlobalPlugin(path.join(process.env.PLUGINS_PATH, pluginname), config[pluginname], (newConfig) => {
                         config[pluginname] = newConfig;
                         return pfs.writeFile(pluginsConfigFile, JSON.stringify(config));
                     }));
+                }
+            });
+
+            plugins_manager.waitForHooks().then(() => {
+                for(let cb of hooksStarted) {
+                    cb();
                 }
             });
 

@@ -17,6 +17,7 @@ const getResponse = (question, type) => {
 
 let challenges = {};
 let isInstalled = false;
+let customHooks = [];
 
 const A_ENABLED = process.env.HOST_A.toLowerCase() != "disabled";
 const AAAA_ENABLED = process.env.HOST_AAAA.toLowerCase() != "disabled";
@@ -76,6 +77,30 @@ dns_server.on("request", async function(request, response) {
             break;
     }
 
+    // custom hooks if required
+    // TODO: rewrite challenges with dns hooks
+    for(let hook of customHooks) {
+        if(hook.enabled && (hook.types.length == 0 || hook.types.includes(questionType))) {
+            let newResponses = await Promise.race([
+                new Promise((resolve) => {
+                    setTimeout(() => resolve(false), 500);
+                }),
+
+                intercom.sendPromise(hook.subject, Object.assign({dnsType: questionType, dnsName: requestedName}, hook.message))
+            ]);
+
+            if(newResponses !== false) {
+                newResponses = newResponses || [];
+                for(let resp of newResponses) {
+                    response.answer.push(resp);
+                }
+            } else {
+                // too long, disable hook
+                hook.enabled = false;
+            }
+        }
+    }
+
     response.send();
 });
 
@@ -108,6 +133,19 @@ function start() {
                 break;
         }
     });
+
+    intercom.subscribe(["dnsHooks"], (message) => {
+        let {subject, types} = message;
+        let askMessage = message.message;
+        if(types == undefined) types = [];
+        else if (typeof types == "string") types = [types];
+
+        if(subject != undefined && typeof askMessage == "object") {
+            customHooks.push({subject, message: askMessage, types, enabled: true});
+        }
+    });
+    // indicate to docker/plugins that this hook is ready
+    intercom.send("hookStarted", {hook: "dns"});
 }
 
 start();
