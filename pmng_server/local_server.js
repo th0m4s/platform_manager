@@ -129,7 +129,7 @@ function start() {
                                     }, ["settings.json"]);
 
                                     let lastSettings = JSON.parse(await pfs.readFile(path.join(extractLastSaveFolder, "settings.json")));
-                                    if(lastSettings.build.mode == "image") {
+                                    if(lastSettings.build != undefined && lastSettings.build.mode == "image") {
                                         try {
                                             lastSaveImage = (await docker_manager.docker.image.get(lastSettings.build.image).status()).data.Id;
                                         } catch(e) {
