@@ -195,7 +195,7 @@ function start() {
                                             await container.start();
 
                                             processExit = () => {
-                                                return Promise.all(restoreSave, container.stop);
+                                                return Promise.all([restoreSave, container.stop]);
                                             };
                                         } catch(error) {
                                             if(error.statusCode == 409) {
