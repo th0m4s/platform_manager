@@ -1,7 +1,7 @@
 FROM pmng/base
 # based from node:alpine3.11
 
-ENV NODE_VERSION 14.7.0
+ENV NODE_VERSION 14.8.0
 
 RUN apk update && apk add --no-cache \
         libstdc++ \
@@ -11,7 +11,7 @@ RUN apk update && apk add --no-cache \
       && case "${alpineArch##*-}" in \
         x86_64) \
           ARCH='x64' \
-          CHECKSUM="40aec41b3d57a45db4a27b515077dc5d214d3dd4d282ba3fe29949a5f80a4fa8" \
+          CHECKSUM="5439e4f7dab6432e19369215d48d5317994b1a5e72c525c05c697603c77e48c1" \
           ;; \
         *) ;; \
       esac \

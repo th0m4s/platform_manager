@@ -645,8 +645,8 @@ let portMappings = {}, firstPort = 49152, lastPort = 49999/*, firstPluginPort = 
 const types = {
     "node": {
         "latest": "pmng/node:latest",
-        "14.7.0": "pmng/node:14.7.0",
-        "14": "pmng/node:14.7.0",
+        "14.8.0": "pmng/node:14.8.0",
+        "14": "pmng/node:14.8.0",
         "13.4.0": "pmng/node:13.14.0",
         "13": "pmng/node:13.14.0",
         "12.18.3": "pmng/node:12.18.3",
