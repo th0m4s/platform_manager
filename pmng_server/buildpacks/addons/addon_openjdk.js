@@ -2,7 +2,7 @@ const BuildAddon = require("./lib_addon");
 
 class OpenJDKAddon extends BuildAddon {
     static async addon(projectName, addonData, utils, logger) {
-        let jdkVersion = addonData.version.toString() || "latest";
+        let jdkVersion = (addonData.version || "latest").toString();
         if(jdkVersion == "latest") jdkVersion = "11";
 
         if(!(["8", "11"].includes(jdkVersion))) {
