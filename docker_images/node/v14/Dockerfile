@@ -11,7 +11,7 @@ RUN apk update && apk add --no-cache \
       && case "${alpineArch##*-}" in \
         x86_64) \
           ARCH='x64' \
-          CHECKSUM="fc556b2b3f751e08d745e97bf6197d977de2a885a6080d0a731158c00ffbb02f" \
+          CHECKSUM="40aec41b3d57a45db4a27b515077dc5d214d3dd4d282ba3fe29949a5f80a4fa8" \
           ;; \
         *) ;; \
       esac \
