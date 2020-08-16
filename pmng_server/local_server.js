@@ -272,11 +272,18 @@ function start() {
                                         connection.write(" Started.\n");
 
                                         if(hasAddons) {
+                                            let lastNewLine = true;
                                             let addonLogger = (message, newLine = true) => {
-                                                connection.write(SPACES + "  [ADDON] " + message + (newLine ? "\n" : ""));
+                                                connection.write((newLine && !lastNewLine ? "\n" : "") + (lastNewLine ? SPACES + "  [ADDON] " : "") + message + (newLine ? "\n" : ""));
+                                                lastNewLine = newLine;
                                             };
 
                                             for(let addonData of addons) {
+                                                if(!lastNewLine) {
+                                                    connection.write("\n");
+                                                    lastNewLine = true;
+                                                }
+
                                                 let addonName = addonData.name;
                                                 let addon = require("./buildpacks/addons/addon_" + addonName);
 
