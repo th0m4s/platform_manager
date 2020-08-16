@@ -226,10 +226,10 @@ function start() {
                                                     if(out == undefined && buffer) {
                                                         logReceived(data);
                                                     } else {
-                                                        let string = data.toString(), contents = string.substring(8), stream = string.charCodeAt(0);
+                                                        let string = data.toString(), contents = string.substring(8), dataStream = string.charCodeAt(0);
                                                         if(out == undefined) {
-                                                            logReceived(stream, contents);
-                                                        } else if(stream == 1) out += contents;
+                                                            logReceived(dataStream, contents);
+                                                        } else if(dataStream == 1) out += contents;
                                                         else err += contents;
                                                     }
                                                 });
