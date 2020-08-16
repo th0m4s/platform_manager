@@ -14,7 +14,8 @@ const privileges = require("./privileges");
 const treekill = require("tree-kill");
 const DockerContainer = require("node-docker-api/lib/container").Container;
 
-const docker = new Docker(process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)});
+const docker = new Docker(Object.assign({version: process.env.DOCKER_API_VERSION}, process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)}));
+// even if (await docker.version()).ApiVersion is always set to last version, requests will behave like specified in DOCKER_API_VERSION
 
 /**
  * Gets the name of the main container for a specific project.
