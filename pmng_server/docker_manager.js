@@ -102,7 +102,7 @@ async function maininstance() {
     let delayWaited = 0, delayNeeded = parseInt(process.env.DOCKER_START_DELAY), intervalDelay = 500, messageSent = false;
     while(true) {
         try {
-            await docker.info();
+            await docker.ping();
             break;
         } catch(error) {
             if(!messageSent) {
