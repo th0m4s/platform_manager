@@ -14,6 +14,10 @@ class OpenJDKAddon extends BuildAddon {
             logger("OpenJDK installed.");
         }
     }
+
+    static displayName() {
+        return "OpenJDK";
+    }
 }
 
 module.exports = OpenJDKAddon;

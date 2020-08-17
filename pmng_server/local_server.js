@@ -288,7 +288,7 @@ function start() {
                                                 let addon = require("./buildpacks/addons/addon_" + addonName);
 
                                                 try {
-                                                    connection.write(SPACES + "Executing addon " + addonName + "...\n");
+                                                    connection.write(SPACES + "Executing addon " + addon.displayName() + " (" + addonName + ")...\n");
                                                     await addon.addon(projectname, addonData, dockerUtils, addonLogger);
                                                 } catch(e) {
                                                     throw "Addon error: " + e;
