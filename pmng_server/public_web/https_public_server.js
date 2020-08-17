@@ -36,7 +36,7 @@ function start() {
         }
     };
 
-    let httpsServer = https.createServer(https_options, (req, res) => {console.log(req.socket.remoteAddress + " : " + req.headers.host + req.url); web.webServe(req, res)}).listen(443, () => {
+    let httpsServer = https.createServer(https_options, (req, res) => {web.webServe(req, res)}).listen(443, () => {
         if(wantCluster) logger.info(`[HTTPS CLUSTER] public server ${process.pid} (worker #${cluster.worker.id}) started.`);
         else logger.info("[HTTPS CLUSTER] public only server started.");
 
