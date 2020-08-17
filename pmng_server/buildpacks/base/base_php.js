@@ -16,7 +16,7 @@ class BasePHPBuildpack extends Buildpack {
         if(baseContents.some((name) => {
             return name.endsWith(".php");
         })) {
-            logger("Warning: You placed PHP files in the project root, and will not be served as they are not in the public directory.");
+            logger("WARNING: You placed PHP files in the project root, and will not be served as they are not in the public directory.");
         }
     
         // check vendor for composer packages

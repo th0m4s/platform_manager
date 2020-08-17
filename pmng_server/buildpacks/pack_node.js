@@ -12,12 +12,12 @@ class NodeBuildpack extends Buildpack {
         let nodeVersion = (await utils.execCommand("node --version")).out.trim();
         if(nodeVersion.startsWith("v13")) {
             logger("WARNING: You are currently using Node " + nodeVersion + ", which is no longer officially supported!");
-            logger("Please switch ASAP to the LTS version (v12), the maintained version (v10) or the latest one (v14).");
+            logger("Please switch ASAP to the LTS version (v12), the maintained version (v10) or the latest one (v14).\n");
         } else logger("Building using Node " + nodeVersion + ".");
 
         if(projectData.version == "latest" && !hasAddons) {
-            logger("WARNING: You are using the 'latest' version tag and your project, with timen may not run with");
-            logger("the version it was built with. For more consistency, please switch to a specific version tag.");
+            logger("WARNING: You are using the 'latest' version tag and your project, with time it may not run with");
+            logger("the version it was built with. For more consistency, please switch to a specific version tag.\n");
         }
 
         logger("Analyzing package.json...");
