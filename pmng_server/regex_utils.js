@@ -47,10 +47,11 @@ async function testCustom(domain) {
 }
 
 async function testProjectOrCustom(domain) {
-    let project = testProject(domain);
+    /*let project = testProject(domain);
     if(project != null) return project;
 
-    return testCustom(domain);
+    return testCustom(domain);*/
+    return testProject(domain) || testCustom(domain);
 }
 
 /**
