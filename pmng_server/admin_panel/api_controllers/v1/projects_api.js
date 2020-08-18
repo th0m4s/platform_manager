@@ -142,19 +142,22 @@ router.post("/create", function(req, res) {
         let customdomains = req.body.customdomains || [];
 
         projects_manager.addProject(projectname, user.id, userenv, pluginnames).then((id) => {
-            let prom = [];
+            let domProm = [], collabsProm = [];
             customdomains.forEach((domain) => {
-                if(domain !== "") prom.push(projects_manager.addCustomDomain(projectname, domain.domain, domain.enablesub == true || domain.enablesub == "true"));
-            });
-            collaborators.forEach((collaborator) => {
-                if(collaborator.trim().length > 0) {
-                    prom.push(projects_manager.addCollaborator(projectname, collaborator, "view").then((collaboratorId) => {
-                        intercom.send("projectsevents", {event: "add_collab", collaboratorId, manageable: false, project: {name: projectname, id, type: null, version: 0}, running: false});
-                    }));
-                }
+                if(domain !== "") domProm.push(projects_manager.addCustomDomain(projectname, domain.domain, domain.enablesub == true || domain.enablesub == "true"));
             });
 
-            (prom.length > 0 ? Promise.all(prom) : Promise.resolve()).then(() => {
+            Promise.all(domProm).then(() => {
+                collaborators.forEach((collaborator) => {
+                    if(collaborator.trim().length > 0) {
+                        collabsProm.push(projects_manager.addCollaborator(projectname, collaborator, "view").then((collaboratorId) => {
+                            intercom.send("projectsevents", {event: "add_collab", collaboratorId, manageable: false, project: {name: projectname, id, type: null, version: 0}, running: false});
+                        }));
+                    }
+                });
+
+                return Promise.all(collabsProm);
+            }).then(() => {
                 res.status(200).json({error: false, code: 200, message: "Project successfully created."});
             }).catch((err) => {
                 res.json({error: true, code: 409, message: "Project created, but one or more custom domains or collaborators were not added.", details: err});

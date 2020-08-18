@@ -335,6 +335,16 @@ function _getProjectStorage(project_name) {
     return path.join(process.env.PLUGINS_PATH, "storages", "mounts", project_name);
 }; const getProjectStorage = runtime_cache(_getProjectStorage);
 
+function getProjectUrl(project) {
+    // project is object with at least name and id (will be maybe used later for custom domains)
+    return "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://" + project.name + "." + process.env.ROOT_DOMAIN;
+}
+
+function addProjectUrl(project) {
+    project.url = getProjectUrl(project);
+    return project;
+}
+
 function sanitizeProject(project) {
     return {id: project.id, version: project.version, name: project.name, type: project.type};
 }
@@ -349,7 +359,7 @@ function sanitizeProject(project) {
  */
 function listOwnedProjects(userId, after, limit, sanitize = true) {
     return database_server.database("projects").where("ownerid", userId).andWhere("id", ">", after).select("*").then((results) => {
-        return {projects: results.slice(0, limit).map(sanitize ? sanitizeProject : (x) => x), hasMore: results.length > limit};
+        return {projects: results.slice(0, limit).map(sanitize ? sanitizeProject : (x) => x).map(addProjectUrl), hasMore: results.length > limit};
     });
 }
 
@@ -370,7 +380,7 @@ function listCollabProjects(userId, after, limit, sanitize = true) {
         return getMultipleProjects(Object.keys(res), false).then((objects) => {
             let projects = [];
             for(let [key, value] of Object.entries(objects)) {
-                projects.push({project: sanitize ? sanitizeProject(value) : value, mode: res[key].mode, id: res[key].id});
+                projects.push({project: addProjectUrl(sanitize ? sanitizeProject(value) : value), mode: res[key].mode, id: res[key].id});
             }
             return {projects: projects.slice(0, limit), hasMore: results.length > limit};
         });
@@ -416,6 +426,8 @@ module.exports.invalidateCachedProject = invalidateCachedProject;
 module.exports.invalidCachedDomain = invalidCachedDomain;
 module.exports.checkCustomDomain = checkCustomDomain;
 module.exports.projectExists = projectExists;
+module.exports.getProjectUrl = getProjectUrl;
+module.exports.addProjectUrl = addProjectUrl;
 module.exports.listOwnedProjects = listOwnedProjects;
 module.exports.listCollabProjects = listCollabProjects;
 module.exports.setPluginsConfig = setPluginsConfig;
