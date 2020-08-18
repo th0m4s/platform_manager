@@ -13,7 +13,7 @@ const PROJECTS_PATH = process.env.PROJECTS_PATH;
 
 // TODO: change Project to a class
 /**
- * Represents a user fetched from the database.
+ * Represents a project fetched from the database.
  * @typedef{{id: number, name: string, ownerid: number, userenv: Object, type: string | null, version: number, plugins: Object, autostart: false}} Project
 */
 
