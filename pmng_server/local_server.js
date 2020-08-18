@@ -81,7 +81,8 @@ function start() {
                                 }
 
                                 let buildFolder = project_manager.getProjectDeployFolder(projectname, false);
-                                let projectCodeFolder = path.resolve(buildFolder, "project");
+                                let projectCodeFolder = path.resolve(buildFolder, "project"); // contains repo/project code
+                                let tempBuildFolder = path.resolve(buildFolder, "tempBuild"); // temp dir for addons/buildpack
 
                                 let projectRepo = project_manager.getProjectRepository(projectname);
 
@@ -98,7 +99,7 @@ function start() {
                                 }
 
                                 await pfs.mkdir(buildFolder); // will create the build.tgz
-                                await pfs.mkdir(projectCodeFolder); // will contain the repository code
+                                await Promise.all([pfs.mkdir(projectCodeFolder), pfs.mkdir(tempBuildFolder)])
                                 connection.write(LINE + "Exporting project repository...\n");
                                 let export_process = child_process.spawn("/bin/bash", ["-c", "git archive master | tar -xf - -C " + projectCodeFolder], {cwd: projectRepo});
 
@@ -187,7 +188,7 @@ function start() {
                                                 },
                                                 HostConfig: {
                                                     AutoRemove: true,
-                                                    Binds: [projectCodeFolder + ":/var/project"]
+                                                    Binds: [projectCodeFolder + ":/var/project", tempBuildFolder + ":/var/tempBuild"]
                                                 },
                                                 Entrypoint: ["/bin/bash"] // create infinite running container
                                             });
@@ -205,13 +206,13 @@ function start() {
                                         }
                                     
 
-                                        let execCommand = async (command, logReceived = undefined, buffer = false, user = "project") => {
+                                        let execCommand = async (command, logReceived = undefined, buffer = false, user = "project", wd = "/var/project") => {
                                             let exec = await container.exec.create({
                                                 AttachStdin: false,
                                                 AttachStdout: true,
                                                 AttachStderr: true,
                                                 User: user,
-                                                WorkingDir: "/var/project",
+                                                WorkingDir: wd,
                                                 Cmd: ["/bin/bash", "-c", command]
                                             });
                                     
@@ -268,7 +269,11 @@ function start() {
                                             });
                                         }
 
-                                        let dockerUtils = {execCommand, readFile, exists};
+                                        let temporaryFile = (name) => {
+                                            return {host: path.resolve(tempBuildFolder, name), container: "/var/tempBuild/" + name};
+                                        }
+
+                                        let dockerUtils = {execCommand, readFile, exists, temporaryFile};
                                         connection.write(" Started.\n");
 
                                         if(hasAddons) {
