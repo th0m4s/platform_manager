@@ -353,42 +353,16 @@ function attachLogs(projectname, container) {
             since: Date.now()/1000
         });
     }).then((stream) => {
-        let lastType = "      ", lastStream = 0;
         stream.on("data", (log) => {
             let data = log.toString("utf-8").split("\n");
             data.forEach((line) => {
                 if(line.length > 0) {
                     let cstream = line.charCodeAt(0);
-                    line = line.slice(7);
-                    let type = line[0];
-                    line = line.slice(1);
-                    switch(type) {
-                        case "+":
-                        case "#":
-                            type = "INF";
-                            break;
-                        case ",":
-                        case "'":
-                            type = "WAR";
-                            break;
-                        case "-":
-                        case "%":
-                            if(cstream == lastStream) {
-                                type = lastType;
-                            } else if(cstream == 2) type = "ERR";
-                            else type = "INF";
-                            break;
-                        case "(":
-                            type = lastType;
-                            break;
-                        default:
-                            line = type + line;
-                            type = "UNK";
-                            break;
-                    }
-
-                    lastType = type;
-                    lastStream = cstream;
+                    line = line.slice(8);
+            
+                    let type = "UNK";
+                    if(cstream == 1) type = "INF";
+                    else if(cstream == 2) type = "ERR";
 
                     let parts = line.split(" ");
                     logStream.write(parts[0] + " " + type + " " + parts.slice(1).join(" ") + "\n");
