@@ -335,13 +335,19 @@ function _getProjectStorage(project_name) {
     return path.join(process.env.PLUGINS_PATH, "storages", "mounts", project_name);
 }; const getProjectStorage = runtime_cache(_getProjectStorage);
 
-function getProjectUrl(project) {
-    // project is object with at least name and id (will be maybe used later for custom domains)
-    return "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://" + project.name + "." + process.env.ROOT_DOMAIN;
+function getProjectUrl(projectname) {
+    let protocol = "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://";
+    return database_server.database("domains").where("projectname", projectname).orderBy("id", "asc").limit(1).select("*").then((results) => {
+        if(results.length == 0) return protocol + projectname + "." + process.env.ROOT_DOMAIN;
+        else {
+            let domain = results[0];
+            return protocol + (domain.enablesub == "true" ? "www." : "") + domain.domain;
+        }
+    });
 }
 
-function addProjectUrl(project) {
-    project.url = getProjectUrl(project);
+async function addProjectUrl(project) {
+    project.url = await getProjectUrl(project.name);
     return project;
 }
 
@@ -358,8 +364,15 @@ function sanitizeProject(project) {
  * @returns {{projects: Project[], hasMore: boolean}} An object with the projects and a hasMore property to indicate if more projects are available for a next call.
  */
 function listOwnedProjects(userId, after, limit, sanitize = true) {
-    return database_server.database("projects").where("ownerid", userId).andWhere("id", ">", after).select("*").then((results) => {
-        return {projects: results.slice(0, limit).map(sanitize ? sanitizeProject : (x) => x).map(addProjectUrl), hasMore: results.length > limit};
+    return database_server.database("projects").where("ownerid", userId).andWhere("id", ">", after).limit(limit+1).select("*").then((results) => {
+        let prom = [], projects = results.slice(0, limit).map(sanitize ? sanitizeProject : (x) => x);
+        for(let project of projects)
+            prom.push(addProjectUrl(project));
+        // projects is modified in place, so just wait for all promises to resolve then use the same array as a return value
+
+        return Promise.all(prom).then(() => {
+            return {projects, hasMore: results.length > limit};
+        });
     });
 }
 
@@ -372,17 +385,23 @@ function listOwnedProjects(userId, after, limit, sanitize = true) {
  * @returns {{projects: Project[], hasMore: boolean}} An object with the projects and a hasMore property to indicate if more projects are available for a next call.
  */
 function listCollabProjects(userId, after, limit, sanitize = true) {
-    return database_server.database("collabs").where("userid", userId).andWhere("id", ">", after).select("*").then((results) => {
+    return database_server.database("collabs").where("userid", userId).andWhere("id", ">", after).select("*").limit(limit+1).then((results) => {
         let res = {};
         results.forEach((result) => {
             res[result.projectname] = result;
         });
         return getMultipleProjects(Object.keys(res), false).then((objects) => {
-            let projects = [];
+            let prom = [], projects = [];
             for(let [key, value] of Object.entries(objects)) {
-                projects.push({project: addProjectUrl(sanitize ? sanitizeProject(value) : value), mode: res[key].mode, id: res[key].id});
+                let project = sanitize ? sanitizeProject(value) : value;
+                projects.push({project, mode: res[key].mode, id: res[key].id});
+                prom.push(addProjectUrl(project));
+                // the project will be modified in place for each result
             }
-            return {projects: projects.slice(0, limit), hasMore: results.length > limit};
+
+            return Promise.all(prom).then(() => {
+                return {projects: projects.slice(0, limit), hasMore: results.length > limit};
+            });
         });
     });
 }

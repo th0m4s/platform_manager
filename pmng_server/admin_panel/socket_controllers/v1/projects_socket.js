@@ -22,17 +22,17 @@ function initializeNamespace(namespace) {
         });
     });
 
-    intercom.subscribe(["projectsevents"], (eventMessage) => {
+    intercom.subscribe(["projectsevents"], async (eventMessage) => {
         let project = eventMessage.project;
         switch(eventMessage.event) {
             case "delete":
                 namespace.to("project_" + project.name).emit("project_action", {action: "delete", project: project.name});
                 break;
             case "add":
-                namespace.to("user_" + eventMessage.owner).emit("project_action", {action: "add", project, id: eventMessage.id, type: "owned", url: project_manager.getProjectUrl({name: project, id: eventMessage.id})});
+                namespace.to("user_" + eventMessage.owner).emit("project_action", {action: "add", project, id: eventMessage.id, type: "owned", url: await project_manager.getProjectUrl(project)}); // here project is just projectname
                 break;
             case "add_collab":
-                namespace.to("user_" + eventMessage.collaboratorId).emit("project_action", {action: "add", type: "collab", project: project_manager.addProjectUrl(project), manageable: eventMessage.manageable, running: eventMessage.running});
+                namespace.to("user_" + eventMessage.collaboratorId).emit("project_action", {action: "add", type: "collab", project: await project_manager.addProjectUrl(project), manageable: eventMessage.manageable, running: eventMessage.running});
                 break;
             case "update_collab":
                 namespace.to("user_" + eventMessage.collaboratorId).emit("project_action", {action: "update_collab", project, collabmode: eventMessage.mode});
