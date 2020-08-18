@@ -40,6 +40,10 @@ class BasePHPBuildpack extends Buildpack {
     
         return ["/var/start/entrypoint.sh"]; // all php based should use this entrypoint script (except if return is changed in the child buildpack)
     }
+
+    static availableAddons(projectData) {
+        return ["nodejs"];
+    }
 }
 
 
