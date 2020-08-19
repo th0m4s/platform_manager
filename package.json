@@ -24,6 +24,7 @@
     "bunyan-blackhole": "^1.1.1",
     "connect-session-knex": "^1.6.0",
     "dotenv": "^8.2.0",
+    "downloadjs": "^1.4.7",
     "ejs": "^3.0.1",
     "express": "^4.17.1",
     "express-flash-messages": "^0.1.1",

@@ -89,5 +89,24 @@ function init() {
     });
 }
 
+function setDownloadButtonState(loading) {
+    if(loading)
+        $("#download-logs-btn").attr("disabled", "disabled").html(`<i class="fas fa-sync fa-spin"></i> Downloading...`);
+    else $("#download-logs-btn").removeAttr("disabled").html(`<i class="fas fa-file-download"></i> Download current logs`);
+}
 
-window.project_logs = {init, loadPreviousLogs};
+function downloadAllLogs() {
+    setDownloadButtonState(true);
+    $.get("/api/v1/logs/project/" + window.projectname + "/logs").fail((xhr, status, error) => {
+        $.notify({message: "Cannot download logs, please use the PMNG CLI: " + error}, {type: "danger"});
+        console.error(status, error);
+    }).done((response) => {
+        download(response, window.projectname + "_" + (new Date().getTime()) + ".log", "text/plain");
+        $.notify({message: "File log successfully downloaded."}, {type: "success"});
+    }).always(() => {
+        setDownloadButtonState(false);
+    });
+}
+
+
+window.project_logs = {init, loadPreviousLogs, downloadAllLogs};

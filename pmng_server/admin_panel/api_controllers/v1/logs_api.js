@@ -32,4 +32,16 @@ router.get("/project/:project/previousLogs/:before", function(req, res) {
     });
 });
 
+router.get("/project/:project/logs", (req, res) => {
+    api_auth(req, res, function(user) {
+        let projectname = req.params.project;
+        projects_manager.canAccessProject(projectname, user.id, false).then(() => {
+            let filename = path.resolve(projects_manager.getProjectLogsFolder(projectname), "project.log");
+            res.sendFile(filename);
+        }).catch((response) => {
+            res.sendStatus(response.code || 500);
+        });
+    });
+});
+
 module.exports = router;
