@@ -19,7 +19,10 @@
             <div class="row mt-3 mx-3" id="details-row">
                 <div class="w-100">
                     <h3 class="d-inline">Project details: <%- project.name %><span id="owner-info"></span></h3>
-                    <a href="../list" class="my-1 btn btn-sm btn-secondary float-right"><i class="fas fa-arrow-left"></i> Back</a>
+                    <div class="btn-group btn-group-sm float-right" role="group">
+                        <a href="../list" class="my-1 btn btn-sm btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
+                        <a href="../logs/<%- project.name %>" class="my-1 btn btn-sm btn-primary"><i class="fas fa-history"></i> Project logs</a>
+                    </div>
                 </div>
             </div>
             <div class="row mt-3 mx-3" id="collabs-row">

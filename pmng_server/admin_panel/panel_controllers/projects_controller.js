@@ -117,6 +117,19 @@ router.get("/details/:projectname", function(req, res) {
     });
 });
 
+router.get("/logs/:projectname", function(req, res) {
+    let projectname = req.params.projectname;
+    project_manager.canAccessProject(projectname, req.user.id, false).then(() => {
+        res.locals.projectname = projectname;
+
+        req.setPage(res, "Project logs", "projects", "logs");
+        res.render("projects/logs");
+    }).catch((error) => {
+        req.flash("danger", error.message);
+        res.redirect("/panel/projects/list");
+    });
+});
+
 router.get("/details/:projectname/saved", (req, res) => {
     req.flash("success", "Plugin configuration saved.");
     res.redirect("./");
