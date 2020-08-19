@@ -5,10 +5,9 @@ function setPreviousButtonState(loading, enabled = false) {
     if(loading) {
         previousButton.attr("disabled", "disabled").html("<i class='fas fa-sync fa-spin'></i> Loading...");
     } else {   
-        previousButton.html(`<i class="fas fa-backward"></i> Load previous logs`);
         if(enabled)
-            previousButton.removeAttr("disabled");
-        else previousButton.attr("disabled", "disabled");
+            previousButton.removeAttr("disabled").html(`<i class="fas fa-backward"></i> Load previous logs`);
+        else previousButton.attr("disabled", "disabled").html("Previous logs loaded");
     }
 }
 
@@ -27,16 +26,21 @@ function loadPreviousLogs() {
                 if(!hasFirstMessage) $("#logs-samp").html("");
 
                 let lines = response.lines;
-                let text = "<span style='color: #aaa;'>";
+                let text = "";
                 for(let i = 0; i < lines.length; i++) {
-                    text += lines[i] + (i < lines.length-1 ? "\n" : "");
+                    text += getLineHtml(lines[i], "previous-log-line");
                 }
 
-                $("#logs-samp").prepend(text + "</span>");
+                $("#logs-samp").prepend(text);
                 hasFirstMessage = true;
             }
         }
     });
+}
+
+function getLineHtml(line, customClass = "") {
+    let type = line.substr(31, 3);
+    return `<span class="log-line${customClass == "" ? "" : " " + customClass} log-${type.toLowerCase()}">${line}</span>\n`;
 }
 
 function init() {
@@ -67,7 +71,7 @@ function init() {
                 hasFirstMessage = true;
                 display.html("");
             }
-            display.append(message.line + "\n");
+            display.append(getLineHtml(message.line));
         });
 
         socket.on("log_error", (message) => {
