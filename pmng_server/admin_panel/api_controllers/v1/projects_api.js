@@ -17,7 +17,7 @@ router.get("/list/owned/:after/:limit", function(req, res) {
     api_auth(req, res, function(user) {
         let after = parseInt(req.params.after), limit = parseInt(req.params.limit);
         if(isNaN(after) || isNaN(limit)) {
-            res.status(405).json({error: true, code: 405, message: "after and limit parameters should be integers."});
+            res.status(400).json({error: true, code: 400, message: "after and limit parameters should be integers."});
         } else {
             projects_manager.listOwnedProjects(user.id, after, limit, true).then((results) => {
                 res.status(200).json({error: false, code: 200, results: results});
@@ -30,7 +30,7 @@ router.get("/list/collabs/:after/:limit", function(req, res) {
     api_auth(req, res, function(user) {
         let after = parseInt(req.params.after), limit = parseInt(req.params.limit);
         if(isNaN(after) || isNaN(limit)) {
-            res.status(405).json({error: true, code: 405, message: "after and limit parameters should be integers."});
+            res.status(400).json({error: true, code: 400, message: "after and limit parameters should be integers."});
         } else {
             projects_manager.listCollabProjects(user.id, after, limit, true).then((results) => {
                 res.status(200).json({error: false, code: 200, results: results});
@@ -133,7 +133,7 @@ router.post("/create", function(req, res) {
         if(projectname == undefined) {
             return res.status(400).json({error: true, code: 400, message: "Missing parameter."});
         } else if(forbidden_names.includes(projectname.toLowerCase())) {
-            return res.status(405).json({error: true, code: 405, message: "Forbidden name."});
+            return res.status(400).json({error: true, code: 400, message: "Forbidden name."});
         }
 
         let userenv = req.body.userenv || {};

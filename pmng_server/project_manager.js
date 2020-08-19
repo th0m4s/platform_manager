@@ -416,7 +416,7 @@ function listCollabProjects(userId, after, limit, sanitize = true) {
  */
 function canAccessProject(projectname, userid, manageMode) {
     return database_server.database("projects").where("name", projectname).select("ownerid").then((results) => {
-        if(results == null || results.length != 1) return Promise.reject({error: true, code: 405, message: "Project doesn't exist."});
+        if(results == null || results.length != 1) return Promise.reject({error: true, code: 404, message: "Project doesn't exist."});
         else if(results[0].ownerid === userid) return projectname; // user owns project
         else return database_server.database("collabs").where("projectname", projectname).andWhere("userid", userid).select("mode").then((results) => {
             if(results == null || results.length != 1) return Promise.reject({error: true, code: 403, message: "Not a collaborator."});

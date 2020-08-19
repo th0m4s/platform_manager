@@ -5,7 +5,7 @@ const api_auth = require("./api_auth");
 router.post("/", async function(req, res) {
     let user = req.body.user, password = req.body.password;
     if(user == undefined || password == undefined) {
-        res.status(405).json({error: true, code: 405, message: "Please provide user and password."});
+        res.status(400).json({error: true, code: 400, message: "Please provide user and password."});
     } else {
         try {
             let userObj = await database_server.findUserByName(user);
