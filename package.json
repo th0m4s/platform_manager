@@ -53,6 +53,7 @@
     "simple-node-logger": "^18.12.24",
     "socket.io": "^2.3.0",
     "socketio-auth": "^0.1.1",
+    "tail": "^2.0.4",
     "tar": "^6.0.1",
     "tree-kill": "^1.2.2",
     "zlib": "^1.0.5"
