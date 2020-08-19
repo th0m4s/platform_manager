@@ -27,8 +27,8 @@ function loadPreviousLogs() {
                 if(!hasFirstMessage) $("#logs-samp").html("");
 
                 let text = "<span style='color: #aaa;'>";
-                for(let line of response.lines) {
-                    text += line + "\n";
+                for(let i = 0; i < lines.length; i++) {
+                    text += lines[i] + (i < lines.length-1 ? "\n" : "");
                 }
 
                 $("#logs-samp").prepend(text + "</span>");
