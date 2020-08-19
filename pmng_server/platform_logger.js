@@ -22,7 +22,7 @@ async function prepare() {
 
         return _logrotate();
     } catch(notexist) {
-        return pfs.mkdir(logDir).catch((folderexists) => {}).then(() => {
+        return pfs.mkdir(logDir).catch(() => {}).then(() => {
             return new Promise((resolve) => {
                 child_process.execSync('touch "' + LOG_FILE + '"');
                 // cannot easily touch a file with node fs
