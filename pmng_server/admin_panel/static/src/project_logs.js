@@ -15,10 +15,13 @@ function loadPreviousLogs() {
     setPreviousButtonState(true);
     $.getJSON("/api/v1/logs/project/" + window.projectname + "/previousLogs/" + startByte).fail((xhr, status, error) => {
         setPreviousButtonState(false, true);
+        $.notify({message: "Server error while reading logs: " + error}, {type: "danger"});
+        console.error(status, error);
     }).done((response) => {
         setPreviousButtonState(false, response.error);
         if(response.error) {
-
+            $.notify({message: "Application error while reading logs: " + response.message}, {type: "danger"});
+            console.error(response.message);
         } else {
             if(response.lines.length == 0) {
                 $("#logs-samp").html("No previous logs found. New logs will automatically be displayed here.");
