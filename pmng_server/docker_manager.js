@@ -176,14 +176,14 @@ async function maininstance() {
                 stopProject(projectname).then(() => {
                     respond({error: false, message: "Project stopped."});
                 }).catch((error) => {
-                    respond({error: true, message: "Cannot stop project: " + error});
+                    respond({error: true, message: error});
                 });
                 break;
             case "startProject":
                 startProject(projectname).then(() => {
                     clearStarting(projectname).then(() => respond({error: false, message: "Project started."}));
                 }).catch((error) => {
-                    clearStarting(projectname).then(() => respond({error: true, message: "Cannot start project " + projectname + ": " + error}));
+                    clearStarting(projectname).then(() => respond({error: true, message: error}));
                 });
                 break;
             case "getPort":
