@@ -42,7 +42,7 @@ class BasePHPBuildpack extends Buildpack {
     }
 
     static availableAddons(projectData) {
-        return ["nodejs"];
+        return ["nodejs", "python"];
     }
 }
 
