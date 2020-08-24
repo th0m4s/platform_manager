@@ -8,6 +8,7 @@ class PythonAddon extends BuildAddon {
         if(!(["2", "3"].includes(pythonVersion))) {
             throw "Invalid Python version. Builds only support python2 and python3.";
         } else {
+            if(addonData.dev == true) pythonVersion += "-dev";
             logger("Installing python" + pythonVersion + " (please wait, it might take a moment)...");
             let resp = await utils.execCommand("apk add --no-cache python" + pythonVersion, undefined, false, "root");
             if(resp.err.trim().length > 0) throw resp.err;
