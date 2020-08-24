@@ -140,7 +140,7 @@ function start() {
                                     }
                                 }
                                 
-                                let projectData, addons, hasAddons = false;
+                                let projectData, addons, hasAddons = false, hasRunAddons = false;
                                 try {
                                     let fileData = JSON.parse(await pfs.readFile(path.resolve(projectCodeFolder, "project.json")));
                                     projectData = fileData.project;
@@ -163,6 +163,10 @@ function start() {
                                             try {
                                                 // require to check if exists, and caches for future require
                                                 require("./buildpacks/addons/addon_" + addon.name);
+
+                                                let deployOnly = addon.deployOnly || false; // no problem with || because default is false
+                                                addon.deployOnly = deployOnly;
+                                                if(!deployOnly) hasRunAddons = true;
                                             } catch(e) {
                                                 if(e.code == "MODULE_NOT_FOUND") throw "Addon '" + addon.name + "' doesn't exist.";
                                                 else throw e;
@@ -276,14 +280,16 @@ function start() {
                                         let dockerUtils = {execCommand, readFile, exists, temporaryFile};
                                         connection.write(" Started.\n");
 
-                                        if(hasAddons) {
-                                            let lastNewLine = true;
-                                            let addonLogger = (message, newLine = true) => {
-                                                connection.write((newLine && !lastNewLine ? "\n" : "") + (lastNewLine ? SPACES + "  [ADDON] " : "") + message + (newLine ? "\n" : ""));
-                                                lastNewLine = newLine;
-                                            };
+                                        let lastNewLine = true;
+                                        let addonLogger = (message, newLine = true) => {
+                                            connection.write((newLine && !lastNewLine ? "\n" : "") + (lastNewLine ? SPACES + "  [ADDON] " : "") + message + (newLine ? "\n" : ""));
+                                            lastNewLine = newLine;
+                                        };
 
+                                        if(hasRunAddons) {
                                             for(let addonData of addons) {
+                                                if(addonData.deployOnly) continue;
+
                                                 if(!lastNewLine) {
                                                     connection.write("\n");
                                                     lastNewLine = true;
@@ -305,6 +311,26 @@ function start() {
                                             connection.write(" Image exported.\n");
                                         }
 
+                                        // now reiterates all addons and add only deploy addons
+                                        for(let addonData of addons) {
+                                            if(!addonData.deployOnly) continue;
+
+                                            if(!lastNewLine) {
+                                                connection.write("\n");
+                                                lastNewLine = true;
+                                            }
+
+                                            let addonName = addonData.name;
+                                            let addon = require("./buildpacks/addons/addon_" + addonName);
+
+                                            try {
+                                                connection.write(SPACES + "Executing deployment addon " + addon.displayName() + " (" + addonName + ")...\n");
+                                                await addon.addon(projectname, addonData, dockerUtils, addonLogger);
+                                            } catch(e) {
+                                                throw "Deployment addon error: " + e;
+                                            }
+                                        }
+
                                         connection.write((hasAddons ? LINE : SPACES) + "Executing buildpack...\n");
 
                                         let startCmd = [];
@@ -318,7 +344,7 @@ function start() {
 
                                         let settings = {project: {type: type, entrypoint: startCmd, version: typeVersion}, build: {version: 2, mode: "archive"}};
 
-                                        if(hasAddons) {
+                                        if(hasRunAddons) {
                                             settings.build.mode = "image";
                                             settings.build.image = buildImageName;
                                         }
