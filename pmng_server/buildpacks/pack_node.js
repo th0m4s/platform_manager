@@ -63,7 +63,7 @@ class NodeBuildpack extends Buildpack {
     }
 
     static availableAddons(projectData) {
-        return ["openjdk", "python"];
+        return ["openjdk", "python", "buildtools"];
     }
 }
 
