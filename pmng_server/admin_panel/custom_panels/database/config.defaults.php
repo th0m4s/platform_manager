@@ -5,6 +5,8 @@ $cfg['PmaAbsoluteUri'] = "__PMAURI";
 $cfg['TempDir'] = "/var/project/temp";
 $cfg['ShowServerInfo'] = false;
 $cfg['ShowStats'] = false;
+$cfg['NavigationTreeEnableGrouping'] = false;
+$cfg['ShowCreateDb'] = false;
 
 $cfg['TitleTable'] = "@VSERVER@ / @DATABASE@ / @TABLE@ | @PHPMYADMIN@";
 $cfg['TitleDatabase'] = "@VSERVER@ / @DATABASE@ | @PHPMYADMIN@";
