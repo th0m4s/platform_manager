@@ -6,6 +6,37 @@ const greenlock_manager = require("../https/greenlock_manager");
 const privileges = require("../privileges");
 const socket_auth = require("./socket_controllers/socket_auth");
 const socketio_auth = require("socketio-auth");
+const fs = require("fs");
+
+let utilsPanels = {};
+function handleCustomPanel(route, panel) {
+    return (req, res, next) => {
+        if(req.originalUrl == "/" + route) res.redirect("/" + route + "/");
+        else panel.handleRequest(req, res, next);
+    };
+}
+
+for(let name of fs.readdirSync(path.resolve(__dirname, "custom_panels"))) {
+    let fullpath = path.resolve(__dirname, "custom_panels", name);
+    let stat = fs.statSync(fullpath);
+
+    if(stat.isDirectory()) {
+        for(let file of fs.readdirSync(fullpath)) {
+            if(file.startsWith("panel_")) {
+                let panel = require(path.resolve(fullpath, file.replace(".js", "")));
+                let route = panel.route();
+
+                if(route != undefined) {
+                    panel.startPanel();
+                    if(panel.requiresUtils()) utilsPanels[route] = panel;
+                    else admin.use("/" + route, handleCustomPanel(route, panel));
+
+                    break;
+                }
+            }
+        }
+    }
+}
 
 admin.set('view engine', 'ejs');
 admin.set('views', path.join(__dirname, '/views'));
@@ -13,6 +44,10 @@ admin.set('etag', false);
 
 admin.use(bodyParser.json());
 admin.use(bodyParser.urlencoded({ extended: true }));
+
+for(let [route, panel] of Object.entries(utilsPanels)) {
+    admin.use("/" + route, handleCustomPanel(route, panel));
+}
 
 // admin.use(passport.initialize());
 // need to initialize and session in the same file
