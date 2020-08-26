@@ -487,6 +487,7 @@ function startProject(projectname) {
             CheckDuplicates: true,
             Driver: "bridge", // default
             Labels: {
+                "pmng.networktype": "project",
                 "pmng.projectname": projectname
             }
         });
