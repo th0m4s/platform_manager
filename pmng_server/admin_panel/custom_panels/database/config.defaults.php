@@ -41,7 +41,7 @@ function addPmaFeatures($cfg, $i) {
 $i++;
 $cfg['Servers'][$i]['host'] = "mariadb";
 $cfg['Servers'][$i]['port'] = "3306";
-$cfg['Servers'][$i]['verbose'] = "Projects database";
+$cfg['Servers'][$i]['verbose'] = "Projects server";
 $cfg['Servers'][$i]['hide_db'] = '^(information_schema)$';
 $cfg['Servers'][$i]['controluser'] = "__CTRLUSER";
 $cfg['Servers'][$i]['controlpass'] = "__CTRLPASS";
@@ -52,7 +52,7 @@ if(__ALLOW_ADMIN) {
     $cfg['Servers'][$i]['socket'] = "__DBSOCKET";
     $cfg['Servers'][$i]['AllowDeny']['order'] = 'explicit';
     $cfg['Servers'][$i]['AllowDeny']['rules'] = ['allow root from all'];
-    $cfg['Servers'][$i]['verbose'] = "Administration database";
+    $cfg['Servers'][$i]['verbose'] = "Platform administration";
     $cfg = addPmaFeatures($cfg, $i);
 }
 
