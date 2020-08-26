@@ -28,7 +28,7 @@ const panel_version = "1"; // used to restart the panel container if changes are
 class DatabasePanel extends CustomPanel {
     static async startPanel() {
         await docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=phpmyadmin"]}}).then(async (containers) => {
-            if(containers.length == 0 || containers[0].data.Labels["pmng.panel_version"] != panel_version) {
+            if(containers.length == 0 || containers[0].data.Labels["pmng.panelversion"] != panel_version) {
                 if(containers.length > 0) await containers[0].stop();
 
                 let configFile = path.resolve(__dirname, "config.inc.php");
@@ -59,7 +59,8 @@ class DatabasePanel extends CustomPanel {
                     name: "pmng_panel_pma",
                     Labels: {
                         "pmng.containertype": "panel",
-                        "pmng.panel": "phpmyadmin"
+                        "pmng.panel": "phpmyadmin",
+                        "pmng.panelversion": panel_version
                     },
                     Env: [
                         "PORT=33307"
