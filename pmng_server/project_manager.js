@@ -61,24 +61,24 @@ function getProject(project_name, check = true) {
  * @returns {Promise} A promise resolved when the project is successfully and completely created.
  */
 function addProject(projectname, ownerid, env, plugins) {
-    let configs = {}, pluginProm = [];
-    plugins.forEach((plugin) => {
-        if(plugin.trim().length > 0) {
-            configs[plugin] = plugins_manager.getDefaultConfig(plugin);
-            pluginProm.push(plugins_manager.install(plugin, projectname, configs[plugin]));
-        }
-    });
+    return database_server.database("projects").insert({name: projectname, ownerid: ownerid, userenv: env, version: 0, plugins: configs}).then(() => {
+        let configs = {}, pluginProm = [];
+        plugins.forEach((plugin) => {
+            if(plugin.trim().length > 0) {
+                configs[plugin] = plugins_manager.getDefaultConfig(plugin);
+                pluginProm.push(plugins_manager.install(plugin, projectname, configs[plugin]));
+            }
+        });
 
-    return Promise.all(pluginProm).then(() => {
-        return database_server.database("projects").insert({name: projectname, ownerid: ownerid, userenv: env, version: 0, plugins: configs}).then(() => {
-            return pfs.mkdir(getProjectFolder(projectname)).then(() => {
-                let repo = getProjectRepository(projectname);
-                return Promise.all([pfs.mkdir(repo), pfs.mkdir(getProjectLogsFolder(projectname))]).then(() => {
-                    return simpleGit(repo).init(true).then(() => {
-                        let postUpdate = path.resolve(repo, "hooks", "post-update");
-                        return pfs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
-                            return pfs.chmod(postUpdate, "700"); // or 0o700
-                        });
+        return Promise.all(pluginProm);
+    }).then(() => {
+        return pfs.mkdir(getProjectFolder(projectname)).then(() => {
+            let repo = getProjectRepository(projectname);
+            return Promise.all([pfs.mkdir(repo), pfs.mkdir(getProjectLogsFolder(projectname))]).then(() => {
+                return simpleGit(repo).init(true).then(() => {
+                    let postUpdate = path.resolve(repo, "hooks", "post-update");
+                    return pfs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
+                        return pfs.chmod(postUpdate, "700"); // or 0o700
                     });
                 });
             });
