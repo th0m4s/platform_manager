@@ -34,13 +34,13 @@ function _getDatabasesSizes() {
 async function updatePrivileges(project, collaboratorId, mode, knex) {
     let collaboratorName = (await database_server.findUserById(collaboratorId)).name;
 
-    await knex.raw("GRANT ALL PRIVILEGES ON `db_" + project + "`.* TO 'pmng_" + collaboratorName + "'@'%';");
+    await knex.raw("GRANT ALL PRIVILEGES ON `db_" + project + "`.* TO '" + collaboratorName + "'@'%';");
     // add all then remove, privileges are not flushed yet
     // TODO: maybe grant/revoke in one command
-    await knex.raw("REVOKE ALL PRIVILEGES ON `db_" + project + "`.* FROM 'pmng_" + collaboratorName + "'@'%';");
+    await knex.raw("REVOKE ALL PRIVILEGES ON `db_" + project + "`.* FROM '" + collaboratorName + "'@'%';");
 
     if(mode != "remove") {
-        await knex.raw("GRANT " + (mode == "manage" ? "ALL PRIVILEGES" : "SELECT, SHOW VIEW") + " ON `db_" + project + "`.* TO 'pmng_" + collaboratorName + "'@'%';");
+        await knex.raw("GRANT " + (mode == "manage" ? "ALL PRIVILEGES" : "SELECT, SHOW VIEW") + " ON `db_" + project + "`.* TO '" + collaboratorName + "'@'%';");
     }
 
     await knex.raw("FLUSH PRIVILEGES;");
@@ -145,7 +145,7 @@ class MariaDBPlugin extends Plugin {
                     await knex.raw("CREATE USER 'dbu_" + projectname + "' IDENTIFIED BY '" + projectconfig.password + "';");
                     await knex.raw("CREATE DATABASE `db_" + projectname + "`;");
                     await knex.raw("GRANT ALL PRIVILEGES ON `db_" + projectname + "`.* TO 'dbu_" + projectname + "'@'%';");
-                    await knex.raw("GRANT ALL PRIVILEGES ON `db_" + projectname + "`.* TO 'pmng_" + username + "'@'%';");
+                    await knex.raw("GRANT ALL PRIVILEGES ON `db_" + projectname + "`.* TO '" + username + "'@'%';");
                     await knex.raw("FLUSH PRIVILEGES;");
                     respond({error: false, message: "Plugin installed."});
                     break;

@@ -190,11 +190,11 @@ function addUser(name, fullname, password, email, scope) {
     // TODO: should also create real plugin db user for connection
     return Promise.all([hashPassword(password).then((hash) => {
         return knex("users").insert({name: name, fullname: fullname, password: hash, email: email, scope: scope});
-    }), getPluginKnex().then((plk) => plk.raw("CREATE USER 'pmng_" + name + "' IDENTIFIED BY '" + password + "';"))]);
+    }), getPluginKnex().then((plk) => plk.raw("CREATE USER '" + name + "' IDENTIFIED BY '" + password + "';"))]);
 }
 
 function removeUser(username) {
-    return Promise.all([knex("users").where("name", username).delete(), getPluginKnex().then((plk) => plk.raw("DROP USER 'pmng_" + username + "';"))]);
+    return Promise.all([knex("users").where("name", username).delete(), getPluginKnex().then((plk) => plk.raw("DROP USER '" + username + "';"))]);
 }
 
 /**

@@ -37,12 +37,12 @@ passport.use(new PassportLocalStrategy(async function(username, password, done) 
                 user.key = key;
 
                 await database_server.getPluginKnex().then((pluginKnex) => {
-                    return pluginKnex.raw("SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = 'pmng_" + username + "') AS 'exists';").then((results) => {
+                    return pluginKnex.raw("SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '" + username + "') AS 'exists';").then((results) => {
                         let values = results[0]; // raw always give array of results and columns defs
                         let exists = values[0].exists != 0;
 
                         if(!exists)
-                            return pluginKnex.raw("CREATE USER 'pmng_" + username + "' IDENTIFIED BY '" + password + "';");
+                            return pluginKnex.raw("CREATE USER '" + username + "' IDENTIFIED BY '" + password + "';");
                     });
                 });
 
