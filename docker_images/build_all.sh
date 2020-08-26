@@ -6,3 +6,4 @@ docker build -t pmng/node:10.22.0 ./node/v10
 docker build -t pmng/apache2-php7 ./apache-php
 docker build -t pmng/nginx-php7 ./nginx-php
 docker build -t pmng/plugin-mariadb ./alpine-mariadb
+docker build -t pmng/panel-pma ./alpine-phpmyadmin
