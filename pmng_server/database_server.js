@@ -6,15 +6,23 @@ const logger = require("./platform_logger").logger();
 const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 
 const DB_NAME = "platform_manager";
+const DB_CONFIG = {
+    database: DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD
+};
+
+if(process.env.DB_MODE == "remote") {
+    DB_CONFIG.host = process.env.DB_HOST;
+    DB_CONFIG.port = process.env.DB_PORT;
+} else {
+    DB_CONFIG.socketPath =  process.env.DB_SOCKET;
+}
+
 /** Represents a connection to the platform database. */
 const knex = Knex({
     client: mdb,
-    connection: {
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: DB_NAME
-    }
+    connection: DB_CONFIG 
 });
 
 // check at least database creation (needed for sessions store of admin panel)
