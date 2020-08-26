@@ -187,9 +187,14 @@ async function getPluginKnex(db) {
  * @returns {Promise} A promise resolved when the user is successfully added into the database.
  */
 function addUser(name, fullname, password, email, scope) {
-    return hashPassword(password).then((hash) => {
+    // TODO: should also create real plugin db user for connection
+    return Promise.all([hashPassword(password).then((hash) => {
         return knex("users").insert({name: name, fullname: fullname, password: hash, email: email, scope: scope});
-    });
+    }), getPluginKnex().then((plk) => plk.raw("CREATE USER 'pmng_" + name + "' IDENTIFIED BY '" + password + "';"))]);
+}
+
+function removeUser(username) {
+    return Promise.all([knex("users").where("name", username).delete(), getPluginKnex().then((plk) => plk.raw("DROP USER 'pmng_" + username + "';"))]);
 }
 
 /**
@@ -294,6 +299,7 @@ module.exports.hasAdminUser = hasAdminUser;
 module.exports.isInstalled = isInstalled;
 module.exports.getPluginKnex = getPluginKnex;
 module.exports.addUser = addUser;
+module.exports.removeUser = removeUser;
 module.exports.hashPassword = hashPassword;
 module.exports.comparePassword = comparePassword;
 module.exports.generateKey = generateKey;
