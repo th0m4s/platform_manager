@@ -3,6 +3,8 @@ const fs = require("fs");
 const docker_manager = require("./docker_manager");
 const project_manager = require("./project_manager");
 const database_server = require("./database_server");
+const pfs = require("fs").promises;
+const path = require("path");
 const intercom = require("./intercom/intercom_client").connect();
 const api_auth = require("./admin_panel/api_controllers/v1/api_auth");
 const LibPlugin = require("./plugins/lib_plugin");
@@ -35,7 +37,7 @@ function getDefaultConfig(plugin) {
 /**
  * Installs a plugin for a specific project.
  * @param {string} plugin The name of the plugin to install.
- * @param {string} projectname The name of the project to install the project for.
+ * @param {string} projectname The name of the project to install the plugin for.
  * @param {Object} pluginconfig The configuration of that plugin for that project.
  * @returns {Promise} A promise resolved when the plugin is successfully installed.
  */
@@ -199,6 +201,15 @@ function waitForHooks() {
     });
 }
 
+let allGlobal = undefined;
+// not used by docker_manager when starting global plugins
+// TODO: add save here and move code from docker_manager
+async function getPluginGlobalConfig(pluginname) {
+    if(allGlobal == undefined) allGlobal = JSON.parse(await pfs.readFile(path.resolve(process.env.PLUGINS_PATH, "config.json")));
+
+    return allGlobal[pluginname];
+}
+
 
 module.exports.getDefaultConfig = getDefaultConfig;
 module.exports.install = install;
@@ -210,3 +221,4 @@ module.exports.getPlugin = getPlugin;
 module.exports.getRouter = getRouter;
 module.exports.getAllConfigs = getAllConfigs;
 module.exports.waitForHooks = waitForHooks;
+module.exports.getPluginGlobalConfig = getPluginGlobalConfig;
