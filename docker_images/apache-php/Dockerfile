@@ -32,6 +32,7 @@ RUN apk add --no-cache \
 	php7-bz2 \
 	php7-pdo_dblib \
 	php7-curl \
+	php7-opcache \
 	php7-ctype \
 	php7-session \
 	php7-redis \
