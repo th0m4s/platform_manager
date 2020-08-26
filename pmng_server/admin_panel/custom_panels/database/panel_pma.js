@@ -4,6 +4,7 @@ const path = require("path");
 const pfs = require("fs").promises;
 const httpProxyServer = require("http-proxy").createProxyServer();
 const CustomPanel = require("../lib_panel");
+const logger = require("../../../platform_logger").logger();
 const mariadb_network = require("../../../plugins/plugin_mariadb").NETWORK_NAME;
 
 async function replaceContents(contents) {
@@ -23,11 +24,13 @@ async function replaceContents(contents) {
     return contents;
 }
 
+const panel_version = "1"; // used to restart the panel container if changes are made
 class DatabasePanel extends CustomPanel {
     static async startPanel() {
         await docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=phpmyadmin"]}}).then(async (containers) => {
-            if(containers.length == 0) {
-    
+            if(containers.length == 0 || containers[0].data.Labels["pmng.panel_version"] != panel_version) {
+                if(containers.length > 0) await containers[0].stop();
+
                 let configFile = path.resolve(__dirname, "config.inc.php");
                 let defaultsConfigFile = path.resolve(__dirname, "config.defaults.php");
     
@@ -61,7 +64,7 @@ class DatabasePanel extends CustomPanel {
                     Env: [
                         "PORT=33307"
                     ],
-                    StopTimeout: 3,
+                    StopTimeout: 1,
                     HostConfig: {
                         AutoRemove: true,
                         NetworkMode: mariadb_network,
@@ -72,6 +75,8 @@ class DatabasePanel extends CustomPanel {
                     }
                 }).then((container) => {
                     return container.start();
+                }).then(() => {
+                    logger.info("phpMyAdmin custom admin panel started.");
                 });
             }
         });
