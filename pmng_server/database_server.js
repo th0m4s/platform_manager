@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const logger = require("./platform_logger").logger();
 const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
+const plugin_mdb = require("./plugins/plugin_mariadb");
 
 const DB_NAME = "platform_manager";
 const DB_CONFIG = {
@@ -170,6 +171,12 @@ function isInstalled() {
     }).catch(() => {return false; });
 }
 
+let _pluginKnex = undefined;
+async function getPluginKnex(db) {
+    if(_pluginKnex == undefined) _pluginKnex = await plugin_mdb.localKnex();
+    return db == undefined ? _pluginKnex : _pluginKnex(db);
+}
+
 /**
  * Adds a user into the database based on the given user's data.
  * @param {string} name Its username.
@@ -285,6 +292,7 @@ module.exports.installDatabase = installDatabase;
 module.exports.hasDatabase = hasDatabase;
 module.exports.hasAdminUser = hasAdminUser;
 module.exports.isInstalled = isInstalled;
+module.exports.getPluginKnex = getPluginKnex;
 module.exports.addUser = addUser;
 module.exports.hashPassword = hashPassword;
 module.exports.comparePassword = comparePassword;
