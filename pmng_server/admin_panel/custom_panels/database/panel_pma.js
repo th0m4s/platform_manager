@@ -9,7 +9,7 @@ const mariadb_network = require("../../../plugins/plugin_mariadb").NETWORK_NAME;
 async function replaceContents(contents) {
     if(process.env.DB_MODE == "socket") {
         contents = contents.replace("__ALLOW_ADMIN", "true");
-        contents = contents.replace("__DBSOCKET", process.env.DB_SOCKET);
+        contents = contents.replace("__DBSOCKET", "/var/start/mysqld.sock"); // path of mounted db_socket
         contents = contents.replace("__DBUSER", process.env.DB_USER);
         contents = contents.replace("__DBPASS", process.env.DB_PASSWORD);
     } else contents = contents.replace("__ALLOW_ADMIN", "false");
@@ -42,6 +42,13 @@ class DatabasePanel extends CustomPanel {
                 await pfs.writeFile(createFile, createCtn);
                 await pfs.chmod(createFile, "755");
     
+                let Binds = [
+                    configFile + ":/etc/phpmyadmin/config.inc.php",
+                    createFile + ":/var/start/create_tables.inc.sh"
+                ];
+
+                if(process.env.DB_MODE == "socket") Binds.push(process.env.DB_SOCKET + ":/var/start/mysqld.sock");
+
                 // now create pma container
                 await docker_manager.docker.container.create({
                     Image: "pmng/panel-pma",
@@ -61,10 +68,7 @@ class DatabasePanel extends CustomPanel {
                         PortBindings: {
                             "33307/tcp": [{HostPort: "33307"}]
                         },
-                        Binds: [
-                            configFile + ":/etc/phpmyadmin/config.inc.php",
-                            createFile + ":/var/start/create_tables.inc.sh"
-                        ]
+                        Binds
                     }
                 }).then((container) => {
                     return container.start();
