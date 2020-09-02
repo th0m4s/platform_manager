@@ -235,7 +235,7 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds) {
  */
 async function webServe(req, res) {
     connCount++;
-    if(req.method == "GET" && req.url.startsWith("/.well-known/acme-challenge/")) {
+    if(req.method == "GET" && regex_utils.isACMEChallenge(req.url)) {
         let domain = req.headers.host, challenges = httpChallenges[domain];
         if(challenges != undefined) {
             let token = req.url.split("/")[3], challenge = challenges[token];

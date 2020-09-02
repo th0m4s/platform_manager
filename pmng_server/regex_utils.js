@@ -76,9 +76,15 @@ function testStorageDisk(filename) {
     else return null;
 }
 
+// TODO: use testACMEChallenge that returns the token
+function isACMEChallenge(url) {
+    return url.startsWith("/.well-known/acme-challenge/");
+}
+
 module.exports.testSpecial = testSpecial;
 module.exports.testProject = testProject;
 module.exports.testProjectOrCustom = testProjectOrCustom;
 module.exports.testCustom = testCustom;
 module.exports.testStorageDisk = testStorageDisk;
 module.exports.testPlugin = testPlugin;
+module.exports.isACMEChallenge = isACMEChallenge;

@@ -27,6 +27,8 @@ function start() {
         };
 
         serve = async (req, res) => {
+            if(regex_utils.isACMEChallenge(req.url)) return web.webServe(req, res);
+
             let host = req.headers.host || "";
             if(host == "") return redirect(req, res);
 
