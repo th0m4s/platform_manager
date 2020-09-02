@@ -82,7 +82,7 @@ function remove(domain) {
 }
 
 function _getSecureContext(serverFile, onlyOptions = false) {
-    // cannot use greenlock.get because called from any thread -(greenlock only exists in one thread)
+    // cannot use greenlock.get because called from any thread (greenlock only exists in one thread)
     return pfs.readFile(path.join(__dirname, "..", "./https/greenlock.d/live/" + serverFile + "/fullchain.pem")).then((cert) => {
         return pfs.readFile(path.join(__dirname, "..", "./https/greenlock.d/live/" + serverFile + "/privkey.pem")).then((key) => {
             let options = {
