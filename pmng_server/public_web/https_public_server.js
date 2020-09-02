@@ -53,7 +53,7 @@ function start() {
     httpsServer.on("upgrade", web.upgradeRequest);
 
     privileges.drop();
-    web.registerPortInfo();
+    web.registerIntercomThread();
 }
 
 if(wantCluster && cluster.isMaster) {

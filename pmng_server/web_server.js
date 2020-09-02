@@ -47,6 +47,9 @@ function start() {
     subprocess_util.forkNamed("./pmng_server/admin_panel/admin_server", "admin_web_server", "admin web server");
     subprocess_util.forkNamed("./pmng_server/git_server", "git_web_server", "git web server");
     subprocess_util.forkNamed("./pmng_server/error_panel/error_server", "error_web_server", "error web server");
+
+    // globally stores current http challenges
+    registerHttpChallenges(true);
 }
 
 /**
@@ -104,9 +107,9 @@ async function _getPort(host) {
 
 let portMappings = {};
 /**
- * Registers intercom ports subscription to associate each host with a port given by docker_manager.js.
+ * Registers intercom ports subscription to associate each host with a port given by docker_manager.js and http challenges
  */
-function registerPortInfo() {
+function registerIntercomThread() {
     intercom.subscribe(["portBroadcast"], function(message) {
         switch(message.command) {
             case "addPort":
@@ -121,11 +124,48 @@ function registerPortInfo() {
         }
     });
 
+    // only process remove and set (get are in start)
+    registerHttpChallenges(false);
+
     intercom.sendPromise("dockermng", {command: "requestPorts"}).then((actualPorts) => {
         portMappings = Object.assign(portMappings, actualPorts);
     });
 
     prepareSocketError();
+}
+
+let httpChallenges = {};
+function registerHttpChallenges(bindGet = false) {
+    intercom.subscribe(["httpChallenges"], (message, respond) => {
+        let command = message.command, domain = message.domain, token = message.token;
+        switch(command) {
+            case "set":
+                if(httpChallenges[domain] == undefined) httpChallenges[domain] = {};
+                httpChallenges[domain][token] = message.contents;
+
+
+                respond({error: false});
+                break;
+            case "remove":
+                delete httpChallenges[domain][token];
+                if(Object.keys(httpChallenges[domain]).length == 0) delete httpChallenges[domain];
+
+                respond({error: false});
+                break;
+            case "get":
+                if(bindGet) {
+                    let challenges = httpChallenges[domain];
+                    if(challenges == undefined) respond({error: true});
+                    else {
+                        let challenge = challenges[token];
+                        if(challenge == undefined) respond({error: true});
+                        else respond({error: false, contents: challenge});
+                    }
+                }
+
+                break;
+        }
+    });
 }
 
 let secConnInterval = -1, connCount = 0;
@@ -195,6 +235,15 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds) {
  */
 async function webServe(req, res) {
     connCount++;
+    if(req.method == "GET" && req.url.startsWith("/.well-known/acme-challenge/")) {
+        let domain = req.headers.host, challenges = httpChallenges[domain];
+        if(challenges != undefined) {
+            let token = req.url.split("/")[3], challenge = challenges[token];
+            if(challenge == undefined) res.end("wrong challenge"); // TODO: why not just proxy as if challenges didnt exist?
+            else res.end(challenge);
+        }
+    }
+    
     httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
 }
 
@@ -222,6 +271,6 @@ httpProxyServer.on("error", function (err, req, res) {
 
 module.exports.start = start;
 module.exports.webServe = webServe;
-module.exports.registerPortInfo = registerPortInfo;
+module.exports.registerIntercomThread = registerIntercomThread;
 module.exports.registerClusterMaster = registerClusterMaster;
 module.exports.upgradeRequest = upgradeRequest;

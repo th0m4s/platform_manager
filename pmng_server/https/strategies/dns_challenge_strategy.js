@@ -1,4 +1,4 @@
-const intercom = require("../intercom/intercom_client").connect();
+const intercom = require("../../intercom/intercom_client").connect();
 
 module.exports.create = function () {
     let m = {};
@@ -6,7 +6,7 @@ module.exports.create = function () {
     m.init = async function(deps) {
         intercom.changeConfig({autoReject: false});
         return null;
-    },
+    }
 
     m.zones = function(opts) {
         return Promise.resolve([]); // optional

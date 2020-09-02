@@ -24,11 +24,6 @@ function init() {
     greenlock.manager.defaults({
         subscriberEmail: process.env.WEBMASTER_MAIL,
         agreeToTerms: true,
-        challenges: {
-            "dns-01": {
-                module: path.resolve(__dirname, "challenge_strategy")
-            }
-        },
         store: {
             module: "greenlock-store-fs",
             basepath: path.resolve(__dirname, "greenlock.d")
@@ -36,25 +31,46 @@ function init() {
     });
 
     let localDomain = process.env.ROOT_DOMAIN;
-    add(localDomain);
+    add(localDomain, true);
 
     intercom.subscribe(["greenlock"], (message) => {
-        let command = message.command, domain = message.domain;
+        let command = message.command, domain = message.domain, full_dns = message.full_dns;
         switch(command) {
             case "addCustom":
-                add(domain);
+                add(domain, full_dns);
                 break;
             case "removeCustom":
                 remove(domain);
+                break;
+            case "edition":
+                remove(domain);
+                add(domain, full_dns);
                 break;
         }
     });
 }
 
-function add(domain) {
+function getChallenges(full_dns) {
+    if(full_dns) {
+        return {
+            "dns-01": {
+                module: path.resolve(__dirname, "strategies", "dns_challenge_strategy")
+            }
+        };
+    } else {
+        return {
+            "http-01": {
+                module: path.resolve(__dirname, "strategies", "http_challenge_strategy")
+            }
+        };
+    }
+}
+
+function add(domain, full_dns = true) {
     greenlock.add({
         subject: domain,
-        altnames: [domain, "*." + domain]
+        altnames: [domain, ...(full_dns ? ["*." + domain] : ["www." + domain])],
+        challenges: getChallenges(full_dns)
     });
 }
 

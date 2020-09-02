@@ -76,7 +76,7 @@ function start() {
     httpServer.on("upgrade", web.upgradeRequest);
 
     privileges.drop();
-    web.registerPortInfo();
+    web.registerIntercomThread();
 }
 
 if(cluster.isMaster) {
