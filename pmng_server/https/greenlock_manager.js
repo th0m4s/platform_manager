@@ -28,7 +28,7 @@ function init() {
             module: "greenlock-store-fs",
             basepath: path.resolve(__dirname, "greenlock.d")
         },
-        challenges: {} // empty default challenges (dns cannot work for disabled full dns delegation, so use domain specific challenges config)
+        challenges: getChallenges(true) // at least one (as full dns is true by default, set dns-01 to be the default challenge)
     });
 
     let localDomain = process.env.ROOT_DOMAIN;
@@ -82,16 +82,13 @@ function remove(domain) {
 }
 
 function _getSecureContext(serverFile, onlyOptions = false) {
-    // TODO: use greenlock.get
-    return pfs.readFile(path.join(__dirname, "..", "./https/greenlock.d/live/" + serverFile + "/fullchain.pem")).then((cert) => {
-        return pfs.readFile(path.join(__dirname, "..", "./https/greenlock.d/live/" + serverFile + "/privkey.pem")).then((key) => {
-            let options = {
-                key: key,
-                cert: cert
-            };
+    return greenlock.get(serverFile).then((pems) => {
+        let options = {
+            key: pems.privkey,
+            cert: site.pems.cert + "\n" + site.pems.chain + "\n"
+        };
 
-            return onlyOptions ? options : tls.createSecureContext(options);
-        });
+        return onlyOptions ? options : tls.createSecureContext(options);
     });
 }; const getSecureContext = runtime_cache(_getSecureContext);
 
