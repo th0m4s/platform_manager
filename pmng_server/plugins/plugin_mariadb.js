@@ -85,7 +85,7 @@ class MariaDBPlugin extends Plugin {
                 });
 
                 // now create gplugin container
-                await docker_manager.docker.container.create({
+                return docker_manager.docker.container.create({
                     Image: "pmng/plugin-mariadb",
                     Hostname: "mariadb",
                     name: PLUGIN_CONTAINER_NAME,
