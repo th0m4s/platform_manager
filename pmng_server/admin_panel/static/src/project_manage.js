@@ -107,7 +107,7 @@ function init() {
 
         // domains are not in project. they should be fetched from the domains table
         values.domains.forEach((domain) => {
-            displayDomain(domain.domain, domain.enablesub);
+            displayDomain(domain.domain, domain.enablesub, domain.full_dns);
         });
 
         Object.keys(values.plugins).forEach((plugin) => {
@@ -137,7 +137,7 @@ function displayEnv(key, value) {
     let rdnId = Math.floor(Math.random()*10000000);
     $("#env-list").append(`<div class="row env-row mb-2"><div class="col-md-4"><input type="text" required class="form-control input-env-key" placeholder="Variable name" value="${key}"></div><div class="col-md-8">`
      + `<div class="input-group"><input type="text" class="form-control input-env-val" placeholder="Value" id="env_${rdnId}"><div class="input-group-append">`
-     + `<button class="btn btn-primary button-add-env-line" style="display: none;" type="button" onclick="project_manage.addEnv()"><i class="fas fa-plus"></i> Add new</button>`
+     // + `<button class="btn btn-primary button-add-env-line" style="display: none;" type="button" onclick="project_manage.addEnv()"><i class="fas fa-plus"></i> Add new</button>`
      + `<button class="btn btn-danger btn-delete" type="button" onclick="project_manage.deleteRow(this);"><i class="fas fa-trash-alt"></i> Delete</button></div></div></div></div>`);
      $("#env_" + rdnId).val(value);
      updateAdd();
@@ -152,29 +152,30 @@ function deleteRow(button) {
     updateAdd();
 }
 
-function displayDomain(domain, enabled) {
+function displayDomain(domain, enabled, fulldns) {
     let randomKey = Math.round(Math.random()*100000);
     $("#domains-list").append(`<div class="row domain-row mb-2"><div class="col">`
-     + `<div class="input-group"><input type="text" class="form-control input-domain" placeholder="Custom domain" value="${domain}"><div class="input-group-append"><div class="input-group-text">`
-     + `<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input input-enablesub" id="domain-sub-${randomKey}"${enabled ? " checked" : ""}><label class="custom-control-label no-select" for="domain-sub-${randomKey}">Enable subdomains (like www)</label></div></div>`
-     + `<button class="btn btn-primary button-add-domain-line" style="display: none;" type="button" onclick="project_manage.addDomain()"><i class="fas fa-plus"></i> Add new</button>`
+     + `<div class="input-group"><input type="text" class="form-control input-domain" placeholder="Custom domain" value="${domain}"><div class="input-group-append">`
+     + `<div class="input-group-text"><div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input input-enablesub" id="domain-sub-${randomKey}"${enabled ? " checked" : ""}><label class="custom-control-label no-select" for="domain-sub-${randomKey}">Enable subdomains</label></div></div>`
+     + `<div class="input-group-text"><div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input input-fulldns" id="domain-fulldns-${randomKey}"${fulldns ? " checked" : ""}><label class="custom-control-label no-select" for="domain-fulldns-${randomKey}">Enable full DNS management</label></div></div>`
+     // + `<button class="btn btn-primary button-add-domain-line" style="display: none;" type="button" onclick="project_manage.addDomain()"><i class="fas fa-plus"></i> Add new</button>`
      + `<button class="btn btn-danger btn-delete" type="button" onclick="project_manage.deleteRow(this);"><i class="fas fa-trash-alt"></i> Delete</button></div></div></div></div>`);
      updateAdd();
 }
 
 function addDomain() {
-    displayDomain("", true);
+    displayDomain("", true, true);
 }
 
 function updateAdd() {
-    if($(".env-row").length > 0) $("#button-add-env").hide();
-    else $("#button-add-env").show();
+    /*if($(".env-row").length > 0) $("#button-add-env").hide();
+    else $("#button-add-env").show();*/
 
     if($(".domain-row").length > 0) {
-        $("#button-add-domain").hide();
+        // $("#button-add-domain").hide();
         $("#domain-info").show();
     } else {
-        $("#button-add-domain").show();
+        // $("#button-add-domain").show();
         $("#domain-info").hide();
     }
 }
@@ -327,7 +328,7 @@ function confirm() {
             if(differences.domains.add.length > 0) {
                 let text = "You added the following custom domain" + (differences.domains.add.length > 1 ? "s" : "") + ":<ul>";
                 differences.domains.add.forEach((item) => {
-                    text += "<li>" + item.domain + (item.enablesub ? " (subs enabled)" : " (subs disabled)") + "</li>";
+                    text += "<li>" + item.domain + " (" + getDomainInfoText(item, false) + ")</li>";
                 });
                 text += "</ul>";
                 diffTexts.push(text);
@@ -336,7 +337,7 @@ function confirm() {
             if(differences.domains.modify.length > 0) {
                 let text = "You modified the following custom domain" + (differences.domains.modify.length > 1 ? "s" : "") + ":<ul>";
                 differences.domains.modify.forEach((item) => {
-                    text += "<li>" + item.domain + (item.newstate ? ": subs enabled" : ": subs disabled") + "</li>";
+                    text += "<li>" + item.domain + " (" + getDomainInfoText(item, true) + ")</li>";
                 });
                 text += "</ul>";
                 diffTexts.push(text);
@@ -413,6 +414,22 @@ function confirm() {
     return false;
 }
 
+function getDomainInfoText(item, edition) {
+    if(item[edition ? "new_enablesub" : "enablesub"]) {
+        if(item[edition ? "new_fulldns" : "full_dns"]) {
+            return "subs and full dns enabled";
+        } else {
+            return "subs enabled, full dns disabled";
+        }
+    } else {
+        if(item[edition ? "new_fulldns" : "full_dns"]) {
+            return "subs disabled, full dns enabled"
+        } else {
+            return "subs and full dns disabled";
+        }
+    }
+}
+
 function getChanges() {
     let wantpluginnames = $("#input-plugins").val().split(",");
     let wantcollaborators = $("#input-collaborators").val().split(",");
@@ -428,7 +445,7 @@ function getChanges() {
     for(let i = 0; i < domrows.length; i++) {
         let row = $(domrows.get(i));
         let domain = row.find(".input-domain").val().trim();
-        if(domain.length > 0) wantdomains.push({domain: domain, enablesub: row.find(".input-enablesub").is(":checked")});
+        if(domain.length > 0) wantdomains.push({domain: domain, enablesub: row.find(".input-enablesub").is(":checked"), full_dns: row.find(".input-fulldns").is(":checked")});
     }
 
     // check differences
@@ -476,7 +493,7 @@ function getChanges() {
     differences.domains = {add: [], remove: [], modify: []};
     let originalDomains = [], wantdomainsobject = {};
     for(let d of wantdomains) {
-        wantdomainsobject[d.domain] = d.enablesub;
+        wantdomainsobject[d.domain] = {enablesub: d.enablesub, full_dns: d.full_dns};
     }
     let wantdomainskeys = Object.keys(wantdomainsobject);
 
@@ -488,8 +505,8 @@ function getChanges() {
         if(!wantdomainskeys.includes(originalDomain)) {
             differences.domains.remove.push(originalDomain);
             count++;
-        } else if(allDomain.enablesub != wantdomainsobject[originalDomain]) {
-            differences.domains.modify.push({domain: originalDomain, newstate: wantdomainsobject[originalDomain]});
+        } else if(allDomain.enablesub != wantdomainsobject[originalDomain].enablesub || allDomain.full_dns != wantdomainsobject[originalDomain].full_dns) {
+            differences.domains.modify.push({domain: originalDomain, new_enablesub: wantdomainsobject[originalDomain].enablesub, new_fulldns: wantdomainsobject[originalDomain].full_dns});
             count++;
         }
     }

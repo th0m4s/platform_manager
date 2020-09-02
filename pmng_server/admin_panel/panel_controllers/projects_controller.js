@@ -31,7 +31,7 @@ router.get("/edit/:projectname", function(req, res) {
             Promise.all([database_server.database("domains").where("projectname", req.params.projectname).select("*"), database_server.database("collabs").where("projectname", req.params.projectname).select("*")]).then(([domains, collabs]) => {
                 let domainsRes = [];
                 domains.forEach((domain) => {
-                    domainsRes.push({domain: domain.domain, enablesub: domain.enablesub == "true"});
+                    domainsRes.push({domain: domain.domain, enablesub: domain.enablesub == "true", full_dns: domain.full_dns == "true"});
                 });
     
                 let collabsProm = [];

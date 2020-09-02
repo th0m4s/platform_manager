@@ -190,11 +190,12 @@ function checkCustomDomain(custom_domain, useSub) {
  * @param {string} projectname The project name to add the domain to.
  * @param {string} custom_domain The custom domain to add.
  * @param {boolean} enablesub Whether enable the subdomains for the domain.
+ * @param {boolean} full_dns Delegate the entire zone to the Platform Manager.
  * @returns {Promise} A promise resolved when the domain is added to the database (HTTPS might not be enabled instantly). 
  */
-function addCustomDomain(projectname, custom_domain, enablesub) {
-    intercom.send("greenlock", {command: "addCustom", domain: custom_domain}) // if https not enabled, no greenlock callback will be executed
-    return database_server.database("domains").insert({domain: custom_domain, projectname: projectname, enablesub: enablesub ? "true" : "false"});
+function addCustomDomain(projectname, custom_domain, enablesub, full_dns) {
+    intercom.send("greenlock", {command: "addCustom", domain: custom_domain, full_dns}) // if https not enabled, no greenlock callback will be executed
+    return database_server.database("domains").insert({domain: custom_domain, projectname: projectname, enablesub: enablesub ? "true" : "false", full_dns: full_dns ? "true" : "false"});
 }
 
 /**

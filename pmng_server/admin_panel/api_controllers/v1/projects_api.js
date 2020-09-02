@@ -144,7 +144,7 @@ router.post("/create", function(req, res) {
         projects_manager.addProject(projectname, user.id, userenv, pluginnames).then((id) => {
             let domProm = [], collabsProm = [];
             customdomains.forEach((domain) => {
-                if(domain !== "") domProm.push(projects_manager.addCustomDomain(projectname, domain.domain, domain.enablesub == true || domain.enablesub == "true"));
+                if(domain !== "") domProm.push(projects_manager.addCustomDomain(projectname, domain.domain, domain.enablesub == true || domain.enablesub == "true", domain.full_dns == true || domain.full_dns == "true"));
             });
 
             Promise.all(domProm).then(() => {
@@ -231,7 +231,7 @@ router.post("/edit/:projectname", function(req, res) {
                     });
         
                     differences.domains.add.forEach((item) => {
-                        promises.push(projects_manager.addCustomDomain(projectname, item.domain, item.enablesub == true || item.enablesub == "true"));
+                        promises.push(projects_manager.addCustomDomain(projectname, item.domain, item.enablesub == true || item.enablesub == "true", item.full_dns == true || item.full_dns == "true"));
                     });
         
                     differences.domains.remove.forEach((item) => {
@@ -240,7 +240,9 @@ router.post("/edit/:projectname", function(req, res) {
                     });
         
                     differences.domains.modify.forEach((item) => {
-                        promises.push(database_server.database("domains").where("domain", item.domain).update({enablesub: (item.newstate == true || item.newstate == "true" ? "true" : "false")}));
+                        let full_dns = item.new_fulldns == true || item.new_fulldns == "true" ? "true" : "false";
+                        intercom.send("greenlock", {command: "edition", domain: item.domain, full_dns}); // call both remove then add
+                        promises.push(database_server.database("domains").where("domain", item.domain).update({enablesub: (item.new_enablesub == true || item.new_enablesub == "true" ? "true" : "false"), full_dns}));
                     });
         
                     Promise.all(promises).then(() => {
