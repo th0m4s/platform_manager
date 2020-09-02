@@ -56,7 +56,23 @@ class MariaDBPlugin extends Plugin {
         await docker_manager.docker.container.list({filters: {label: ["pmng.containertype=globalplugin", "pmng.pluginname=mariadb"]}}).then(async (containers) => {
             if(containers.length == 0) {
                 await docker_manager.docker.network.list({filters: {name: [NETWORK_NAME]}}).then((networks) => {
-                    if(networks.length > 0) return networks[0].stop();
+                    if(networks.length > 0) {
+                        for(let network of networks) {
+                            return network.status().then((network) => {
+                                let prom = [];
+
+                                for(let cid of Object.keys(network.data.Containers)) {
+                                    prom.push(network.disconnect({
+                                        Container: cid
+                                    }));
+                                }
+
+                                return Promise.all(prom).then(() => {
+                                    return network.remove();
+                                })
+                            });
+                        }
+                    }
                 });
 
                 let dataDir = path.join(plugindirectory, "data");
