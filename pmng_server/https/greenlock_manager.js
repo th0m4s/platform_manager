@@ -75,7 +75,9 @@ function add(domain, full_dns = true) {
 }
 
 function remove(domain) {
-    greenlock.remove(domain);
+    greenlock.remove({
+        subject: domain
+    });
 }
 
 function _getSecureContext(serverFile, onlyOptions = false) {
