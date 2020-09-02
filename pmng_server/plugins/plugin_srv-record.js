@@ -7,7 +7,7 @@ const Plugin = require("./lib_plugin");
 const dns = require("native-dns");
 
 async function checkService(service) {
-    if(service.includes(" ")) throw "Invalid service name.";
+    if(service.includes(" ") || service.length == 0) throw "Invalid service name.";
     else return service;
 }
 
@@ -122,7 +122,7 @@ class SRVRecordPlugin extends Plugin {
     }
 
     static getDefaultConfig() {
-        return {service: "service", protocol: "tcp", target: process.env.ROOT_DOMAIN, port: 0};
+        return {service: "service", protocol: "tcp", target: ":host", port: 0};
     }
 
     static getConfigForm() {
