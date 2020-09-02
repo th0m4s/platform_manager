@@ -27,7 +27,8 @@ function init() {
         store: {
             module: "greenlock-store-fs",
             basepath: path.resolve(__dirname, "greenlock.d")
-        }
+        },
+        challenges: Object.assign(getChallenges(true), getChallenges(false))
     });
 
     let localDomain = process.env.ROOT_DOMAIN;
