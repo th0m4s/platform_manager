@@ -5,7 +5,7 @@ const intercom = require("../../../intercom/intercom_client").connect();
 
 router.get("/restart/:subp_id", (req, res) => {
     api_auth(req, res, function(user) {
-        if(database_server.checkScope(user.scope, "admin")) {
+        if(database_server.checkScope(user.scope, "system")) {
             intercom.sendPromise("subprocesses", {id: req.params.subp_id, command: "restart"}, {
                 autoReject: true, autoResolve: false
             }).then((response) => {
@@ -19,7 +19,7 @@ router.get("/restart/:subp_id", (req, res) => {
 
 router.get("/check/:subp_id", (req, res) => {
     api_auth(req, res, function(user) {
-        if(database_server.checkScope(user.scope, "admin")) {
+        if(database_server.checkScope(user.scope, "system")) {
             intercom.sendPromise("subprocesses", {id: req.params.subp_id, command: "check"}, {
                 autoReject: true, autoResolve: false
             }).then((response) => {

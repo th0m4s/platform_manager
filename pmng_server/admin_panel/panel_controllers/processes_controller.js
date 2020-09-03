@@ -10,7 +10,7 @@ router.all("*", async function(req, res, next) {
     } else if(req.user === undefined) {
         req.flash("warn", "Please login to access this page.");
         res.redirect("/panel/login");
-    } else if(!(await database_server.checkScope(req.user.scope, "admin"))) {
+    } else if(!database_server.checkScope(req.user.scope, "system")) {
         req.flash("warn", "You don't have enough privileges to access this page.");
         res.redirect("/panel/dashboard");
     } else next();
