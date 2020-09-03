@@ -190,6 +190,7 @@ function disableAllInputs() {
 
 function enableAllInputs() {
     selectAllInputs().removeAttr("disabled").removeClass("disabled");
+    $(".always-disabled").attr("disabled", "disabled").addClass("disabled");
 }
 
 let lastDifferences = undefined;
@@ -539,7 +540,7 @@ function getChanges() {
         }
     }
 
-    return {differences: differences, count: count};
+    return {differences, count};
 }
 
 let saving = false, lastNeedRestart = false;

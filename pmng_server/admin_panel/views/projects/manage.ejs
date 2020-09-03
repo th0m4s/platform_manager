@@ -26,7 +26,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="input-project-name" class="mb-1">Project name:</label>
-                                <input type="text" required class="form-control" id="input-project-name" pattern="[a-z-0-9]{4,32}" value="<%- getEditParam('name') %>" <%- getIfEdit(" disabled",  "") %> placeholder="Project name (4 to 32 chars. from a-z, 0-9 and special -)">
+                                <input type="text" required class="form-control<%- getIfEdit(' always-disabled') %>" id="input-project-name" pattern="[a-z-0-9]{4,32}" value="<%- getEditParam('name') %>" <%- getIfEdit(" disabled",  "") %> placeholder="Project name (4 to 32 chars. from a-z, 0-9 and special -)">
                                 <% if(isEdit() == false) { %>
                                     <small id="name-confirm" class="form-text text-muted">This name is definitive, you won't be able to change it later. Select it carefully.</small>
                                 <% } %>
