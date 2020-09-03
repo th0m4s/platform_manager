@@ -93,6 +93,39 @@ router.post("/edit/:username", (req, res) => {
     });
 });
 
+// edition of current account
+router.post("/me", (req, res) => {
+    api_auth(req, res, function(user) {
+        let currentPassword = req.body.currentPassword || "";
+        database_server.comparePassword(user.id, currentPassword).then(async (result) => {
+            if(result !== true) throw new Error("Invalid password.");
+
+            let changes = req.body.changes;
+            let update = {}; // not using req.body.changes like in /edit/:username
+
+            if(changes.fullname != undefined && changes.fullname.trim().length > 0)
+                update.fullname = changes.fullname.trim();
+            
+            if(changes.email != undefined && changes.email.trim().length > 0)
+                update.email = changes.email.trim();
+
+            if(changes.password != undefined && changes.password.trim().length > 0)
+                update.password = await database_server.hashPassword(changes.password);
+
+            if(Object.keys(update).length == 0) res.status(400).json({error: true, code: 400, message: "Invalid update: No changes."});
+            else {
+                database_server.database("users").where("name", user.name).update(update).then(() => {
+                    res.status(200).json({error: false, code: 200, message: "User updated."});
+                }).catch((error) => {
+                    res.status(500).json({error: true, code: 500, message: "Cannot update user database: " + error});
+                });
+            }
+        }).catch((error) => {
+            res.status(403).json({error: true, code: 403, message: "Cannot update user: " + error});
+        });
+    });
+});
+
 router.get("/delete/:username", (req, res) => {
     api_auth(req, res, function(user) {
         if(database_server.checkScope(user.scope, "admin")) {

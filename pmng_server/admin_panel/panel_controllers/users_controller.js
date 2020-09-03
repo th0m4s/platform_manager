@@ -17,7 +17,9 @@ router.get("/", (req, res) => {
 });
 
 router.get("/me", (req, res) => {
-    res.send("salut");
+    req.setPage(res, "Account", "users", "me");
+    res.locals.user = req.user;
+    res.render("users/me");
 });
 
 router.get("/all", (req, res) => {

@@ -148,6 +148,9 @@ function confirmSave() {
     lastDifferences = undefined;
 
     saving = true;
+    disableAllInputs();
+    utils.disableButton(confirmButton, "Saving changes...");
+
     $("#confirmModal").modal("hide");
 
     let confirmButton = $("#confirm-button");
