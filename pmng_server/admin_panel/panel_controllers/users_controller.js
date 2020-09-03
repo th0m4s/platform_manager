@@ -17,7 +17,7 @@ router.get("/", (req, res) => {
 });
 
 router.get("/me", (req, res) => {
-    req.setPage(res, "Account", "users", "me");
+    req.setPage(res, "Account", "account", "me"); // not using the correct users/me because it would highlight users for admin users
     res.locals.user = req.user;
     res.render("users/me");
 });
