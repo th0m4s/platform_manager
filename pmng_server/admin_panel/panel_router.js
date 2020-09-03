@@ -73,6 +73,22 @@ passport.deserializeUser(async function(key, done) {
     }
 });
 
+// helper from https://stackoverflow.com/questions/41069593/how-do-i-handle-errors-in-passport-deserializeuser
+// passportjs docs doesn't explain how to handle deserialization errors
+router.use(function(err, req, res, next) {
+    if (err) {
+        req.logout();
+        if (req.originalUrl == "/panel/login") {
+            next();
+        } else {
+            req.flash("error", "You've been logged out: " + (err.message || err));
+            res.redirect("/panel/login");
+        }
+    } else {
+        next();
+    }
+});
+
 router.get("*", function(req, res, next) {
     req.setPage = function(r, title, active, sub) { r.locals.page = {title: title, active: active || "none", sub: sub || "none"}; }
     res.locals.site = {title: "Platform Manager"};
