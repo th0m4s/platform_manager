@@ -46,24 +46,32 @@ knex.raw("SHOW DATABASES;").catch((error) => {
 /**
  * Returns a user based on its *username*.
  * @param {string} username The username of the requested user.
+ * @param {boolean} stripPassword Empty the user password from the result.
  * @returns {Promise<User>} A new user object filled with the corresponding user's data or *null* if this username is not associated with a user.
  */
-function findUserByName(username) {
+function findUserByName(username, stripPassword = true) {
     return knex("users").where("name", username).select("*").then((results) => {
         if(results.length != 1) return null;
-        else return results[0];
+        else {
+            if(stripPassword) results[0].password = "";
+            return results[0];
+        };
     });
 }
 
 /**
  * Returns a user based on its id.
  * @param {number} id The id of the requested user.
+ * @param {boolean} stripPassword Empty the user password from the result.
  * @returns {Promise<User>} A new user object filled with the corresponding user's data or *null* if this id doesn't exist in the database.
  */
-function findUserById(id) {
+function findUserById(id, stripPassword = true) {
     return knex("users").where("id", id).select("*").then((results) => {
         if(results.length != 1) return null;
-        else return results[0];
+        else {
+            if(stripPassword) results[0].password = "";
+            return results[0];
+        };
     });
 }
 
