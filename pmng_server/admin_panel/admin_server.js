@@ -89,6 +89,7 @@ function start() {
     require("./socket_controllers/v1/docker_socket").initializeNamespace(authNamespace(io.of("/v1/docker")));
     require("./socket_controllers/v1/projects_socket").initializeNamespace(authNamespace(io.of("/v1/projects")));
     require("./socket_controllers/v1/logs_socket").initializeNamespace(authNamespace(io.of("/v1/logs")));
+    require("./socket_controllers/v1/users_socket").initializeNamespace(authNamespace(io.of("/v1/users")));
 
     if(process.env.ENABLE_HTTPS.toLowerCase() == "true") greenlock_manager.init();
 }
