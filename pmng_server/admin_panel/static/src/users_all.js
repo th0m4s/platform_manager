@@ -113,7 +113,7 @@ function deleteUser(username) {
         + "<br/><br/><i class='fas fa-exclamation-triangle'></i> Warning: This action is irreversible! All the projects and their associated contents owned by this user will be removed for ever!");
     $("#confirmModal").modal();
 
-    let button = $("#confirmModal-button").html("Please wait 10s...").attr("disabled", "disabled"), i = 3;
+    let button = $("#confirmModal-button").html("Please wait 10s...").attr("disabled", "disabled"), i = 10;
     lastCid = setInterval(() => {
         i--;
         if(i == 0) {
