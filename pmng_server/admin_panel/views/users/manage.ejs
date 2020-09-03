@@ -1,0 +1,94 @@
+<html>
+    <head>
+        <%- include("../default/head.ejs") %>
+    </head>
+    <body>
+        <%- include("../default/flash.ejs") %>
+        <%- include("../default/api.ejs") %>
+        <script>
+        const edit = <% if (isEdit()) { %>true; const values=JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(edit)) %>"))<% } else { %>false<% } %>;
+        </script>
+        <%- startPageScript("user_manage") %>
+        
+        <header>
+            <%- include("../default/header.ejs") %>
+        </header>
+        <%- include("../default/loading.ejs") %>
+        <div class="container-fluid" id="main-container">
+            <div class="row mt-3 mx-3" id="details-row">
+                <div class="w-100">
+                    <h3 class="d-inline"><%- getIfEdit("Edit an", "Create a new") %> user:</h3>
+                    <a href="<%- getIfEdit('../') %>all" class="my-1 btn btn-sm btn-secondary float-right"><i class="fas fa-times"></i> Cancel</a>
+                </div>
+                <form class="mt-3 w-100" onsubmit="return user_manage.confirm();">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label for="input-username" class="mb-1">Username:</label>
+                                <input type="text" required class="form-control<%- getIfEdit(' always-disabled') %>" id="input-username" value="<%- getEditParam('name') %>" <%- getIfEdit(" disabled",  "") %> placeholder="jdoe">
+                                <% if(isEdit() == false) { %>
+                                    <small id="name-confirm" class="form-text text-muted">The username is definitive, you won't be able to change it later.</small>
+                                <% } %>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="form-group">
+                                <label for="input-fullname" class="mb-1">Fullname:</label>
+                                <input type="text" required class="form-control" id="input-fullname" value="<%- getEditParam('fullname') %>" placeholder="John DOE">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label for="input-permlevel" class="mb-1">Permission level:</label>
+                                <input type="number" min="1" max="99" required class="form-control" value="<%- getEditParam('scope') %>" id="input-permlevel" placeholder="99">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="form-group">
+                                <label for="input-email" class="mb-1">Email address:</label>
+                                <input type="email" required class="form-control" id="input-email" value="<%- getEditParam('email') %>" placeholder="jdoe@example.com">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="input-password" class="mb-1"><%- getIfEdit("New p", "P") %>assword:</label>
+                                <input type="password" class="form-control" id="input-password" <%- getIfEdit("", "required ") %>minlength="8" placeholder="<%- getIfEdit("Leave empty to keep the current password", "User password") %> (min. length of 8 characters)">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="input-confirmpass" class="mb-1"><%- getIfEdit("New p", "P") %>assword confirmation:</label>
+                                <input type="password" class="form-control" <%- getIfEdit("", "required ") %>minlength="8" id="input-confirmpass">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" id="confirm-button" class="btn btn-primary btn-lg btn-block mt-5"><% if(isEdit()) { %>Save<% } else {%>Create<% } %> this user</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Save confirmation</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="confirmModal-content">
+                        
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="button-confirm-save" onclick="user_manage.confirmSave()">Confirm save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

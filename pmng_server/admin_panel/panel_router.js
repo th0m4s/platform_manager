@@ -132,5 +132,6 @@ router.use("/dashboard", require("./panel_controllers/dashboard_controller"));
 router.use("/projects", require("./panel_controllers/projects_controller"));
 router.use("/docker", require("./panel_controllers/docker_controller"));
 router.use("/processes", require("./panel_controllers/processes_controller"));
+router.use("/users", require("./panel_controllers/users_controller"));
 
 module.exports = router;
