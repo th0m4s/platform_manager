@@ -52,7 +52,7 @@ class NodeBuildpack extends Buildpack {
             cmd = "npm install --production && npm cache clean --force";
         } else {
             logger("Installing node modules from yarn (please wait)...");
-            cmd = "yarn install --production --frozen-lockfile";
+            cmd = "yarn install --production --frozen-lockfile && yarn cache clean";
         }
 
         let {out, err, code} = await utils.execCommand(cmd);
