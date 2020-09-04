@@ -515,7 +515,8 @@ function startProject(projectname) {
             HostConfig: {
                 PortBindings: portBindings,
                 AutoRemove: true,
-                NetworkMode: networkName
+                NetworkMode: networkName,
+                Memory: 512*1024*1024
             },
             NetworkingConfig: {
                 EndpointsConfig: {
