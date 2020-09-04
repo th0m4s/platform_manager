@@ -186,6 +186,12 @@ async function getPluginKnex(db) {
     return db == undefined ? _pluginKnex : _pluginKnex(db);
 }
 
+function isUsernameValid(username) {
+    // maybe deny underscore in username (it will disable all names starting with dbu_)
+    // same regex as in the users/manage view
+    return username.match(/^(?!dbu_.*$)[a-z][a-z0-9_-]{3,15}$/) != null;
+}
+
 /**
  * Adds a user into the database based on the given user's data.
  * @param {string} name Its username.
@@ -196,7 +202,8 @@ async function getPluginKnex(db) {
  * @returns {Promise} A promise resolved when the user is successfully added into the database.
  */
 function addUser(name, fullname, password, email, scope) {
-    // TODO: should also create real plugin db user for connection
+    if(!isUsernameValid(name)) return Promise.reject("Invalid username.");
+
     return Promise.all([hashPassword(password).then((hash) => {
         return knex("users").insert({name: name, fullname: fullname, password: hash, email: email, scope: scope});
     }), getPluginKnex().then((plk) => plk.raw("CREATE USER '" + name + "' IDENTIFIED BY '" + password + "';"))]).then(() => {

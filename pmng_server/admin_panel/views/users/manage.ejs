@@ -25,9 +25,9 @@
                         <div class="col-md-5">
                             <div class="form-group">
                                 <label for="input-username" class="mb-1">Username:</label>
-                                <input type="text" required class="form-control<%- getIfEdit(' always-disabled') %>" id="input-username" value="<%- getEditParam('name') %>" <%- getIfEdit(" disabled",  "") %> placeholder="jdoe">
+                                <input type="text" required class="form-control<%- getIfEdit(' always-disabled') %>" id="input-username" pattern="^(?!dbu_.*$)[a-z][a-z0-9_-]{3,15}$" value="<%- getEditParam('name') %>" <%- getIfEdit(" disabled",  "") %> placeholder="jdoe">
                                 <% if(isEdit() == false) { %>
-                                    <small id="name-confirm" class="form-text text-muted">The username is definitive, you won't be able to change it later.</small>
+                                    <small id="name-confirm" class="form-text text-muted">The username is definitive, you won't be able to change it later. Must contains between 4 and 16 characters (a-z, 0-9, - and _)</small>
                                 <% } %>
                             </div>
                         </div>
