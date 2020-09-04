@@ -1,4 +1,6 @@
 
+const intercom = require("../../../intercom/intercom_client").connect();
+
 function initializeNamespace(namespace) {
     namespace.on("connection", (socket) => {
         let setup = false;
@@ -10,13 +12,20 @@ function initializeNamespace(namespace) {
 
             if(socket.hasAccess("admin")) {
                 setup = true;
-                if(setup) {
-                    socket.emit("setup", {error: false, message: "Socket setup."});
-                }
-            } else {
-                socket.emit("setup", {error: true, message: "Insufficient permissions."});
-            }
+                socket.join("users_list");
+                socket.emit("setup", {error: false, message: "Socket setup."});
+            } else socket.emit("setup", {error: true, message: "Insufficient permissions."});
         });
+    });
+
+    intercom.subscribe(["usersevents"], (message) => {
+        let event = message.event, user = message.user;
+        switch(event) {
+            case "add":
+            case "remove":
+                namespace.to("users_list").emit("user_action", {action: event, user});
+                break;
+        }
     });
 }
 

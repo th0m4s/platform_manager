@@ -29,8 +29,14 @@ function init() {
     });
 
     socket.on("user_action", (message) => {
+        let user = message.user;
         switch(message.action) {
-            
+            case "add":
+                displayUser(user);
+                break;
+            case "remove":
+                $("#line-" + user).remove();
+                break;
         }
     });
 }

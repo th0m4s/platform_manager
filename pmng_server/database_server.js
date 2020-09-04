@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const logger = require("./platform_logger").logger();
 const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const plugin_mdb = require("./plugins/plugin_mariadb");
+const intercom = require("./intercom/intercom_client").connect();
 
 const DB_NAME = "platform_manager";
 const DB_CONFIG = {
@@ -198,11 +199,17 @@ function addUser(name, fullname, password, email, scope) {
     // TODO: should also create real plugin db user for connection
     return Promise.all([hashPassword(password).then((hash) => {
         return knex("users").insert({name: name, fullname: fullname, password: hash, email: email, scope: scope});
-    }), getPluginKnex().then((plk) => plk.raw("CREATE USER '" + name + "' IDENTIFIED BY '" + password + "';"))]);
+    }), getPluginKnex().then((plk) => plk.raw("CREATE USER '" + name + "' IDENTIFIED BY '" + password + "';"))]).then(() => {
+        return findUserId(name);
+    }).then((id) => {
+        intercom.send("usersevents", {event: "add", user: {id, name, fullname, email, scope}})
+    });
 }
 
 function removeUser(username) {
-    return Promise.all([knex("users").where("name", username).delete(), getPluginKnex().then((plk) => plk.raw("DROP USER '" + username + "';"))]);
+    return Promise.all([knex("users").where("name", username).delete(), getPluginKnex().then((plk) => plk.raw("DROP USER '" + username + "';"))]).then(() => {
+        intercom.send("usersevents", {event: "remove", user: username});
+    });
 }
 
 /**
