@@ -64,4 +64,5 @@ function showCookieNotifications() {
     Cookies.remove("notifications");
 }
 
-window.utils = {disableButton, showInfiniteLoading, hideLoading, generateAlert, enableButton, updateTagsInputWidth, addNotification, showCookieNotifications, updateTagsInputWidth};
+let string_utils = require("../../../string_utils");
+window.utils = {disableButton, showInfiniteLoading, hideLoading, generateAlert, enableButton, updateTagsInputWidth, addNotification, showCookieNotifications, updateTagsInputWidth, string: string_utils};

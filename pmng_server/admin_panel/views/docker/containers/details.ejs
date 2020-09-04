@@ -5,7 +5,7 @@
     <body>
         <%- include("../../default/flash.ejs") %>
         <%- include("../../default/api.ejs") %>
-        <%- startPageScript("docker_cdetails") %>
+        <%- startPageScript("docker_cdetails", ["/socket.io/socket.io.js"]) %>
         <script>
         window.reference = "<%- value %>";
         </script>
@@ -30,6 +30,7 @@
                             <li class="list-group-item"><b>Based on image: </b><span id="info-image"></span></li>
                             <li class="list-group-item"><b>Container labels: </b><br/><ul id="info-labels"></ul></li>
                             <li class="list-group-item"><b>Connected networks: </b><br/><div class="card w-100"><ul class="list-group list-group-flush" id="info-networks"></ul></div></li>
+                            <li class="list-group-item"><b>Container stats: </b><br/><ul id="info-stats">Loading...</ul></li>
                         </ul>
                     </div>
                 </div>

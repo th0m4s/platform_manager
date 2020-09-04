@@ -1,7 +1,57 @@
 function init() {
     utils.showInfiniteLoading("Loading container details..."),
     window.refreshInterval = setInterval(refreshDetails, 10*1000);
-    refreshDetails();
+    socket = io("/v1/docker");
+
+    socket.on("connect", function(){
+        console.log("Socket connected.")
+        socket.emit("authentication", {key: API_KEY});
+        socket.on("authenticated", function() {
+            console.log("Socket authenticated.");
+            socket.emit("setup", {type: "stats", container: window.reference});
+
+            // TODO: refresh details with docker socket
+            refreshDetails();
+        });
+        socket.on("unauthorized", function(err) {
+            utils.hideLoading();
+            $.notify({message: "Unable to authenticate to the socket. Usage statistics will not be displayed."}, {type: "danger"});
+            $("#info-stats").html("Cannot load container stats.");
+
+            console.log("Unauthorized from the socket", err);
+        });
+    });
+
+    socket.on("error", (err) => {
+        utils.hideLoading();
+        $.notify({message: "Connection with the socket lost. You may need to reload the page (container stats will not work anymore)."}, {type: "danger"});
+        $("#info-stats").html("Cannot load container stats: socket error.");
+
+        console.log("Socket error", err);
+    });
+
+    socket.on("stats", (statsData) => {
+        let mem_max = statsData.mem_max, mem_used = statsData.mem_used;
+        $("#stats-mem").html(utils.string.formatBytes(mem_used, 0) + "/" + utils.string.formatBytes(mem_max, 0) + " (" + (mem_used/mem_max*100).toPrecision(2) + "%)");
+
+        $("#stats-cpu").html(statsData.cpu_usage.toPrecision(2) + "%");
+
+        let net = statsData.net;
+        $("#stats-net").html("RX " + net.rx + " (" + utils.string.formatBytes(net.rx, 0) + ") / TX " + net.tx + " (" + utils.string.formatBytes(net.tx, 0) + ")");
+    });
+
+    socket.on("setup", (status) => {
+        if(status.error == false) {
+            // if container doesn't exist, this will be overwritten
+            $("#info-stats").html("<li>Memory usage: <span id='stats-mem'>Loading...</span></li>"
+                + "<li>CPU usage: <span id='stats-cpu'>Loading...</span></li>"
+                + "<li>Network I/O: <span id='stats-net'>Loading...</span></li>");
+        } // if important, stats_error will be emitted
+    })
+
+    socket.on("stats_error", (err) => {
+        $("#info-stats").html("Cannot load container stats: " + (err.message || err));
+    });
 }
 
 let fetchError = false, loadHidden = false, lastContainerFailed = false;
