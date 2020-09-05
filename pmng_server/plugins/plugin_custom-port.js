@@ -15,7 +15,7 @@ function portSaved(project, config) {
     return intercom.sendPromise("plugin_custom-port", {command: "setPort", project, port: config.port});
 }
 
-function localCheck(port) {
+function localCheck(port, projectname) {
     port = parseInt(port);
     return isPortValid(port).then((result) => {
         if(!result) throw "Invalid port.";
@@ -88,12 +88,12 @@ class CustomPortPlugin extends Plugin {
     }
 
     static prepareRouter(router) {
-        router.get("/checkPort/:port", (req, res) => {
-            let port = parseInt(req.params.port);
+        router.get("/checkPort/:projectname/:port?", (req, res) => {
+            let port = parseInt(req.params.port || "");
             if(isNaN(port)) {
                 res.json({valid: false, message: "Port should be a number."});
             } else {
-                isPortValid(port).then((valid) => {
+                isPortValid(port, req.params.projectname).then((valid) => {
                     res.json({valid, message: valid ? "Valid port." : "Invalid port."});
                 }).catch((error) => {
                     res.json({valid: false, message: "Cannot check port: " + error});

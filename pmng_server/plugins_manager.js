@@ -130,7 +130,7 @@ function getRouter() {
 
                                     for(let change of changes) {
                                         let configName = change[0];
-                                        prom.push(formVerif[configName](change[1]).then((result) => {
+                                        prom.push(formVerif[configName](change[1], projectname).then((result) => {
                                             pluginConfig[configName] = result;
                                         }));
                                     }

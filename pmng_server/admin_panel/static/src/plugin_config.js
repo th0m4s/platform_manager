@@ -21,7 +21,7 @@ function init() {
                             if(window.config[input.config] == checkVal) {
                                 resolve("No change.");
                             } else {
-                                $.getJSON("/api/v1/plugins/" + window.pluginname + input.remoteCheck + checkVal).fail((xhr, status, error) => {
+                                $.getJSON("/api/v1/plugins/" + window.pluginname + input.remoteCheck + window.projectname + "/" + checkVal).fail((xhr, status, error) => {
                                     console.warn("Unable to check value for " + input.config + ":", error);
                                     allowSave();
         

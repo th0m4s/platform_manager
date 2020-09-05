@@ -6,18 +6,18 @@ const intercom = require("../intercom/intercom_client").connect();
 const Plugin = require("./lib_plugin");
 const dns = require("native-dns");
 
-async function checkService(service) {
+async function checkService(service, projectname) {
     if(service.includes(" ") || service.length == 0) throw "Invalid service name.";
     else return service;
 }
 
-async function checkProtocol(protocol) {
+async function checkProtocol(protocol, projectname) {
     protocol = protocol.toLowerCase();
     if(["udp", "tcp"].includes(protocol)) return protocol;
     else throw "Invalid protocol.";
 }
 
-async function checkPort(port) {
+async function checkPort(port, projectname) {
     port = parseInt(port);
     if(isNaN(port)) throw "Port is not a valid number.";
     else if(port < 0 || port > 65535) throw "Invalid port in range.";
@@ -142,24 +142,24 @@ class SRVRecordPlugin extends Plugin {
     }
 
     static prepareRouter(router) {
-        router.get("/checkService/:service?", async (req, res) => {
-            checkService(req.params.service || "").then(() => {
+        router.get("/checkService/:projectname/:service?", async (req, res) => {
+            checkService(req.params.service || "", req.params.projectname).then(() => {
                 res.json({valid: true, message: "Valid service."});
             }).catch((message) => {
                 res.json({valid: false, message});
             });
         });
 
-        router.get("/checkProtocol/:protocol?", async (req, res) => {
-            checkProtocol(req.params.protocol || "").then(() => {
+        router.get("/checkProtocol/:projectname/:protocol?", async (req, res) => {
+            checkProtocol(req.params.protocol || "", req.params.projectname).then(() => {
                 res.json({valid: true, message: "Valid protocol."});
             }).catch((message) => {
                 res.json({valid: false, message});
             });
         });
 
-        router.get("/checkPort/:port?", async (req, res) => {
-            checkPort(req.params.port || "").then(() => {
+        router.get("/checkPort/:projectname/:port?", async (req, res) => {
+            checkPort(req.params.port || "", req.params.projectname).then(() => {
                 res.json({valid: true, message: "Valid port."});
             }).catch((message) => {
                 res.json({valid: false, message});
