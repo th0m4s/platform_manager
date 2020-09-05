@@ -37,7 +37,7 @@ router.post("/create", (req, res) => {
             } else {
                 database_server.findUserByName(name).then((existingUser) => {
                     if(existingUser == null) {
-                        database_server.addUser(name, fullname, password, email, scope).then(() => {
+                        database_server.addUser(name, fullname, password, email, scope, 0).then(() => {
                             res.status(200).json({error: false, code: 200, message: "User added into the database."});
                         }).catch((error) => {
                             res.status(500).json({error: true, code: 500, message: "Cannot add this user to the database: " + error});
