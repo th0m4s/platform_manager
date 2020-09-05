@@ -146,14 +146,13 @@ function confirmSave() {
     if(lastDifferences == undefined) return;
     let changes = lastDifferences;
     lastDifferences = undefined;
+    let confirmButton = $("#confirm-button");
 
     saving = true;
     disableAllInputs();
     utils.disableButton(confirmButton, "Saving changes...");
 
     $("#confirmModal").modal("hide");
-
-    let confirmButton = $("#confirm-button");
     $.post("/api/v1/users/edit/" + values.name, changes).fail((xhr, status, error) => {
         saving = false;
         $.notify({message: "Unable to contact server. See console for details."}, {type: "danger"});
