@@ -6,6 +6,7 @@ const plugins_manager = require("./plugins_manager");
 const simpleGit = require("simple-git/promise");
 const intercom = require("./intercom/intercom_client").connect();
 const docker_manager = require("./docker_manager");
+const plans_manager = require("./plans_manager");
 const rmfr = require("rmfr");
 
 const pfs = require("fs").promises;
@@ -61,14 +62,18 @@ function getProject(project_name, check = true) {
  * @returns {Promise} A promise resolved when the project is successfully and completely created.
  */
 function addProject(projectname, ownerid, env, plugins) {
-    return database_server.database("projects").insert({name: projectname, ownerid: ownerid, userenv: env, version: 0, plugins: {}}).then(() => {
-        return pfs.mkdir(getProjectFolder(projectname)).then(() => {
-            let repo = getProjectRepository(projectname);
-            return Promise.all([pfs.mkdir(repo), pfs.mkdir(getProjectLogsFolder(projectname))]).then(() => {
-                return simpleGit(repo).init(true).then(() => {
-                    let postUpdate = path.resolve(repo, "hooks", "post-update");
-                    return pfs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
-                        return pfs.chmod(postUpdate, "700"); // or 0o700
+    return plans_manager.canUserCreateProject(ownerid).then((canCreate) => {
+        if(!canCreate) throw "User cannot create more projects.";
+    }).then(() => {
+        return database_server.database("projects").insert({name: projectname, ownerid: ownerid, userenv: env, version: 0, plugins: {}}).then(() => {
+            return pfs.mkdir(getProjectFolder(projectname)).then(() => {
+                let repo = getProjectRepository(projectname);
+                return Promise.all([pfs.mkdir(repo), pfs.mkdir(getProjectLogsFolder(projectname))]).then(() => {
+                    return simpleGit(repo).init(true).then(() => {
+                        let postUpdate = path.resolve(repo, "hooks", "post-update");
+                        return pfs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
+                            return pfs.chmod(postUpdate, "700"); // or 0o700
+                        });
                     });
                 });
             });

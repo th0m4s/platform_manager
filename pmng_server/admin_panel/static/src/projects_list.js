@@ -43,6 +43,8 @@ function init() {
                         let line = $("#line-project-" + project);
                         if(line.length > 0) {
                             line.remove();
+                            checkCanCreateProject();
+                            checkHasProjects();
                             $.notify({message: `The project <i>${project}</i> was deleted from another session.`}, {type: "info"});
                         }
                     }
@@ -71,9 +73,7 @@ function init() {
                     let collabmode = message.collabmode;
                     if(collabmode == "remove") {
                         $("#line-project-" + project).remove();
-
-                        showHasProjects(true, $("#owned-list li").length > 0);
-                        showHasProjects(false, $("#collab-list li").length > 0);
+                        checkHasProjects();
                     } else {
                         let stateBtn = $("#button-state-" + project);
                         let manageable = collabmode == "manage";
@@ -101,6 +101,13 @@ function init() {
 
         console.log("Socket error", err);
     });
+}
+
+function checkHasProjects() {
+    setTimeout(() => {
+        showHasProjects(true, $("#owned-list li").length > 0);
+        showHasProjects(false, $("#collab-list li").length > 0);
+    }, 0);
 }
 
 function showHasProjects(owned, hasProjects) {
@@ -138,6 +145,16 @@ function addOwnedProjects(projects) {
         allProjects = allProjects.concat(names);
         checkStates(names);
     }
+}
+
+function checkCanCreateProject() {
+    // don't care if server/application error
+    $.getJSON("/api/v1/projects/create").done((response) => {
+        if(!response.error) {
+            if(response.canCreate) $("#createProject-link").removeClass("disabled");
+            else $("#createProject-link").addClass("disabled");
+        }
+    })
 }
 
 function addCollabProjects(results) {
@@ -293,6 +310,7 @@ function confirmDelete() {
             $.notify({message: "Unable to delete this project (application error). See console for details."}, {type: "danger"});
         } else {
             $("#line-project-" + currentDelete).remove();
+            checkCanCreateProject();
             allProjects.splice(allProjects.indexOf(currentDelete));
             $.notify({message: "The project was successfully deleted."}, {type: "success"});
         }

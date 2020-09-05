@@ -15,7 +15,7 @@
             <div class="row mt-3 mx-3" id="owned-row">
                 <div class="w-100">
                     <h3 class="d-inline">Owned projects:</h3>
-                    <a href="create" class="my-1 btn btn-sm btn-primary float-right"><i class="fas fa-plus"></i> Create a new project</a>
+                    <a href="create" id="createProject-link" class="my-1 btn btn-sm btn-primary float-right<%- (canCreateProject ? '"' : ' disabled"') %> title="You cannot create more projects."><i class="fas fa-plus"></i> Create a new project</a>
                 </div>
                 <p class="w-100" id="owned-status">Loading projects...</p>
                 <div class="card w-100" style="display: none;" id="owned-card">

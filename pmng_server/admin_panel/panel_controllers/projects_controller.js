@@ -4,6 +4,7 @@ const passport = require('passport');
 const project_manager = require("../../project_manager");
 const logger = require("../../platform_logger").logger();
 const plugins_manager = require("../../plugins_manager");
+const plans_manager = require("../../plans_manager");
 
 router.all("*", async function(req, res, next) {
     if(!(await database_server.isInstalled())) {
@@ -16,13 +17,23 @@ router.all("*", async function(req, res, next) {
 });
 
 router.get("/list", function(req, res) {
-    req.setPage(res, "Projects list", "projects", "list");
-    res.render("projects/list");
+    plans_manager.canUserCreateProject(req.user).then((canCreate) => {
+        req.setPage(res, "Projects list", "projects", "list");
+        res.locals.canCreateProject = canCreate;
+        res.render("projects/list");
+    });
 });
 
 router.get("/create", function(req, res) {
-    req.setPage(res, "Create a new project", "projects", "create");
-    res.render("projects/manage");
+    plans_manager.canUserCreateProject(req.user).then((canCreate) => {
+        if(canCreate) {
+            req.setPage(res, "Create a new project", "projects", "create");
+            res.render("projects/manage");
+        } else {
+            req.flash("warn", "You cannot create more projects. Quota exceeded.");
+            res.redirect("/panel/projects/list");
+        }
+    });
 });
 
 router.get("/edit/:projectname", function(req, res) {

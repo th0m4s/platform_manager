@@ -3,6 +3,7 @@ const database_server = require("../../../database_server");
 const projects_manager = require("../../../project_manager");
 const plugins_manager = require("../../../plugins_manager");
 const docker_manager = require("../../../docker_manager");
+const plans_manager = require("../../../plans_manager");
 const api_auth = require("./api_auth");
 const intercom = require("../../../intercom/intercom_client").connect();
 
@@ -123,6 +124,16 @@ router.get("/stop/:projectname", function(req, res) {
         }).catch((response) => {
             console.warn(response);
             res.status(500).json(response);
+        });
+    });
+});
+
+router.get("/create", (req, res) => {
+    api_auth(req, res, function(user) {
+        plans_manager.canUserCreateProject(user).then((canCreate) => {
+            res.status(200).json({error: false, code: 200, message: "User can" + (canCreate ? "" : "not") + " create project.", canCreate});
+        }).catch((error) => {
+            res.status(500).json({error: true, code: 500, message: "Cannot check plan usage: " + error});
         });
     });
 });
