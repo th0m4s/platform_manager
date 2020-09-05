@@ -98,7 +98,7 @@ router.post("/me", (req, res) => {
     api_auth(req, res, function(user) {
         let currentPassword = req.body.currentPassword || "";
         database_server.comparePassword(user.id, currentPassword).then(async (result) => {
-            if(result !== true) throw new Error("Invalid password.");
+            if(result != true) throw new Error("Invalid password.");
 
             let changes = req.body.changes;
             let update = {}; // not using req.body.changes like in /edit/:username
