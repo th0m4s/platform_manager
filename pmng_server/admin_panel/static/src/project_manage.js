@@ -261,7 +261,7 @@ function confirm() {
         let count = changes.count, differences = changes.differences;
 
         if(count > 0) {
-            let diffTexts = [], specialTexts = [], needDelay = false, needRestart = false;
+            let diffTexts = [], specialTexts = [], needDelay = false, needRestart = false, specialWithoutRestart = 0;
             lastDifferences = differences;
 
             if(differences.plugins.remove.length > 0) {
@@ -290,9 +290,13 @@ function confirm() {
                 differences.plugins.add.forEach((item) => {
                     text += "<li>" + item + "</li>";
                     if(item == "custom-port") {
+                        specialWithoutRestart++;
                         needDelay = true;
-                        if(count == 1) needRestart = false;
                         specialTexts.push("<i class='fas fa-info-circle'></i> Information: The custom-port plugin will not be initialized and will not be bound to any port until you select one from the Details page of the project.");
+                    } else if(item == "custom-memory") {
+                        specialWithoutRestart++;
+                        needDelay = true;
+                        specialTexts.push("<i class='fas fa-info-circle'></i> Information: The custom-memory plugin will not be initialized and your project will continue to use the maximum memory until you setup the plugin from the Details page of the project..");
                     }
                 });
                 text += "</ul>";
@@ -374,6 +378,8 @@ function confirm() {
                 text += "</ul>";
                 diffTexts.push(text);
             }
+
+            if(specialWithoutRestart == count) needRestart = false;
 
             let restartText = "";
             if(needRestart) {
