@@ -195,6 +195,16 @@ function getAllConfigs(pluginname) {
     });
 }
 
+function getConfig(pluginname, projectname) {
+    // not get project nor getAllConfigs because only want part of all the information
+    return database_server.database("projects").where("name", projectname).select("plugins").then((results) => {
+        if(results.length == 0) return undefined;
+        
+        let plugins = JSON.parse(results[0].plugins);
+        return plugins[pluginname];
+    });
+}
+
 function waitForHooks() {
     let requiredHooks = {
         "dns": false
@@ -230,6 +240,7 @@ module.exports.isPluginConfigurable = isPluginConfigurable;
 module.exports.isPluginDetailed = isPluginDetailed;
 module.exports.getPlugin = getPlugin;
 module.exports.getRouter = getRouter;
+module.exports.getConfig = getConfig;
 module.exports.getAllConfigs = getAllConfigs;
 module.exports.waitForHooks = waitForHooks;
 module.exports.getPluginGlobalConfig = getPluginGlobalConfig;
