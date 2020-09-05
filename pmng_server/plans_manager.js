@@ -42,7 +42,8 @@ function userMaxMemory(userInfo) {
         if(user == null) user = {plan: 0};
 
         return getPlanDetails(user.plan).then((plan) => {
-            return plan.docker.memory < 4 ? 512 : plan.docker.memory;
+            let maxMemory = plan.docker.memory;
+            return (maxMemory > 0 && maxMemory < 4) ? 512 : maxMemory;
         });
     })
 }
