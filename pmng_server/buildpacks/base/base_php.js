@@ -12,6 +12,9 @@ class BasePHPBuildpack extends Buildpack {
             throw "Cannot build PHP project. Only files in the public directory are served and no matching directory was found.";
         }
     
+        if(!utils.exists("d", "temp"))
+            await utils.execCommand("mkdir ./temp");
+    
         let baseContents = (await utils.execCommand("ls -1")).out.split("\n");
         if(baseContents.some((name) => {
             return name.endsWith(".php");
