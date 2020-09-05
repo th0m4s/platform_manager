@@ -17,6 +17,8 @@ class Plugin {
     static getConfigForm() { return []; }
     static getConfigDetails() { return { restart: true, saved: async () => {} }; };
 
+    static getUserDetails(projectname, pluginconfig) { return projectname == undefined ? false : {type: "none"}; }
+
     static prepareRouter(router) { return router; }
 
     static async getUsage(projectname) {

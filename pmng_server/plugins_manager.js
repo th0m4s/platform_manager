@@ -82,6 +82,16 @@ function isPluginConfigurable(plugin) {
     return configurablePlugins[plugin];
 }
 
+let detailedPlugins = {};
+function isPluginDetailed(plugin) {
+    if(!detailedPlugins.hasOwnProperty(plugin)) {
+        let details = getPlugin(plugin).getUserDetails();
+        detailedPlugins[plugin] = details != undefined && details != false && details.type != "none";
+    }
+
+    return detailedPlugins[plugin];
+}
+
 /**
  * Gets a router for the plugins API route.
  * 
@@ -217,6 +227,7 @@ module.exports.uninstall = uninstall;
 module.exports.getConfigForm = getConfigForm;
 module.exports.getConfigDetails = getConfigDetails;
 module.exports.isPluginConfigurable = isPluginConfigurable;
+module.exports.isPluginDetailed = isPluginDetailed;
 module.exports.getPlugin = getPlugin;
 module.exports.getRouter = getRouter;
 module.exports.getAllConfigs = getAllConfigs;
