@@ -402,6 +402,22 @@ function startProject(projectname) {
 
         let project = await project_manager.getProject(projectname, true);
 
+        // clear remaining secondary project containers (like plugins)
+        // TODO: make this clear in a separate function (because same clear in stopProject)
+        await docker.container.list({filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
+            let prom = [];
+            containers.forEach((container) => {
+                // like for stopProject, don't delete deployment
+                if(container.data.Labels["pmng.containertype"] != "deployment") {
+                    prom.push(container.stop().catch((err) => {
+                        return Promise.reject("Error during prestart clean. Cannot stop " + container.data.Names[0] + ": " + err);
+                    })); // delete is automatic
+                }
+            });
+
+            return Promise.all(prom);
+        });
+
         // check build
         let buildPath = project_manager.getProjectBuild(projectname);
         await pfs.access(buildPath);
@@ -412,7 +428,9 @@ function startProject(projectname) {
         let rotateConf = path.join(logFolder, "rotate.conf"), rotateStatus = path.join(logFolder, "rotate.status");
 
         await pfs.writeFile(rotateConf, logFile + " {\n\tsize 1\n\trotate 7\n\tcompress\n\tdelaycompress\n\tmissingok\n}");
-        child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf, privileges.droppingOptions(true));
+        try {
+            child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf, privileges.droppingOptions(true));
+        } catch(e) {}
 
         // if starting folder exists, delete it
         let startingFolder = project_manager.getProjectDeployFolder(projectname, true);
@@ -467,6 +485,8 @@ function startProject(projectname) {
                 prom.push(docker.network.get(network.id).status().then((networkDetails) => {
                     let containersDisc = [];
 
+                    // if network exists, normally remaining plugins containers were already stopped (and so disconnected),
+                    // but as it is a total clear, disconnect everything manually
                     for(let containerId of Object.keys(networkDetails.data.Containers)) {
                         containersDisc.push(network.disconnect({
                             Container: containerId
