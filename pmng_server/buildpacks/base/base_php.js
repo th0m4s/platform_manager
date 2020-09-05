@@ -11,7 +11,7 @@ class BasePHPBuildpack extends Buildpack {
         if(!utils.exists("d", "public")) {
             throw "Cannot build PHP project. Only files in the public directory are served and no matching directory was found.";
         }
-    
+
         if(!utils.exists("d", "temp"))
             await utils.execCommand("mkdir ./temp");
     
@@ -45,7 +45,7 @@ class BasePHPBuildpack extends Buildpack {
     }
 
     static availableAddons(projectData) {
-        return ["nodejs", "python", "buildtools"];
+        return ["nodejs", "python", "buildtools", "webapp"];
     }
 }
 
