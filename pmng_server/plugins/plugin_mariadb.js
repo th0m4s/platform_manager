@@ -242,7 +242,7 @@ class MariaDBPlugin extends Plugin {
     static getUserDetails(projectname, pluginconfig) {
         if(projectname == undefined) return true;
         else return {type: "html", html: "Connection details (only works from your project):"
-            + "<ul><li><b>Host:</b> mariadb</li><li><b>Username:</b> dbu_" + projectname + "</li><li><b>Password:</b> <span class='hidden-details'>" + pluginconfig.password + "</span></li><li><b>Database name:</b> db_" + projectname + "</li></ul>"}
+            + "<ul><li><b>Host:</b> mariadb</li><li><b>Database name:</b> db_" + projectname + "</li><li><b>Username:</b> dbu_" + projectname + "</li><li><b>Password:</b> <span class='hidden-details'>" + pluginconfig.password + "</span></li></ul>"}
     }
 
     static async localKnex() {
