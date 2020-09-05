@@ -88,8 +88,7 @@ function addProjectContainer(container) {
 function addPlatformContainer(container) {
     let content = `<li class="list-group-item line-platform" id="line-${container.name}">`
     + `<b>${_getPlatformKindDisplay(container.kind) + (container.kind != "deployment" ? " " + (container.pluginname || (container.panel || "<i>Unknown</i>")) : "") + (container.kind == "plugin" ? ` (for project <i>${container.projectname}</i>)` : (container.kind == "deployment" ? ` of project ${container.projectname}` : ""))} : </b> Running in container <i>${getCDetailsLink(container.name)}</i> (id ${getCDetailsLink(container.id)})`
-    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_c
-    list.showContainerDetails('${container.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
+    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_clist.showContainerDetails('${container.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
 
     $("#platform-list").append(content);
 }
