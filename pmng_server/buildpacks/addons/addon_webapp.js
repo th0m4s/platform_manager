@@ -31,6 +31,10 @@ class WebAppAddon extends BuildAddon {
                     throw "Cannot download Wordpress: " + error;
                 }
 
+                // check if public dir exists, and create it if missing (because extract requires this directory)
+                if(!utils.exists("d", "public"))
+                    await utils.execCommand("mkdir ./public");
+
                 logger("Extracting archive...");
                 let tempDir = path.dirname(downloadPaths.container);
                 let extractExec = await utils.execCommand("tar -xzf " + filename + " -C /var/project/public --strip-components=1 --no-same-owner", undefined, false, "project", tempDir);
