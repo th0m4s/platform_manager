@@ -277,7 +277,14 @@ function start() {
                                             return {host: path.resolve(tempBuildFolder, name), container: "/var/tempBuild/" + name};
                                         }
 
-                                        let dockerUtils = {execCommand, readFile, exists, temporaryFile};
+                                        let writeFile = (filename, contents) => {
+                                            filename = path.resolve(projectCodeFolder, filename);
+                                            if(!filename.startsWith(projectCodeFolder)) throw "Cannot access file outside of project.";
+
+                                            return pfs.writeFile(filename, contents);
+                                        }
+
+                                        let dockerUtils = {execCommand, readFile, exists, temporaryFile, writeFile};
                                         connection.write(" Started.\n");
 
                                         let lastNewLine = true;
