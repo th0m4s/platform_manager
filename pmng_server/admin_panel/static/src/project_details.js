@@ -70,7 +70,8 @@ function getDomainLineHtml(domainid, domain, subs, disabled) {
 function getPluginLineHtml(plugin, details, disabled) {
     return `<li class="list-group-item" id="line-plugin-${plugin}">`
     + `<b>Plugin ${plugin} : </b> <span id="plugin-usage-${plugin}">Loading usage...</span>`
-    + ((details.configurable && !disabled) ? `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-primary" onclick="project_details.editPlugin('${plugin}')"><i class="fas fa-edit"></i> Edit plugin configuration</button></div></span>` : "") + `</li>`;
+    + '<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;">' + (details.detailed ? `<button class="btn btn-sm btn-info" onclick="project_details.pluginDetails('${plugin}')"><i class="fas fa-info-circle"></i> View plugin details</button>` : "")
+    + ((details.configurable && !disabled) ? `<button class="btn btn-sm btn-primary" onclick="project_details.editPlugin('${plugin}')"><i class="fas fa-edit"></i> Edit plugin configuration</button>` : "") + `</div></span></li>`;
 }
 
 function setCollabModeButton(collabid, mode) {  // texts are inverted
@@ -217,4 +218,56 @@ function confirmDelete() {
     }
 }
 
-window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete, editPlugin};
+function pluginDetails(plugin) {
+    utils.showInfiniteLoading("Loading plugin details...");
+
+    $.getJSON("/api/v1/projects/pluginDetails/" + window.project.name + "/" + plugin).fail((xhr, status, error) => {
+        $.notify({message: `Unable to plugins details because of a server error.`}, {type: "danger"});
+        console.warn("Cannot load plugin details:", error);
+    }).done((response) => {
+        if(response.error) {
+            $.notify({message: `Unable to plugins details because of an application error.`}, {type: "danger"});
+            console.warn("Cannot load plugin details:", error);
+        } else {
+            let hasDetails = true;
+            let details = response.details;
+
+            switch(details.type) {
+                case "html":
+                    $("#detailsModal-content").html(details.html);
+                    break;
+                default:
+                    hasDetails = false;
+                    break;
+            }
+
+            if(hasDetails) {
+                $("#detailsModal-title").html("Details of plugin <i>" + plugin + "</i>");
+                $("#detailsModal").modal();
+
+                if($(".hidden-details").length > 0) {
+                    detailsVisible = true;
+                    toggleHiddenDetails();
+                    $("#detailsShowHide-button").show();
+                } else $("#detailsShowHide-button").hide();
+            } else $.notify({message: `This plugin doesn't have any details here.`}, {type: "warning"});
+        }
+    }).always(() => {
+        utils.hideLoading();
+    });
+}
+
+let detailsVisible = true;
+function toggleHiddenDetails() {
+    if(detailsVisible) {
+        $("#detailsShowHide-button").html("Reveal sensitive hidden details");
+        $(".hidden-details").css("user-select", "none").css("filter", "blur(5px)");
+    } else {
+        $("#detailsShowHide-button").html("Hide sensitive details");
+        $(".hidden-details").css("user-select", "inherit").css("filter", "blur(0px)");
+    }
+
+    detailsVisible = !detailsVisible;
+}
+
+window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete, editPlugin, pluginDetails, toggleHiddenDetails};

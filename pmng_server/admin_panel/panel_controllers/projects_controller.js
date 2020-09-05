@@ -96,7 +96,7 @@ router.get("/details/:projectname", function(req, res) {
 
                         let newPlugins = {};
                         for(let [plugin, config] of Object.entries(project.plugins)) {
-                            newPlugins[plugin] = {configurable: plugins_manager.isPluginConfigurable(plugin), config};
+                            newPlugins[plugin] = {configurable: plugins_manager.isPluginConfigurable(plugin), detailed: plugins_manager.isPluginDetailed(plugin)};
                         }
                         res.locals.project.plugins = newPlugins;
 

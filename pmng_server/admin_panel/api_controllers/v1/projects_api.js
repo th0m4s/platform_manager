@@ -399,4 +399,25 @@ router.post("/removedomain/:domainid", function(req, res) {
     });
 });
 
+// TODO: why not this in plugins_api (because it doesn't have a separate file)
+// TODO: what about catch errors here?
+router.get("/pluginDetails/:projectname/:pluginname", (req, res) => {
+    api_auth(req, res, function(user) {
+        let projectname = req.params.projectname;
+        projects_manager.canAccessProject(projectname, user.id, false).then(() => {
+            projects_manager.getProject(projectname).then((project) => {
+                let pluginname = req.params.pluginname;
+                let plugins = project.plugins;
+
+                if(plugins[pluginname] == undefined) {
+                    res.status(404).json({error: true, code: 404, message: "Invalid plugin for this project."});
+                } else {
+                    let details = plugins_manager.getPlugin(pluginname).getUserDetails(projectname, plugins[pluginname]) || {type: "none"};
+                    res.status(200).json({error: false, code: 200, message: "Plugin user details.", details});
+                }
+            });
+        });
+    });
+});
+
 module.exports = router;
