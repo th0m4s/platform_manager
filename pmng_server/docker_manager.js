@@ -261,7 +261,7 @@ async function maininstance() {
 
                                             if(successes > 0) logger.info("Successfully autostarted " + successes + " container(s).");
                                         });
-                                    } else logger.info("No container to autostart (they can already be up and running).");
+                                    } else logger.info("No container to autostart (can already be up and running).");
                                 }
                             });
                         }
@@ -375,6 +375,7 @@ function attachLogs(projectname, container) {
         });
 
         stream.on("close", () => {
+            logStream.close();
             if(stoppingProjects.includes(projectname)) {
                 stoppingProjects.splice(stoppingProjects.indexOf(projectname), 1);
             } else {
@@ -516,7 +517,7 @@ function startProject(projectname) {
                 PortBindings: portBindings,
                 AutoRemove: true,
                 NetworkMode: networkName,
-                Memory: 512*1024*1024
+                Memory: 512*1024*1024 // TODO: make multiples plans for users (actually its always 512MB)
             },
             NetworkingConfig: {
                 EndpointsConfig: {
@@ -616,8 +617,7 @@ function removePort(projectname) {
     }
 }
 
-let portMappings = {}, firstPort = 49152, lastPort = 49999/*, firstPluginPort = 12001*/;
-// 11001 is for project
+let portMappings = {}, firstPort = 49152, lastPort = 49999;
 
 const types = {
     "node": {

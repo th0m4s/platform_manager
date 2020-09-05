@@ -110,6 +110,11 @@ let portMappings = {};
  * Registers intercom ports subscription to associate each host with a port given by docker_manager.js and http challenges
  */
 function registerIntercomThread() {
+    setInterval(() => {
+        process.send({action: "counter", count: connCount});
+        connCount = 0;
+    }, clusterUpdateInterval*1000);
+
     intercom.subscribe(["portBroadcast"], function(message) {
         switch(message.command) {
             case "addPort":
@@ -169,6 +174,7 @@ function registerHttpChallenges(bindGet = false) {
 }
 
 let secConnInterval = -1, connCount = 0;
+const clusterUpdateInterval = 1;
 /**
  * Manages a cluster of servers based on the number of connections per second.
  * @param {number} maxConnPerSec The maximum number of connections per second for a single process. The master will attempt
@@ -179,25 +185,33 @@ let secConnInterval = -1, connCount = 0;
  */
 function registerClusterMaster(maxConnPerSec, minFork, maxFork, clusterName) {
     if(secConnInterval == -1) {
-        let intervalSeconds = 10;
         secConnInterval = setInterval(() => {
-            updateCluster(maxConnPerSec, minFork, maxFork, intervalSeconds);
-        }, 1000*intervalSeconds);
-        updateCluster(maxConnPerSec, minFork, maxFork, 1);
+            updateCluster(maxConnPerSec, minFork, maxFork, clusterUpdateInterval, clusterName);
+        }, 1000*clusterUpdateInterval);
+        updateCluster(maxConnPerSec, minFork, maxFork, 1, clusterName);
 
         cluster.on('exit', (worker, code, signal) => {
             if (worker.exitedAfterDisconnect === true) {
                 currentClosing.splice(currentClosing.indexOf(worker.id), 1);
-                logger.info(`[${clusterName}] Worker #${worker.id} exited successfully to reduce usage.`);
+                logger.info(`[${clusterName}] Worker #${worker.id} exited successfully to reduce usage (${Object.keys(cluster.workers).length} running).`);
             } else {
                 logger.warn(`[${clusterName}] Worker #${worker.id} exited unexpectedly (${code}, ${signal}). Restarting a fork...`);
                 cluster.fork();
             }
         });
+
+        cluster.on("message", (worker, message) => {
+            // per worker online message is handled in updateCluster
+            switch(message.action) {
+                case "counter":
+                    connCount += message.count;
+                    break;
+            }
+        });
     }
 }
 
-let currentClosing = [];
+let currentClosing = [], currentStarting = [];
 /**
  * Called by registerClusterMaster. Method responsible for spawning and killing processes.
  * Should not be called directly!
@@ -205,16 +219,33 @@ let currentClosing = [];
  * @param {*} minFork The minimum number of spawned servers.
  * @param {*} maxFork The maximum number of available running servers.
  * @param {*} seconds The elasped time in seconds since the last call of this function.
+ * @param {string} clusterName The name of the cluster for logging purposes.
  * Used to calculate the number of connections per second for the cluster.
  */
-function updateCluster(maxConnPerSec, minFork, maxFork, seconds) {
+function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
+    // called on the master, so conncount is not synced with webServe and upgradeRequest, so use cluster process comm to send counter messages
     let workersForConn = connCount / maxConnPerSec / seconds;
     connCount = 0;
     workersForConn = Math.max(Math.min(Math.max(workersForConn, minFork), maxFork), 1);
     let actualCount = Object.keys(cluster.workers).length - currentClosing.length;
     if(actualCount < workersForConn) {
-        for(let i = 0; i < workersForConn - actualCount; i++) {
-            cluster.fork();
+        for(let i = 0; i < workersForConn - actualCount - currentStarting.length; i++) {
+            logger.info(`[${clusterName}] Starting new worker... (actually ${Object.keys(cluster.workers).length} running).`);
+            let worker = cluster.fork();
+
+            let rdnId = Math.floor(Math.random()*Number.MAX_SAFE_INTEGER);
+            currentStarting.push(rdnId);
+
+            let workerTimeout = setTimeout(() => {
+                currentStarting.splice(currentStarting.indexOf(rdnId), 1);
+                logger.warn(`[${clusterName}] Worker ${worker.id} could not start correctly, killing process...`);
+                worker.process.kill(1);
+            }, 5000);
+
+            worker.on("online", () => {
+                clearTimeout(workerTimeout);
+                currentStarting.splice(currentStarting.indexOf(rdnId), 1);
+            });
         }
     } else if(actualCount > workersForConn) {
         let workers = Object.entries(cluster.workers), index = 0;
@@ -248,7 +279,7 @@ async function webServe(req, res) {
 }
 
 /**
- * Upgrades a standart HTTP connection to a WebSocket connection.
+ * Upgrades a standard HTTP connection to a WebSocket connection.
  * @param {http.IncomingMessage} req The client incoming message.
  * @param {net.Socket} socket The associated socket for this connection.
  * @param {Buffer} head The current head of the connection.
