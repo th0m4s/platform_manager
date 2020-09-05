@@ -8,6 +8,7 @@ const path = require("path");
 const logger = require("./platform_logger").logger();
 const database_server = require("./database_server");
 const plugins_manager = require("./plugins_manager");
+const plans_manager = require("./plans_manager");
 const child_process = require("child_process");
 const regex_utils = require("./regex_utils");
 const privileges = require("./privileges");
@@ -537,7 +538,7 @@ function startProject(projectname) {
                 PortBindings: portBindings,
                 AutoRemove: true,
                 NetworkMode: networkName,
-                Memory: 512*1024*1024 // TODO: make multiples plans for users (actually its always 512MB)
+                Memory: (await plans_manager.userMaxMemory(project.ownerid))*1024*1024 // if no limit (0), it will be multiplied but stay at 0 which indicates unlimited
             },
             NetworkingConfig: {
                 EndpointsConfig: {
