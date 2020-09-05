@@ -2,7 +2,7 @@ let forbidden_names = [];
 let containerRunning = 0; // 0 no info, 1 running, -1 stopped
 // only for edit
 function init() {
-    const plugins = ["mariadb", "redis", "persistent-storage", "custom-port", "srv-record"];
+    const plugins = ["mariadb", "redis", "persistent-storage", "custom-port", "srv-record", "custom-memory"];
 
     let inputCollabs = $("#input-collaborators");
     inputCollabs.tagsinput({ tagClass: "badge-secondary tagsbadge" });
