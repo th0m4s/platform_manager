@@ -101,6 +101,7 @@ function installDatabase() {
             users.text("email");
             users.text("password");
             users.integer("scope");
+            users.integer("plan").defaultTo(0);
         }).then(() => {
             return true;
         }), knex.schema.createTable("keys", (keys) => {
@@ -199,13 +200,14 @@ function isUsernameValid(username) {
  * @param {string} password Its clear password.
  * @param {string} email Its email.
  * @param {number} scope Its corresponding scope as a number.
+ * @param {number} plan Its associated plan as a number.
  * @returns {Promise} A promise resolved when the user is successfully added into the database.
  */
-function addUser(name, fullname, password, email, scope) {
+function addUser(name, fullname, password, email, scope, plan) {
     if(!isUsernameValid(name)) return Promise.reject("Invalid username.");
 
     return Promise.all([hashPassword(password).then((hash) => {
-        return knex("users").insert({name: name, fullname: fullname, password: hash, email: email, scope: scope});
+        return knex("users").insert({name, fullname, password: hash, email, scope, plan});
     }), getPluginKnex().then((plk) => plk.raw("CREATE USER '" + name + "' IDENTIFIED BY '" + password + "';"))]).then(() => {
         return findUserId(name);
     }).then((id) => {
