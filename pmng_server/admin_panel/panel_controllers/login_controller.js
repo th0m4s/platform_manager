@@ -73,7 +73,7 @@ router.post("/install/user", async function(req, res) {
         res.redirect("/panel/login/install/database");
     } else if(!(await database_server.hasAdminUser())) {
         try {
-            await database_server.addUser(req.body.name, req.body.fullname, req.body.password, req.body.email, 1, 1); // TODO: use constant instead of '1's for scope and plan
+            await database_server.addUser(req.body.name, req.body.fullname, req.body.password, req.body.email, 1, 2); // TODO: use constant instead of '1' and '2' for scope and plan
 
             req.flash("success", "User created. Please login.");
             res.redirect("/panel/login");

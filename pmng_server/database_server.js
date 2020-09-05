@@ -107,7 +107,7 @@ function installDatabase() {
             users.text("email");
             users.text("password");
             users.integer("scope");
-            users.integer("plan").defaultTo(0);
+            users.integer("plan").defaultTo(1);
         }).then(() => {
             return true;
         }), createTableIfNotExists("keys", (keys) => {
