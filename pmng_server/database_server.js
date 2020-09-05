@@ -88,13 +88,19 @@ function findUserByKey(key) {
     });
 }
 
+function createTableIfNotExists(name, schemaCallback) {
+    return knex.schema.hasTable(name).then((result) => {
+        if(!result) return knex.schema.createTable(name, schemaCallback);
+    });
+}
+
 /**
  * Creates all the required database for the platform.
  * @returns {Promise<boolean>} A promise resolved with *true* if the installation was successfull (all required tables created), *false* otherwise.
  */
 function installDatabase() {
     return Promise.all([
-        knex.schema.createTable("users", (users) => {
+        createTableIfNotExists("users", (users) => {
             users.increments("id").primary().index();
             users.text("name").unique();
             users.text("fullname");
@@ -104,7 +110,7 @@ function installDatabase() {
             users.integer("plan").defaultTo(0);
         }).then(() => {
             return true;
-        }), knex.schema.createTable("keys", (keys) => {
+        }), createTableIfNotExists("keys", (keys) => {
             keys.increments("id").primary();
             keys.string("key", 64).unique().index();
             keys.integer("userid");
@@ -112,7 +118,7 @@ function installDatabase() {
             keys.enum("mode", ["session", "api"]);
         }).then(() => {
             return true;
-        }), knex.schema.createTable("projects", (projects) => {
+        }), createTableIfNotExists("projects", (projects) => {
             projects.increments("id").primary();
             projects.text("name").unique().index();
             projects.integer("ownerid");
@@ -123,24 +129,45 @@ function installDatabase() {
             projects.enum("autostart", ["true", "false"]).defaultTo("false");
         }).then(() => {
             return true;
-        }), knex.schema.createTable("collabs", (collabs) => {
+        }), createTableIfNotExists("collabs", (collabs) => {
             collabs.increments("id").primary();
             collabs.text("projectname").index();
             collabs.integer("userid");
             collabs.text("mode");
         }).then(() => {
             return true;
-        }), knex.schema.createTable("domains", (domains) => {
+        }), createTableIfNotExists("domains", (domains) => {
             domains.increments("id");
             domains.text("domain");
             domains.text("projectname").notNullable();
             domains.enum("enablesub", ["true", "false"]).defaultTo("true");
         }).then(() => {
             return true;
+        }), createTableIfNotExists("plans", (plans) => {
+            plans.increments("id");
+            plans.text("name");
+            plans.text("usage").defaultTo("{}");
+            plans.decimal("price", 3, 2).defaultTo(0);
+            plans.enum("restricted", ["true", "false"]).defaultTo("false");
+        }).then(() => {
+            return hasDefaultPlans();
+        }).then((exists) => {
+            if(!exists) return knex("plans").insert([
+                {name: "default", usage: JSON.stringify({projects: {max: 10}, docker: {memory: 512}})},
+                {name: "admin", usage: JSON.stringify({projects: {max: 0}, docker: {memory: 0}}), restricted: "true"}
+            ]);
+        }).then(() => {
+            return true;
         })
     ]).then((results) => {
         return !results.includes(false);
     }).catch((e) => { logger.error(e); return false; }); 
+}
+
+function hasDefaultPlans() {
+    return knex("plans").where("name", "default").orWhere("name", "admin").select("id").then((results) => {
+        return results.length >= 2;
+    });
 }
 
 /**
@@ -151,7 +178,10 @@ function installDatabase() {
  */
 function hasDatabase() {
     return Promise.all([
-      knex.schema.hasTable("users"), knex.schema.hasTable("keys"), knex.schema.hasTable("projects"), knex.schema.hasTable("collabs"), knex.schema.hasTable("domains")
+      knex.schema.hasTable("users"), knex.schema.hasTable("keys"), knex.schema.hasTable("projects"), knex.schema.hasTable("collabs"), knex.schema.hasTable("domains"), knex.schema.hasTable("plans").then((exists) => {
+          if(!exists) return false;
+          else return hasDefaultPlans();
+      })
     ]).then((results) => {
       return !results.includes(false);
     }).catch(() => { return false; });
