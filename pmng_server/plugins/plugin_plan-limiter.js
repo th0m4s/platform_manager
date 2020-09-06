@@ -2,7 +2,7 @@
 const plans_manager = require("../plans_manager");
 const string_utils = require("../string_utils");
 const project_manager = require("../project_manager");
-const plugins_manager = require("../plugins_manager");
+const plugins_manager = require("../plugins_manager"), plugin_ps = plugins_manager.getPlugin("persistent-storage");
 const database_server = require("../database_server");
 const Plugin = require("./lib_plugin");
 
@@ -22,6 +22,7 @@ function checkMemory(memory, projectname) {
 function checkStorage(storageInput, projectname) {
     let storage = string_utils.parseBytesSize(storageInput);
     if(isNaN(storage)) return Promise.reject("Invalid storage input: Malformed number.");
+    if(!plugin_ps.isCorrectSize(storage)) return Promise.reject("Invalid storage size. Must be a multiple of " + plugin_ps.BLOCK_SIZE + " bytes.");
 
     return database_server.database("projects").where("name", projectname).select("ownerid").then((results) => {
         if(results.length == 0) throw "No user for project.";
@@ -36,7 +37,7 @@ async function configSaved(projectname, newconfig, oldconfig) {
     if(newconfig.storage != oldconfig.storage) {
         let project = await project_manager.getProject(projectname);
         if(project.plugins.hasOwnProperty("persistent-storage"))
-            await plugins_manager.getPlugin("persistent-storage").updateFilesize(projectname, oldconfig.storage, newconfig.storage);
+            await plugin_ps.updateFilesize(projectname, oldconfig.storage, newconfig.storage);
     }
 
     // memory change doesn't need special callback, new memory will be used on restart (always true, see getConfigDetails)

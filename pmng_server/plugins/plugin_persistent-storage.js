@@ -37,6 +37,7 @@ function _getUsage(projectname) {
     });
 };
 
+const BLOCK_SIZE = 4096;
 class PersistentStoragePlugin extends Plugin {
     static startGlobalPlugin(plugindirectory) {
         // TODO: check is baseDir could be replaced by plugindirectory
@@ -115,8 +116,14 @@ class PersistentStoragePlugin extends Plugin {
 
     static getUsage = runtime_cache(_getUsage);
 
+    static isCorrectSize(size) {
+        return Math.floor(newsize/BLOCK_SIZE) == newsize/BLOCK_SIZE;
+    }
+
     static async updateFilesize(projectname, oldsize, newsize) {
         if(oldsize == newsize) return;
+        if(!this.isCorrectSize(newsize)) throw "Invalid new size. Must be a multiple of " + BLOCK_SIZE + " bytes.";
+
         let projectStorage = project_manager.getProjectStorage(projectname), baseDir = path.join(projectStorage, "..", "..");
 
         try {
@@ -135,7 +142,7 @@ class PersistentStoragePlugin extends Plugin {
 
         if(oldsize > newsize) {
             await new Promise((resolve) => {
-                child_process.exec("resize2fs ./disks/" + projectname + ".img " + (newsize/4096), {cwd: baseDir}, resolve);
+                child_process.exec("resize2fs ./disks/" + projectname + ".img " + (newsize/BLOCK_SIZE), {cwd: baseDir}, resolve);
             });
         }
 
@@ -154,3 +161,4 @@ class PersistentStoragePlugin extends Plugin {
 }
 
 module.exports = PersistentStoragePlugin;
+module.exports.BLOCK_SIZE = BLOCK_SIZE;
