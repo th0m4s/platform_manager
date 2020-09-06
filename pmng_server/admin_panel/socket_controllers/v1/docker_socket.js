@@ -81,13 +81,17 @@ function setupStats(namespace, socket, containerName) {
                     namespace.to("docker_stats_" + containerName).emit("stats", {mem_max, mem_used, cpu_usage, net: {tx: net_tx, rx: net_rx}});
                 });
 
+                stats.on("close", () => {
+                    namespace.to("docker_stats_" + containerName).emit("stats_error", {stopped: true, message: "Container stopped!"});
+                });
+
                 stats.on("error", (error) => {
                     delete currentStats[containerName];
-                    namespace.to("docker_stats_" + containerName).emit("stats_error", {message: "Stats stream error: " + error});
+                    namespace.to("docker_stats_" + containerName).emit("stats_error", {stopped: false, message: "Stats stream error: " + error});
                 });
             }).catch((error) => {
                 delete currentStats[containerName];
-                namespace.to("docker_stats_" + containerName).emit("stats_error", {message: "Cannot attach to a stats stream: " + error});
+                namespace.to("docker_stats_" + containerName).emit("stats_error", {stopped: false, message: "Cannot attach to a stats stream: " + error});
             });
         }
 

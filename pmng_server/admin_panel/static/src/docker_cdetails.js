@@ -1,3 +1,5 @@
+let socketClosed = false, socket;
+
 function init() {
     utils.showInfiniteLoading("Loading container details..."),
     window.refreshInterval = setInterval(refreshDetails, 10*1000);
@@ -50,7 +52,13 @@ function init() {
     })
 
     socket.on("stats_error", (err) => {
-        $("#info-stats").html("Cannot load container stats: " + (err.message || err));
+        if(err.stopped == true) {
+            $("#info-stats").html("The container was stopped. Please wait, we're trying to reconnect...");
+            socketClosed = true;
+            socket.close();
+        } else {
+            $("#info-stats").html("Cannot load container stats: " + (err.message || err));
+        }
     });
 }
 
@@ -81,9 +89,22 @@ function refreshDetails() {
                 fetchError = true;
             }
 
+            if(response.code == 404) {
+                if(lastContainerFailed) {
+                    setTimeout(() => {
+                        window.location.href = "../list";
+                    }, 3000);
+                    $.notify({message: `Multiple consecutive refresh failures. This container doesn't exist anymore.`}, {type: "danger"});
+                } else lastContainerFailed = true;
+            }
+
             console.warn(response.code, response.message);
         } else {
             lastContainerFailed = false;
+            if(socketClosed) {
+                socketClosed = false;
+                socket.open();
+            }
 
             let details = response.details;
 
@@ -121,7 +142,6 @@ function refreshDetails() {
 
             let labelsList = $("#info-labels").html("");
             for(let [name, value] of Object.entries(details.labels)) {
-                console.log(name, value);
                 labelsList.append(`<li>${name}: ${value}</li>`);
             }
 
