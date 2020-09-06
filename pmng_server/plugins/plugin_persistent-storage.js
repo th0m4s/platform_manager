@@ -87,6 +87,7 @@ class PersistentStoragePlugin extends Plugin {
             let projectOwnerId = (await project_manager.getProject(projectname)).ownerid;
             let storageSize = allconfigs.hasOwnProperty("plan-limiter") ? allconfigs["plan-limiter"].storage : 0;
             if(storageSize == 0) storageSize = await plans_manager.userMaxStorage(projectOwnerId);
+            if(storageSize == 0) storageSize = 10737418240; // if user entered 0 and if plan limit is 0, limit to 10g (user can then use a higher value)
 
             await new Promise((resolve) => {
                 child_process.exec("truncate -s " + storageSize + " ./disks/" + projectname + ".img", {cwd: baseDir}, resolve);
