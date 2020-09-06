@@ -135,7 +135,7 @@ class PersistentStoragePlugin extends Plugin {
 
         if(oldsize > newsize) {
             await new Promise((resolve) => {
-                child_process.exec("resize2fs ./disks/" + projectname + ".img " + newsize, {cwd: baseDir}, resolve);
+                child_process.exec("resize2fs ./disks/" + projectname + ".img " + (newsize/4096), {cwd: baseDir}, resolve);
             });
         }
 
