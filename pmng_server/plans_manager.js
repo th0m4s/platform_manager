@@ -53,7 +53,8 @@ function userMaxStorage(userInfo) {
         if(user == null) user = {plan: 1};
 
         return getPlanDetails(user.plan).then((plan) => {
-            return plan.storages.max;
+            let maxStorage = plan.storages.max;
+            return maxStorage > 0 ? maxStorage : 10737418240; // default to 10g
         });
     })
 }
