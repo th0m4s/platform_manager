@@ -11,11 +11,13 @@ require("dotenv").config();
 
 
 async function saveStorages() {
-    console.log(">>>> Saving storages on " + new Date().toString() + ":");
+    let startTime = new Date();
+    console.log(">>>> Saving storages on " + startTime.toString() + ":");
     try {
         let storagesDir = path.resolve(process.env.PLUGINS_PATH, "storages", "mounts");
         let projects = await pfs.readdir(storagesDir);
         let savesCount = parseInt(process.env.SAVES_COUNT);
+        startTime = startTime.getTime();
 
         for(let project of projects) {
             let projectStorageDir = path.resolve(storagesDir, project);
@@ -47,7 +49,7 @@ async function saveStorages() {
             if(contents.length == 0) {
                 console.log("Project " + project + " is empty. Continue...");
             } else {
-                let savePath = path.resolve(projectSavesDir, project + "_" + (new Date().getTime()) + ".tar.gz");
+                let savePath = path.resolve(projectSavesDir, project + "_" + startTime + ".tar.gz");
                 await tar.c({
                     file: savePath,
                     gzip: true,
