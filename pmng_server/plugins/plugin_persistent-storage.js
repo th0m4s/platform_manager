@@ -7,7 +7,7 @@ const regex_utils = require("../regex_utils");
 const intercom = require("../intercom/intercom_client").connect(); 
 const path = require("path");
 const child_process = require("child_process");
-const runtime_cache_delay = 30000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
+const runtime_cache_delay = 8000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const Plugin = require("./lib_plugin");
 
 function _mountProject(project) {
@@ -128,6 +128,10 @@ class PersistentStoragePlugin extends Plugin {
         // TODO: why not allow to keep the disk mounted if newsize > oldsize
         // disks support on-line resizing (but not shrinking)
         await _umountProject(projectname);
+
+        await new Promise((resolve) => {
+            child_process.exec("e2fsck -fy ./disks/" + projectname + ".img", {cwd: baseDir}, resolve);
+        });
 
         if(oldsize > newsize) {
             await new Promise((resolve) => {
