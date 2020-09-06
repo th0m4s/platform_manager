@@ -139,14 +139,15 @@ function getRouter() {
                                             pluginConfig[configName] = result;
                                         }));
                                     }
-
+                                    
+                                    let needRestart = configDetails.needRestart(projectname, pluginConfig, oldconfig);
                                     Promise.all(prom).then(() => {
-                                        (running && configDetails.needRestart(projectname, pluginConfig, oldconfig) ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.resolve()).then(() => {
+                                        (running && needRestart ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.resolve()).then(() => {
                                             project.plugins[pluginname] = pluginConfig;
 
                                             project_manager.setPluginsConfig(projectname, project.plugins).then(() => {
                                                 configDetails.saved(projectname, pluginConfig, oldconfig).then(() => {
-                                                    (running && configDetails.restart ? intercom.sendPromise("dockermng", {command: "startProject", project: projectname}) : Promise.resolve()).then(() => {
+                                                    (running && needRestart ? intercom.sendPromise("dockermng", {command: "startProject", project: projectname}) : Promise.resolve()).then(() => {
                                                         res.json({error: false, message: "Plugin configuration saved."});
                                                     }).catch((error) => {
                                                         res.json({error: true, message: "The configuration was saved, but the project didn't restart. Please start it manually from your panel (" + error + ")."});
