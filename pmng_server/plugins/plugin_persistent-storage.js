@@ -117,7 +117,7 @@ class PersistentStoragePlugin extends Plugin {
     static getUsage = runtime_cache(_getUsage);
 
     static isCorrectSize(size) {
-        return Math.floor(newsize/BLOCK_SIZE) == newsize/BLOCK_SIZE;
+        return Math.floor(size/BLOCK_SIZE) == size/BLOCK_SIZE;
     }
 
     static async updateFilesize(projectname, oldsize, newsize) {
