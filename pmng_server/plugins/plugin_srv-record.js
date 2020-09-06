@@ -137,7 +137,7 @@ class SRVRecordPlugin extends Plugin {
     static getConfigDetails() {
         return {
             saved: cacheProject,
-            restart: false
+            needRestart: (projectname, oldconfig, newconfig) => false
         };
     }
 

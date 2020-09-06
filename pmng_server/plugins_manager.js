@@ -120,6 +120,7 @@ function getRouter() {
                             project_manager.getProject(projectname, true).then((project) => {
                                 docker_manager.isProjectContainerRunning(projectname).then((running) => {
                                     let pluginConfig = project.plugins[pluginname];
+                                    let oldconfig = Object.assign({}, pluginConfig);
                                     let prom = [];
 
                                     let configDetails = getConfigDetails(pluginname);
@@ -136,11 +137,11 @@ function getRouter() {
                                     }
 
                                     Promise.all(prom).then(() => {
-                                        (running && configDetails.restart ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.resolve()).then(() => {
+                                        (running && configDetails.needRestart(projectname, pluginConfig, oldconfig) ? intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}) : Promise.resolve()).then(() => {
                                             project.plugins[pluginname] = pluginConfig;
 
                                             project_manager.setPluginsConfig(projectname, project.plugins).then(() => {
-                                                configDetails.saved(projectname, pluginConfig).then(() => {
+                                                configDetails.saved(projectname, pluginConfig, oldconfig).then(() => {
                                                     (running && configDetails.restart ? intercom.sendPromise("dockermng", {command: "startProject", project: projectname}) : Promise.resolve()).then(() => {
                                                         res.json({error: false, message: "Plugin configuration saved."});
                                                     }).catch((error) => {
