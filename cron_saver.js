@@ -4,7 +4,7 @@ const pfs = require("fs").promises;
 const path = require("path");
 const tar = require("tar");
 
-const PMNG_DIR="/etc/pmng";
+const PMNG_DIR="/home/thomas/Programmation/node/platform_manager";
 
 process.chdir(PMNG_DIR);
 require("dotenv").config();
@@ -12,7 +12,7 @@ require("dotenv").config();
 
 async function saveStorages() {
     let startTime = new Date();
-    console.log(">>>> Saving storages on " + startTime.toString() + ":");
+    console.log(">>>> Saving contents on " + startTime.toString() + ":");
     try {
         let storagesDir = path.resolve(process.env.PLUGINS_PATH, "storages", "mounts");
         let projects = await pfs.readdir(storagesDir);
@@ -34,13 +34,17 @@ async function saveStorages() {
                 continue;
             }
 
-            let projectSavesDir = path.resolve(process.env.SAVES_PATH, project);
+            let projectDir = path.resolve(process.env.SAVES_PATH, project)
+            let projectSavesDir = path.resolve(projectDir, "storages");
+            let projectSqlDir = path.resolve(projectDir, "databases");
 
             let saves = [];
             try {
                 saves = await pfs.readdir(projectSavesDir);
             } catch(error) {
+                await pfs.mkdir(projectDir);
                 await pfs.mkdir(projectSavesDir);
+                await pfs.mkdir(projectSqlDir);
             }
 
             let contents = await pfs.readdir(projectStorageDir);
