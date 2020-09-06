@@ -20,6 +20,8 @@ function checkMemory(memory, projectname) {
 }
 
 function checkStorage(storageInput, projectname) {
+    if(storageInput.endsWith("B")) storageInput = storageInput.substr(0, storageInput.length-1);
+    // as we need block size of 4096 (default), we cannot use powers of 10, so force powers of 2^10
     let storage = string_utils.parseBytesSize(storageInput);
     if(isNaN(storage)) return Promise.reject("Invalid storage input: Malformed number.");
     if(!plugin_ps.isCorrectSize(storage)) return Promise.reject("Invalid storage size. Must be a multiple of " + plugin_ps.BLOCK_SIZE + " bytes.");
