@@ -209,7 +209,15 @@ router.post("/edit/:projectname", function(req, res) {
                             delete originalproject.plugins[item];
                         });
         
-                        promises.push(database_server.database("projects").where("name", projectname).update({plugins: originalproject.plugins}));
+                        promises.push(database_server.database("projects").where("name", projectname).update({plugins: originalproject.plugins}).then(() => {
+                            let postInstalls = [];
+
+                            differences.plugins.add.forEach((item) => {
+                                postInstalls.push(plugins_manager.postInstall(item, projectname, originalproject.plugins));
+                            });
+
+                            return Promise.all(postInstalls);
+                        }));
                     }
         
                     if(differences.env.add.length > 0 || differences.env.remove.length > 0 || differences.env.modify.length > 0) {

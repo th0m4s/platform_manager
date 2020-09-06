@@ -45,6 +45,10 @@ function install(plugin, projectname, pluginconfig) {
     return getPlugin(plugin).installPlugin(projectname, pluginconfig);
 }
 
+function postInstall(plugin, projectname, allconfigs) {
+    return getPlugin(plugin).postInstall(projectname, allconfigs);
+}
+
 /**
  * Uninstalls a plugin for a specific project.
  * @param {string} plugin The name of the plugin to uninstall.
@@ -234,6 +238,7 @@ async function getPluginGlobalConfig(pluginname) {
 
 module.exports.getDefaultConfig = getDefaultConfig;
 module.exports.install = install;
+module.exports.postInstall = postInstall;
 module.exports.uninstall = uninstall;
 module.exports.getConfigForm = getConfigForm;
 module.exports.getConfigDetails = getConfigDetails;

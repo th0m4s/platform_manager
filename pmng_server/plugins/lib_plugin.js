@@ -9,6 +9,7 @@ class Plugin {
     static async projectContainerCreated(projectname, containerconfig, networkname, plugincontainername, pluginconfig) { }
 
     static async installPlugin(projectname, pluginconfig) { }
+    static async postInstall(projectname, allconfigs) { }
     static async uninstallPlugin(projectname, pluginconfig) { }
 
     static initializeHooks() { }

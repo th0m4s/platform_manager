@@ -89,7 +89,15 @@ function addProject(projectname, ownerid, env, plugins) {
 
         return Promise.all(pluginProm).then(() => {
             return database_server.database("projects").where("name", projectname).update({plugins: configs});
+        }).then(() => {
+            return configs;
         });
+    }).then((configs) => {
+        let postInstalls = [];
+        for(let plugin of Object.keys(configs))
+            postInstalls.push(plugins_manager.postInstall(plugin, projectname, configs));
+
+        return Promise.all(postInstalls);
     }).then(() => {
         return getIdFromName(projectname);
     }).then((id) => {
