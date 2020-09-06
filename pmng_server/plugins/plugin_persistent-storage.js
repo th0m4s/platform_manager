@@ -2,14 +2,13 @@ const project_manager = require("../project_manager");
 const pfs = require("fs").promises;
 const getfoldersize = require("get-folder-size");
 const string_utils = require("../string_utils");
+const plans_manager = require("../plans_manager");
 const regex_utils = require("../regex_utils");
 const intercom = require("../intercom/intercom_client").connect(); 
 const path = require("path");
 const child_process = require("child_process");
 const runtime_cache_delay = 30000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const Plugin = require("./lib_plugin");
-
-const STORAGE_SIZE = 10737418240; // 10GB
 
 function _mountProject(project) {
     return intercom.sendPromise("rootProcessor", {command: "storagePlugin", action: "mount", project: project});
@@ -18,11 +17,17 @@ function _mountProject(project) {
 function _getUsage(projectname) {
     return new Promise((resolve) => {
         // usage doesn't reject, they resolve with type: "measure_error"
-        getfoldersize(project_manager.getProjectStorage(projectname), (err, size) => {
+        let projectstorage = project_manager.getProjectStorage(projectname);
+        getfoldersize(projectstorage, (err, size) => {
             if(err) {
                 resolve({type: "measure_error", error: err});
             } else {
-                resolve({type: "limited", value: size, formatted: string_utils.formatBytes(size) + " used out of " + string_utils.formatBytes(STORAGE_SIZE) + " (" + parseFloat(size / STORAGE_SIZE * 100).toFixed(0) + "%).", maximum: STORAGE_SIZE});
+                pfs.stat(path.resolve(projectstorage, "..", "..", "disks", projectname + ".img")).then((diskStats) => {
+                    let allocatedSize = diskStats.size;
+                    resolve({type: "limited", value: size, formatted: string_utils.formatBytes(size) + " used out of " + string_utils.formatBytes(allocatedSize) + " (" + parseFloat(size / allocatedSize * 100).toFixed(0) + "%).", maximum: allocatedSize});
+                }).catch((error) => {
+                    resolve({type: "measure_error", error});
+                });
             }
         });
     });
@@ -75,8 +80,11 @@ class PersistentStoragePlugin extends Plugin {
     static installPlugin(projectname, pluginconfig) {
         let projectStorage = project_manager.getProjectStorage(projectname), baseDir = path.join(projectStorage, "..", "..");
         return pfs.mkdir(projectStorage).then(async () => {
+            let projectOwnerId = (await project_manager.getProject(projectname)).ownerid;
+            let storageSize = await plans_manager.userMaxStorage(projectOwnerId);
+
             await new Promise((resolve) => {
-                child_process.exec("truncate -s " + STORAGE_SIZE + " ./disks/" + projectname + ".img", {cwd: baseDir}, resolve);
+                child_process.exec("truncate -s " + storageSize + " ./disks/" + projectname + ".img", {cwd: baseDir}, resolve);
             });
 
             await new Promise((resolve) => {

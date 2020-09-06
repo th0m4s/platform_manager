@@ -39,7 +39,7 @@ function canUserCreateProject(userInfo) {
 
 function userMaxMemory(userInfo) {
     return resolveUser(userInfo).then((user) => {
-        if(user == null) user = {plan: 0};
+        if(user == null) user = {plan: 1};
 
         return getPlanDetails(user.plan).then((plan) => {
             let maxMemory = plan.docker.memory;
@@ -48,6 +48,17 @@ function userMaxMemory(userInfo) {
     })
 }
 
+function userMaxStorage(userInfo) {
+    return resolveUser(userInfo).then((user) => {
+        if(user == null) user = {plan: 1};
+
+        return getPlanDetails(user.plan).then((plan) => {
+            return plan.storages.max;
+        });
+    })
+}
+
 module.exports.getPlanDetails = getPlanDetails;
 module.exports.canUserCreateProject = canUserCreateProject;
 module.exports.userMaxMemory = userMaxMemory;
+module.exports.userMaxStorage = userMaxStorage;

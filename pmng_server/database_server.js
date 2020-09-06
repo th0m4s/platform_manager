@@ -153,8 +153,8 @@ function installDatabase() {
             return hasDefaultPlans();
         }).then((exists) => {
             if(!exists) return knex("plans").insert([
-                {name: "default", usage: JSON.stringify({projects: {max: 10}, docker: {memory: 512}})},
-                {name: "admin", usage: JSON.stringify({projects: {max: 0}, docker: {memory: 0}}), restricted: "true"}
+                {name: "default", usage: JSON.stringify({projects: {max: 10}, docker: {memory: 512}, storages: {max: 10737418240}})},
+                {name: "admin", usage: JSON.stringify({projects: {max: 0}, docker: {memory: 0}, storages: {max: 0}}), restricted: "true"}
             ]);
         }).then(() => {
             return true;
