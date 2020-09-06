@@ -33,8 +33,11 @@ function checkStorage(storageInput, projectname) {
 }
 
 async function configSaved(projectname, newconfig, oldconfig) {
-    if(newconfig.storage != oldconfig.storage)
-        await plugins_manager.getPlugin("persistent-storage").updateFilesize(projectname, oldconfig.storage, newconfig.storage);
+    if(newconfig.storage != oldconfig.storage) {
+        let project = await project_manager.getProject(projectname);
+        if(project.plugins.hasOwnProperty("persistent-storage"))
+            await plugins_manager.getPlugin("persistent-storage").updateFilesize(projectname, oldconfig.storage, newconfig.storage);
+    }
 
     // memory change doesn't need special callback, new memory will be used on restart (always true, see getConfigDetails)
 }
