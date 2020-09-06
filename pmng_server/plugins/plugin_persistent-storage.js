@@ -81,11 +81,12 @@ class PersistentStoragePlugin extends Plugin {
         return containerconfig;
     }
 
-    static installPlugin(projectname, pluginconfig) {
+    static postInstall(projectname, allconfigs) {
         let projectStorage = project_manager.getProjectStorage(projectname), baseDir = path.join(projectStorage, "..", "..");
         return pfs.mkdir(projectStorage).then(async () => {
             let projectOwnerId = (await project_manager.getProject(projectname)).ownerid;
-            let storageSize = await plans_manager.userMaxStorage(projectOwnerId);
+            let storageSize = allconfigs.hasOwnProperty("plan-limiter") ? allconfigs["plan-limiter"].storage : 0;
+            if(storageSize == 0) storageSize = await plans_manager.userMaxStorage(projectOwnerId);
 
             await new Promise((resolve) => {
                 child_process.exec("truncate -s " + storageSize + " ./disks/" + projectname + ".img", {cwd: baseDir}, resolve);
