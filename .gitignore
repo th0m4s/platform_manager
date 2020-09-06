@@ -5,3 +5,4 @@ greenlock.d
 /.env
 /GIT TOKEN
 /pmng_server/admin_panel/custom_panels/database/*.inc.*
+/saves
