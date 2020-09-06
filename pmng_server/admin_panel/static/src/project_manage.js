@@ -2,7 +2,7 @@ let forbidden_names = [];
 let containerRunning = 0; // 0 no info, 1 running, -1 stopped
 // only for edit
 function init() {
-    const plugins = ["mariadb", "redis", "persistent-storage", "custom-port", "srv-record", "custom-memory"];
+    const plugins = ["mariadb", "redis", "persistent-storage", "custom-port", "srv-record", "plan-limiter"];
 
     let inputCollabs = $("#input-collaborators");
     inputCollabs.tagsinput({ tagClass: "badge-secondary tagsbadge" });
@@ -293,10 +293,10 @@ function confirm() {
                         specialWithoutRestart++;
                         needDelay = true;
                         specialTexts.push("<i class='fas fa-info-circle'></i> Information: The custom-port plugin will not be initialized and will not be bound to any port until you select one from the Details page of the project.");
-                    } else if(item == "custom-memory") {
+                    } else if(item == "plan-limiter") {
                         specialWithoutRestart++;
                         needDelay = true;
-                        specialTexts.push("<i class='fas fa-info-circle'></i> Information: The custom-memory plugin will not be initialized and your project will continue to use the maximum memory until you setup the plugin from the Details page of the project..");
+                        specialTexts.push("<i class='fas fa-info-circle'></i> Information: The plan-limiter plugin will not be initialized and your project will continue to use the maximum allowed settings until you setup the plugin from the Details page of the project..");
                     }
                 });
                 text += "</ul>";
