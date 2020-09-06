@@ -15,6 +15,7 @@ async function saveStorages() {
     try {
         let storagesDir = path.resolve(process.env.PLUGINS_PATH, "storages", "mounts");
         let projects = await pfs.readdir(storagesDir);
+        let savesCount = parseInt(process.env.SAVES_COUNT);
 
         for(let project of projects) {
             let projectStorageDir = path.resolve(storagesDir, project);
@@ -33,8 +34,9 @@ async function saveStorages() {
 
             let projectSavesDir = path.resolve(process.env.SAVES_PATH, project);
 
+            let saves = [];
             try {
-                await pfs.access(projectSavesDir);
+                saves = await pfs.readdir(projectSavesDir);
             } catch(error) {
                 await pfs.mkdir(projectSavesDir);
             }
@@ -53,6 +55,18 @@ async function saveStorages() {
                 }, contents);
 
                 console.log("Project " + project + " saved!");
+
+                // only keep n saves from process.env.SAVES_COUNT
+                let timestamps = [];
+                for(let save of saves) {
+                    if(save.startsWith(project + "_")) timestamps.push(parseInt(save.split(".")[0].split("_")[1]));
+                }
+
+                timestamps.sort();
+
+                for(let i = 0; i < Math.max(0, timestamps.length - savesCount); i++) {
+                    await pfs.unlink(path.resolve(projectSavesDir, project + "_" + timestamps[i] + ".tar.gz"));
+                }
             }
         }
     } catch(error) {
