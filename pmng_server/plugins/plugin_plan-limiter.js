@@ -2,6 +2,7 @@
 const plans_manager = require("../plans_manager");
 const string_utils = require("../string_utils");
 const project_manager = require("../project_manager");
+const plugins_manager = require("../plugins_manager");
 const database_server = require("../database_server");
 const Plugin = require("./lib_plugin");
 
@@ -29,6 +30,13 @@ function checkStorage(storageInput, projectname) {
             else return storage;
         });
     });
+}
+
+async function configSaved(projectname, newconfig, oldconfig) {
+    if(newconfig.storage != oldconfig.storage)
+        await plugins_manager.getPlugin("persistent-storage").updateFilesize(projectname, oldconfig.storage, newconfig.storage);
+
+    // memory change doesn't need special callback, new memory will be used on restart (always true, see getConfigDetails)
 }
 
 class PlanLimiterPlugin extends Plugin {
@@ -71,6 +79,13 @@ class PlanLimiterPlugin extends Plugin {
         });
     
         return router;
+    }
+
+    static getConfigDetails() {
+        return {
+            saved: configSaved,
+            needRestart: (projectname, oldconfig, newconfig) => true
+        };
     }
 
     static async getUsage(projectname) {

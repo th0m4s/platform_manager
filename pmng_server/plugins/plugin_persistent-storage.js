@@ -14,6 +14,10 @@ function _mountProject(project) {
     return intercom.sendPromise("rootProcessor", {command: "storagePlugin", action: "mount", project: project});
 }
 
+function _umountProject(project) {
+    return intercom.sendPromise("rootProcessor", {command: "storagePlugin", action: "unmount", project});
+}
+
 function _getUsage(projectname) {
     return new Promise((resolve) => {
         // usage doesn't reject, they resolve with type: "measure_error"
@@ -96,7 +100,7 @@ class PersistentStoragePlugin extends Plugin {
     }
 
     static uninstallPlugin(projectname, pluginconfig) {
-        return intercom.sendPromise("rootProcessor", {command: "storagePlugin", action: "unmount", project: projectname}).then((response) => {
+        return _umountProject(projectname).then((response) => {
             if(response.error) return Promise.reject("Cannot unmount project storage directory.");
             else {
                 let mountedFolder = project_manager.getProjectStorage(projectname);
@@ -108,6 +112,39 @@ class PersistentStoragePlugin extends Plugin {
     }
 
     static getUsage = runtime_cache(_getUsage);
+
+    static async updateFilesize(projectname, oldsize, newsize) {
+        if(oldsize == newsize) return;
+        let projectStorage = project_manager.getProjectStorage(projectname), baseDir = path.join(projectStorage, "..", "..");
+
+        try {
+            await pfs.access(path.join(baseDir, "disks", projectname + ".img"));
+        } catch(error) {
+            throw "Cannot access disk file: " + error;
+        }
+
+        // TODO: why not allow to keep the disk mounted if newsize > oldsize
+        // disks support on-line resizing (but not shrinking)
+        await _umountProject(projectname);
+
+        if(oldsize > newsize) {
+            await new Promise((resolve) => {
+                child_process.exec("resize2fs ./disks/" + projectname + ".img " + newsize, {cwd: baseDir}, resolve);
+            });
+        }
+
+        await new Promise((resolve) => {
+            child_process.exec("truncate -s " + newsize + " ./disks/" + projectname + ".img", {cwd: baseDir}, resolve);
+        });
+
+        if(newsize > oldsize) {
+            await new Promise((resolve) => {
+                child_process.exec("resize2fs ./disks/" + projectname + ".img", {cwd: baseDir}, resolve);
+            });
+        }
+
+        await _mountProject(projectname);
+    }
 }
 
 module.exports = PersistentStoragePlugin;
