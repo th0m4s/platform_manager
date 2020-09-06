@@ -18,29 +18,9 @@ function checkMemory(memory, projectname) {
     });
 }
 
-const sizePrefixes = ["B", "K", "M", "G", "T", "P", "E", "Z", "Y"];
 function checkStorage(storageInput, projectname) {
-    storageInput = storageInput.toString().trim();
-    if(storageInput.length == 0) return Promise.reject("Invalid storage input.");
-
-    let storage = 0, lastChar = storageInput.slice(-1);
-    storageInput = storageInput.substr(0, storageInput.length-1);
-    if(sizePrefixes.includes(lastChar)) {
-        if(lastChar != "B") storage = parseFloat(storageInput)*Math.pow(1024, sizePrefixes.indexOf(lastChar));
-        else {
-            let secondEnd = storageInput.slice(-1);
-            storageInput = storageInput.substr(0, storageInput.length-1);
-            if(sizePrefixes.includes(secondEnd)) {
-                if(secondEnd == "B") return Promise.reject("Invalid number unit for storage.");
-                else storage = parseFloat(storageInput)*Math.pow(1000, sizePrefixes.indexOf(secondEnd))
-            } else storage = parseFloat(storageInput + secondEnd);
-        }
-    } else {
-        storage = parseFloat(storageInput + lastChar);
-    }
-
+    let storage = string_utils.parseBytesSize(storageInput);
     if(isNaN(storage)) return Promise.reject("Invalid storage input: Malformed number.");
-    else storage = Math.floor(storage);
 
     return database_server.database("projects").where("name", projectname).select("ownerid").then((results) => {
         if(results.length == 0) throw "No user for project.";
