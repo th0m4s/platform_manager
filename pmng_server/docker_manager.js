@@ -294,6 +294,7 @@ function stopProject(projectname, force = false) {
     return (force ? Promise.resolve(true) : isProjectContainerRunning(projectname)).then((result) => {
         if(!result) return Promise.reject("Cannot stop a stopped project.");
         stoppingProjects.push(projectname);
+        logger.tag("DOCKER", "Stopping project " + projectname + "...", force ? "(forced)" : undefined);
         return docker.container.list({filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
             let prom = [];
             containers.forEach((container) => {
@@ -324,13 +325,18 @@ function stopProject(projectname, force = false) {
                 return Promise.all([Promise.all(prom).then(() => {
                     // when all containers are removed
                     // ... remove project network
-                    docker.network.list({filters: {name: [projectNetworkName]}}).then((networks) => {
+                    return docker.network.list({filters: {name: [projectNetworkName]}}).then((networks) => {
                         return networks[0].remove().catch((err) => {
                             if(!force) return Promise.reject("Cannot remove network for project " + projectname + ": " + err);
                         });
                     });
                 }), dbProm])
+            }).then(() => {
+                logger.tag("DOCKER", "Project " + projectname + " stopped.");
             });
+        }).catch((error) => {
+            logger.tagWarn("DOCKER", "Cannot stop project " + projectname + ":", error);
+            throw error;
         });
     });
 }
@@ -343,6 +349,7 @@ const LOGFILE_NAME = "project.log";
  * @returns {Promise} A resolved promise when the logs are successfully attached.
  */
 function attachLogs(projectname, container) {
+    logger.tag("DOCKER", "Attaching logs to project " + projectname + "...");
     let logFile = path.resolve(project_manager.getProjectLogsFolder(projectname), LOGFILE_NAME);
     let logStream = fs.createWriteStream(logFile, {flags: "a"});
     return pfs.chown(logFile, ...privileges.droppingOptions(false)).then(() => {
@@ -386,6 +393,11 @@ function attachLogs(projectname, container) {
                 });
             }
         });
+    }).then(() => {
+        logger.tag("DOCKER", "Logs of project " + projectname + " attached.");
+    }).catch((error) => {
+        logger.tagWarn("DOCKER", "Could not attach to the logs of project " + projectname + ":", error);
+        throw error;
     });
 }
 
@@ -401,193 +413,202 @@ function startProject(projectname) {
         if(startingProjects.includes(projectname)) return Promise.reject("Cannot start a starting project.");
         startingProjects.push(projectname);
 
-        let project = await project_manager.getProject(projectname, true);
+        logger.tag("DOCKER", "Starting project " + projectname + "...");
 
-        // clear remaining secondary project containers (like plugins)
-        // TODO: make this clear in a separate function (because same clear in stopProject)
-        await docker.container.list({filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
-            let prom = [];
-            containers.forEach((container) => {
-                // like for stopProject, don't delete deployment
-                if(container.data.Labels["pmng.containertype"] != "deployment") {
-                    prom.push(container.stop().catch((err) => {
-                        return Promise.reject("Error during prestart clean. Cannot stop " + container.data.Names[0] + ": " + err);
-                    })); // delete is automatic
+        try {
+            let project = await project_manager.getProject(projectname, true);
+
+            // clear remaining secondary project containers (like plugins)
+            // TODO: make this clear in a separate function (because same clear in stopProject)
+            await docker.container.list({filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
+                let prom = [];
+                containers.forEach((container) => {
+                    // like for stopProject, don't delete deployment
+                    if(container.data.Labels["pmng.containertype"] != "deployment") {
+                        prom.push(container.stop().catch((err) => {
+                            return Promise.reject("Error during prestart clean. Cannot stop " + container.data.Names[0] + ": " + err);
+                        })); // delete is automatic
+                    }
+                });
+
+                return Promise.all(prom);
+            });
+
+            // check build
+            let buildPath = project_manager.getProjectBuild(projectname);
+            await pfs.access(buildPath);
+
+            // rotate log file
+            let logFolder = project_manager.getProjectLogsFolder(projectname);
+            let logFile = path.join(logFolder, LOGFILE_NAME);
+            let rotateConf = path.join(logFolder, "rotate.conf"), rotateStatus = path.join(logFolder, "rotate.status");
+
+            await pfs.writeFile(rotateConf, logFile + " {\n\tsize 1\n\trotate 7\n\tcompress\n\tdelaycompress\n\tmissingok\n}");
+            try {
+                child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf, privileges.droppingOptions(true));
+            } catch(e) {}
+
+            // if starting folder exists, delete it
+            let startingFolder = project_manager.getProjectDeployFolder(projectname, true);
+            try {
+                await pfs.access(startingFolder);
+                await rmfr(startingFolder);
+            } catch(e) {}
+            await pfs.mkdir(startingFolder);
+
+            // extracting build
+            await tar.x({
+                file: buildPath,
+                cwd: startingFolder
+            });
+
+            let fullSettings = JSON.parse(await pfs.readFile(path.resolve(startingFolder, "settings.json")));
+            let projectSettings = fullSettings.project, buildSettings = fullSettings.build || {};
+            let buildVersion = buildSettings.version || (fullSettings.buildVersion || 1), buildMode = buildSettings.mode || "archive";
+            let type = projectSettings.type, typeVersion = projectSettings.version || "latest";
+            let entrypoint = projectSettings.entrypoint;
+            
+            let imageName = buildMode == "archive" ? getImageFromType(type, typeVersion) : buildSettings.image;
+            if(imageName == undefined) throw "Unknown image for project.";
+
+            let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "CUSTOM_PORT"];
+            for(let [key, value] of Object.entries(project.userenv)) {
+                if(!specialEnv.includes(key.toUpperCase())) env.push(key + "=" + value);
+            }
+
+            // add version env
+            env.push("PROJECT_VERSION=" + project.version);
+
+            // request port
+            let hostPort = requestPort(projectname);
+            // port broadcasted by requestPort
+
+            if(hostPort == 0) {
+                return Promise.reject("Unable to find free port for this project.");
+            }
+            
+            env.push("PORT=" + hostPort);
+
+            let portBindings = {}; // bind the two ports
+            portBindings[hostPort + "/tcp"] = [{HostPort: hostPort.toString()}];
+
+            let networkName = getProjectNetworkName(projectname);
+
+            // if network already exists (normally deleted on stop or prune), delete it
+            await docker.network.list({filters: {name: [networkName]}}).then((networks) => {
+                let prom = [];
+                networks.forEach((network) => { // normally only one exists, but as is this is a total clear, also remove possible duplicates
+                    prom.push(docker.network.get(network.id).status().then((networkDetails) => {
+                        let containersDisc = [];
+
+                        // if network exists, normally remaining plugins containers were already stopped (and so disconnected),
+                        // but as it is a total clear, disconnect everything manually
+                        for(let containerId of Object.keys(networkDetails.data.Containers)) {
+                            containersDisc.push(network.disconnect({
+                                Container: containerId
+                            }));
+                        }
+
+                        return Promise.all(containersDisc).then(() => {
+                            network.remove();
+                        });
+                    }));
+                });
+
+                return Promise.all(prom);
+            });
+
+            // create closed network
+            await docker.network.create({
+                Name: networkName,
+                CheckDuplicates: true,
+                Driver: "bridge", // default
+                Labels: {
+                    "pmng.networktype": "project",
+                    "pmng.projectname": projectname
                 }
             });
 
-            return Promise.all(prom);
-        });
-
-        // check build
-        let buildPath = project_manager.getProjectBuild(projectname);
-        await pfs.access(buildPath);
-
-        // rotate log file
-        let logFolder = project_manager.getProjectLogsFolder(projectname);
-        let logFile = path.join(logFolder, LOGFILE_NAME);
-        let rotateConf = path.join(logFolder, "rotate.conf"), rotateStatus = path.join(logFolder, "rotate.status");
-
-        await pfs.writeFile(rotateConf, logFile + " {\n\tsize 1\n\trotate 7\n\tcompress\n\tdelaycompress\n\tmissingok\n}");
-        try {
-            child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf, privileges.droppingOptions(true));
-        } catch(e) {}
-
-        // if starting folder exists, delete it
-        let startingFolder = project_manager.getProjectDeployFolder(projectname, true);
-        try {
-            await pfs.access(startingFolder);
-            await rmfr(startingFolder);
-        } catch(e) {}
-        await pfs.mkdir(startingFolder);
-
-        // extracting build
-        await tar.x({
-            file: buildPath,
-            cwd: startingFolder
-        });
-
-        let fullSettings = JSON.parse(await pfs.readFile(path.resolve(startingFolder, "settings.json")));
-        let projectSettings = fullSettings.project, buildSettings = fullSettings.build || {};
-        let buildVersion = buildSettings.version || (fullSettings.buildVersion || 1), buildMode = buildSettings.mode || "archive";
-        let type = projectSettings.type, typeVersion = projectSettings.version || "latest";
-        let entrypoint = projectSettings.entrypoint;
-        
-        let imageName = buildMode == "archive" ? getImageFromType(type, typeVersion) : buildSettings.image;
-        if(imageName == undefined) throw "Unknown image for project.";
-
-        let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "CUSTOM_PORT"];
-        for(let [key, value] of Object.entries(project.userenv)) {
-            if(!specialEnv.includes(key.toUpperCase())) env.push(key + "=" + value);
-        }
-
-        // add version env
-        env.push("PROJECT_VERSION=" + project.version);
-
-        // request port
-        let hostPort = requestPort(projectname);
-        // port broadcasted by requestPort
-
-        if(hostPort == 0) {
-            return Promise.reject("Unable to find free port for this project.");
-        }
-        
-        env.push("PORT=" + hostPort);
-
-        let portBindings = {}; // bind the two ports
-        portBindings[hostPort + "/tcp"] = [{HostPort: hostPort.toString()}];
-
-        let networkName = getProjectNetworkName(projectname);
-
-        // if network already exists (normally deleted on stop or prune), delete it
-        await docker.network.list({filters: {name: [networkName]}}).then((networks) => {
-            let prom = [];
-            networks.forEach((network) => { // normally only one exists, but as is this is a total clear, also remove possible duplicates
-                prom.push(docker.network.get(network.id).status().then((networkDetails) => {
-                    let containersDisc = [];
-
-                    // if network exists, normally remaining plugins containers were already stopped (and so disconnected),
-                    // but as it is a total clear, disconnect everything manually
-                    for(let containerId of Object.keys(networkDetails.data.Containers)) {
-                        containersDisc.push(network.disconnect({
-                            Container: containerId
-                        }));
-                    }
-
-                    return Promise.all(containersDisc).then(() => {
-                        network.remove();
-                    });
-                }));
-            });
-
-            return Promise.all(prom);
-        });
-
-        // create closed network
-        await docker.network.create({
-            Name: networkName,
-            CheckDuplicates: true,
-            Driver: "bridge", // default
-            Labels: {
-                "pmng.networktype": "project",
-                "pmng.projectname": projectname
-            }
-        });
-
-        let containerConfig = {
-            Image: imageName,
-            Hostname: "project-" + projectname,
-            name: getProjectMainContainer(projectname),
-            Labels: {
-                "pmng.containertype": "project",
-                "pmng.projectname": projectname
-            },
-            Env: env,
-            Healthcheck: {
-                Test: ["CMD-SHELL", "exit $(( $(netstat -a | grep \":" + hostPort + "\" | grep \"LISTEN\" | wc -l) * -1 + 1))"],
-                Interval: 1000000000*30, // in ns (10^-9s)
-                Timeout: 1000000000*10,
-                Retries: 2
-            },
-            StopTimeout: 3,
-            Entrypoint: entrypoint,
-            ExposedPorts: {
-                [hostPort + "/tcp"]: {}
-            },
-            HostConfig: {
-                PortBindings: portBindings,
-                AutoRemove: true,
-                NetworkMode: networkName,
-                Memory: (await plans_manager.userMaxMemory(project.ownerid))*1024*1024 // if no limit (0), it will be multiplied but stay at 0 which indicates unlimited
-            },
-            NetworkingConfig: {
-                EndpointsConfig: {
-                    [networkName]: {
-                        Aliases: ["project-" + projectname, "project"] // same as hostname
+            let containerConfig = {
+                Image: imageName,
+                Hostname: "project-" + projectname,
+                name: getProjectMainContainer(projectname),
+                Labels: {
+                    "pmng.containertype": "project",
+                    "pmng.projectname": projectname
+                },
+                Env: env,
+                Healthcheck: {
+                    Test: ["CMD-SHELL", "exit $(( $(netstat -a | grep \":" + hostPort + "\" | grep \"LISTEN\" | wc -l) * -1 + 1))"],
+                    Interval: 1000000000*30, // in ns (10^-9s)
+                    Timeout: 1000000000*10,
+                    Retries: 2
+                },
+                StopTimeout: 3,
+                Entrypoint: entrypoint,
+                ExposedPorts: {
+                    [hostPort + "/tcp"]: {}
+                },
+                HostConfig: {
+                    PortBindings: portBindings,
+                    AutoRemove: true,
+                    NetworkMode: networkName,
+                    Memory: (await plans_manager.userMaxMemory(project.ownerid))*1024*1024 // if no limit (0), it will be multiplied but stay at 0 which indicates unlimited
+                },
+                NetworkingConfig: {
+                    EndpointsConfig: {
+                        [networkName]: {
+                            Aliases: ["project-" + projectname, "project"] // same as hostname
+                        }
                     }
                 }
+            };
+
+            // each plugin can modify the main container and can create another container based on the given name and correctly set label pmng.containertype to plugin
+            let plugins = project.plugins;
+            for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
+                containerConfig = await plugins_manager.getPlugin(pluginName).startProjectPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig) || containerConfig;
             }
-        };
 
-        // each plugin can modify the main container and can create another container based on the given name and correctly set label pmng.containertype to plugin
-        let plugins = project.plugins;
-        for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
-            containerConfig = await plugins_manager.getPlugin(pluginName).startProjectPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig) || containerConfig;
+            // create container
+            let container = await docker.container.create(containerConfig);
+
+            let projectFilesFolder = path.resolve(startingFolder, buildVersion == 1 ? "deploying" : "project");
+            let projectArchive = path.resolve(startingFolder, "archive.tar");
+            
+            // archive without gzip project
+            let archiveFiles = await pfs.readdir(projectFilesFolder);
+            await tar.c({
+                file: projectArchive,
+                cwd: projectFilesFolder
+            }, archiveFiles);
+
+            // send tar to container
+            await container.fs.put(projectArchive, {
+                path: "/var/project"
+            });
+
+            // container ready, maybe other stuff to do before start
+            for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
+                await plugins_manager.getPlugin(pluginName).projectContainerCreated(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
+            }
+
+            // start the container
+            await container.start();
+
+            // attach logs
+            await attachLogs(projectname, container);
+
+            // updating database
+            try {
+                await database_server.database("projects").where("name", projectname).update({autostart: "true"});
+            } catch(error) {}
+        } catch(error) {
+            logger.tagWarn("DOCKER", "Cannot start project " + projectname + ":", error);
+            throw error;
         }
-
-        // create container
-        let container = await docker.container.create(containerConfig);
-
-        let projectFilesFolder = path.resolve(startingFolder, buildVersion == 1 ? "deploying" : "project");
-        let projectArchive = path.resolve(startingFolder, "archive.tar");
-        
-        // archive without gzip project
-        let archiveFiles = await pfs.readdir(projectFilesFolder);
-        await tar.c({
-            file: projectArchive,
-            cwd: projectFilesFolder
-        }, archiveFiles);
-
-        // send tar to container
-        await container.fs.put(projectArchive, {
-            path: "/var/project"
-        });
-
-        // container ready, maybe other stuff to do before start
-        for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
-            await plugins_manager.getPlugin(pluginName).projectContainerCreated(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
-        }
-
-        // start the container
-        await container.start();
-
-        // attach logs
-        await attachLogs(projectname, container);
-
-        // updating database
-        try {
-            await database_server.database("projects").where("name", projectname).update({autostart: "true"});
-        } catch(error) {}
+    }).then(() => {
+        logger.tag("DOCKER", "Project " + projectname + " started.");
     });
 }
 

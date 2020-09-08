@@ -42,6 +42,8 @@ function start() {
                                 break;
                             }
 
+                            logger.tag("LCLSRV", "Deploying project " + projectname + "...");
+
                             let currentBuildPath = project_manager.getProjectBuild(projectname, false);
                             let saveBuildPath = project_manager.getProjectBuild(projectname, true);
                             let buildImageName = project_manager.getProjectImage(projectname);
@@ -438,8 +440,10 @@ function start() {
                                     }
                                 }
 
-
+                                logger.tag("LCLSRV", "Project " + projectname + " deployed.");
                             } catch(error) {
+                                logger.tagWarn("LCLSRV", "Deployment of project " + projectname + " failed:", error);
+
                                 connection.write(LINE + "An error occured during deployment:\n" + error + "\n");
                                 connection.write(SPACES + "Please solve the issue and recommit any change to deploy this project.\n");
 
