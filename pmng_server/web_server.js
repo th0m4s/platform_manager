@@ -193,9 +193,9 @@ function registerClusterMaster(maxConnPerSec, minFork, maxFork, clusterName) {
         cluster.on('exit', (worker, code, signal) => {
             if (worker.exitedAfterDisconnect === true) {
                 currentClosing.splice(currentClosing.indexOf(worker.id), 1);
-                logger.info(`[${clusterName}] Worker #${worker.id} exited successfully to reduce usage (${Object.keys(cluster.workers).length} running).`);
+                logger.tag(clusterName, `Worker #${worker.id} exited successfully to reduce usage (${Object.keys(cluster.workers).length} running).`);
             } else {
-                logger.warn(`[${clusterName}] Worker #${worker.id} exited unexpectedly (${code}, ${signal}). Restarting a fork...`);
+                logger.tagWarn(clusterName, `Worker #${worker.id} exited unexpectedly (${code}, ${signal}). Restarting a fork...`);
                 cluster.fork();
             }
         });
@@ -230,7 +230,7 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
     let actualCount = Object.keys(cluster.workers).length - currentClosing.length;
     if(actualCount < workersForConn) {
         for(let i = 0; i < workersForConn - actualCount - currentStarting.length; i++) {
-            logger.info(`[${clusterName}] Starting new worker... (actually ${Object.keys(cluster.workers).length} running).`);
+            logger.tag(clusterName, `Starting new worker... (actually ${Object.keys(cluster.workers).length} running).`);
             let worker = cluster.fork();
 
             let rdnId = Math.floor(Math.random()*Number.MAX_SAFE_INTEGER);
@@ -238,7 +238,7 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
 
             let workerTimeout = setTimeout(() => {
                 currentStarting.splice(currentStarting.indexOf(rdnId), 1);
-                logger.warn(`[${clusterName}] Worker ${worker.id} could not start correctly, killing process...`);
+                logger.tagWarn(clusterName, `Worker ${worker.id} could not start correctly, killing process...`);
                 worker.process.kill(1);
             }, 5000);
 

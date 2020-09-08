@@ -72,11 +72,20 @@ let _logger = undefined;
  */
 function logger() {
     // logger stored outside to only open file once per thread
-    if(_logger == undefined)
+    if(_logger == undefined) {
         _logger = nodeLogger.createSimpleLogger({
             logFilePath: LOG_FILE,
             timestampFormat: "YYYY-MM-DDTHH:mm:ss.SSSZ"
         });
+
+        let tagLogger = (tag, name, array) => _logger[name](`[${tag}] ${array.join(" ")}`);
+        _logger.tagInfo = (tag, ...arguments) => tagLogger(tag, "info", arguments);
+        _logger.tag = _logger.tagInfo;
+        _logger.tagLog = _logger.tagInfo;
+
+        _logger.tagWarn = (tag, ...arguments) => tagLogger(tag, "warn", arguments);
+        _logger.tagError = (tag, ...arguments) => tagLogger(tag, "error", arguments);
+    }
 
     return _logger;
 }

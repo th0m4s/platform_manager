@@ -70,7 +70,7 @@ function start() {
 
         serve(req, res);
     }*/serve).listen(80, () => {
-        logger.info(`[HTTP CLUSTER] public server ${process.pid} (worker #${cluster.worker.id}) started.`);
+        logger.tag("HTTP CLUSTER", `public server ${process.pid} (worker #${cluster.worker.id}) started.`);
 
         // intercom.send("webStarted", {type: "http"});
     });
@@ -82,7 +82,7 @@ function start() {
 }
 
 if(cluster.isMaster) {
-    logger.info("[HTTP CLUSTER] Master process started.");
+    logger.tag("HTTP CLUSTER", "Master process started.");
     web.registerClusterMaster(process.env.CLUSTER_MAX_SEC_CONN_HTTP || process.env.CLUSTER_MAX_SEC_CONN,
         process.env.CLUSTER_MIN_CHILDREN_HTTP || process.env.CLUSTER_MIN_CHILDREN,
         process.env.CLUSTER_MAX_CHILDREN_HTTP || process.env.CLUSTER_MAX_CHILDREN, "HTTP CLUSTER");

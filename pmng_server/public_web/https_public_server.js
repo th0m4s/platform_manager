@@ -37,8 +37,8 @@ function start() {
     };
 
     let httpsServer = https.createServer(https_options, (req, res) => {web.webServe(req, res)}).listen(443, () => {
-        if(wantCluster) logger.info(`[HTTPS CLUSTER] public server ${process.pid} (worker #${cluster.worker.id}) started.`);
-        else logger.info("[HTTPS CLUSTER] public only server started.");
+        if(wantCluster) logger.tag("HTTPS CLUSTER", `public server ${process.pid} (worker #${cluster.worker.id}) started.`);
+        else logger.tag("HTTPS CLUSTER", "public only server started.");
 
         // intercom.send("webStarted", {type: "https"});
     });
@@ -57,7 +57,7 @@ function start() {
 }
 
 if(wantCluster && cluster.isMaster) {
-    logger.info("[HTTPS CLUSTER] Master process started.");
+    logger.tag("HTTPS CLUSTER", "Master process started.");
     web.registerClusterMaster(process.env.CLUSTER_MAX_SEC_CONN_HTTPS || process.env.CLUSTER_MAX_SEC_CONN,
         process.env.CLUSTER_MIN_CHILDREN_HTTPS || process.env.CLUSTER_MIN_CHILDREN,
         process.env.CLUSTER_MAX_CHILDREN_HTTPS || process.env.CLUSTER_MAX_CHILDREN, "HTTPS CLUSTER");
