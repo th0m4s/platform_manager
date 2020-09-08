@@ -72,7 +72,12 @@ let _logger = undefined;
  */
 function logger() {
     // logger stored outside to only open file once per thread
-    if(_logger == undefined) _logger = nodeLogger.createSimpleLogger(LOG_FILE)
+    if(_logger == undefined)
+        _logger = nodeLogger.createSimpleLogger({
+            logFilePath: LOG_FILE,
+            timestampFormat: "YYYY-MM-DDTHH:mm:ss.SSSZ"
+        });
+
     return _logger;
 }
 
