@@ -6,7 +6,7 @@ const regex_utils = require("../regex_utils");
 const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
 
-const wantCluster = false;
+const wantCluster = true;
 const cluster = wantCluster ? require("cluster") : undefined;
 
 /**
