@@ -4,8 +4,7 @@ const pfs = require("fs").promises;
 const path = require("path");
 const tar = require("tar");
 
-const PMNG_DIR="/home/thomas/Programmation/node/platform_manager";
-
+const PMNG_DIR="/etc/pmng";
 process.chdir(PMNG_DIR);
 require("dotenv").config();
 
