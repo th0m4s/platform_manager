@@ -57,6 +57,7 @@ class WebAppAddon extends BuildAddon {
                     defaultSettings = defaultSettings.replace("__dbpass", pluginconfig.password);
 
                     await utils.writeFile("public/wp-config.php", defaultSettings);
+                    utils.setNextProtected(true);
                     logger("Wordpress was successfully installed into your project.");
                 } catch(error) {
                     logger("The installer could not set the default values for the database connection:");
