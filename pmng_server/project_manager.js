@@ -15,7 +15,7 @@ const PROJECTS_PATH = process.env.PROJECTS_PATH;
 // TODO: change Project to a class
 /**
  * Represents a project fetched from the database.
- * @typedef{{id: number, name: string, ownerid: number, userenv: Object, type: string | null, version: number, plugins: Object, autostart: false}} Project
+ * @typedef{{id: number, name: string, ownerid: number, userenv: Object, type: string | null, version: number, plugins: Object, autostart: boolean, forcepush: boolean, allow_https: boolean}} Project
 */
 
 /**
@@ -32,6 +32,9 @@ function _getProject(project_name, check = true) {
                 let project = lines[0];
                 project.userenv = JSON.parse(project.userenv);
                 project.plugins = JSON.parse(project.plugins);
+                project.autostart = project.autostart.toLowerCase() == "true";
+                project.forcepush = project.forcepush.toLowerCase() == "true";
+                project.allow_https = project.allow_https.toLowerCase() == "true";
 
                 return project;
             }
