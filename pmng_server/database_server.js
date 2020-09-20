@@ -314,7 +314,7 @@ function _findUserId(username) {
 function projectAllowHttps(project) {
     return knex("projects").where("name", project).select("allow_https").then((results) => {
         if(results.length == 0) return false;
-        else return results[0].allow_https == "true";
+        else return results[0].allow_https.toLowerCase() == "true";
     }).catch(() => false);
 }
 
