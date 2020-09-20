@@ -127,6 +127,8 @@ function installDatabase() {
             projects.integer("version").defaultTo(0);
             projects.text("plugins").defaultTo("{}");
             projects.enum("autostart", ["true", "false"]).defaultTo("false");
+            projects.enum("forcepush", ["true", "false"]).defaultTo("false");
+            projects.enum("allow_https", ["true", "false"]).defaultTo("true");
         }).then(() => {
             return true;
         }), createTableIfNotExists("collabs", (collabs) => {
