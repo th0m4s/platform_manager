@@ -13,6 +13,7 @@ const string_utils = require("./string_utils");
 const privileges = require("./privileges");
 
 const LINE = "\n-----> ", SPACES = "       ";
+let predeploys = {};
 
 /**
  * Starts the local platform server.
@@ -31,19 +32,26 @@ function start() {
                 
                 let parts = command.trim().split(":");
                 if(parts.length >= 2) {
-                    switch(parts[0].toLowerCase()) {
+                    let projectname = parts[1];
+                    let localCommand = projectname != undefined ? parts[0] : "";
+                    switch(localCommand.toLowerCase()) {
                         case "deploy":
-                            let projectname = parts[1];
                             try {
                                 await project_manager.projectExists(projectname);
                             } catch(error) {   // not using LINE because first line doesn't have line margin (\n)
+                                // normally this would not happen, because only called from hooks directory inside project folder
                                 connection.write("-----> Cannot deploy " + projectname + ". This project doesn't exist.\n");
                                 connection.end();
                                 break;
                             }
 
-                            logger.tag("LCLSRV", "Deploying project " + projectname + "...");
+                            if(predeploys[projectname] !== true) {
+                                connection.write("-----> Cannot deploy " + projectname + ". Predeployment tests not available.");
+                                connection.end();
+                                break;
+                            } else delete predeploys[projectname];
 
+                            logger.tag("LCLSRV", "Deploying project " + projectname + "...");
                             let currentBuildPath = project_manager.getProjectBuild(projectname, false);
                             let saveBuildPath = project_manager.getProjectBuild(projectname, true);
                             let buildImageName = project_manager.getProjectImage(projectname);
@@ -52,7 +60,6 @@ function start() {
 
                             try {
                                 connection.write("-----> Starting deployment for project " + projectname + "...\n");
-                                connection.write(SPACES + "If you quit the git process, the deployment will continue in the background.\n");
 
                                 try {
                                     await pfs.access(currentBuildPath);
@@ -82,7 +89,7 @@ function start() {
                                     // no image
                                 }
 
-                                let buildFolder = project_manager.getProjectDeployFolder(projectname, false);
+                                let buildFolder = project_manager.getProjectDeployFolder(projectname, false); // should exits from predeploy
                                 let projectCodeFolder = path.resolve(buildFolder, "project"); // contains repo/project code
                                 let tempBuildFolder = path.resolve(buildFolder, "tempBuild"); // temp dir for addons/buildpack
 
@@ -90,17 +97,6 @@ function start() {
 
                                 let settingsFile = path.resolve(buildFolder, "settings.json");
 
-                                try {
-                                    await pfs.access(buildFolder);
-                                    // should be deleted
-                                    connection.write(LINE + "Deployment files from last version detected. Deleting...\n");
-                                    await rmfr(buildFolder);
-                                    connection.write(SPACES + "Last deployment files deleted.\n");
-                                } catch(error) {
-                                    // normally ok
-                                }
-
-                                await pfs.mkdir(buildFolder); // will create the build.tgz
                                 await Promise.all([pfs.mkdir(projectCodeFolder), pfs.mkdir(tempBuildFolder)])
                                 connection.write(LINE + "Exporting project repository...\n");
                                 let export_process = child_process.spawn("/bin/bash", ["-c", "git archive master | tar -xf - -C " + projectCodeFolder], {cwd: projectRepo});
@@ -124,12 +120,13 @@ function start() {
                                 let lastSaveImage = undefined;
                                 if(lastBuildExists) {
                                     let extractLastSaveFolder = path.join(buildFolder, "lastExtracted");
-                                    await pfs.mkdir(extractLastSaveFolder);
+                                    /*await pfs.mkdir(extractLastSaveFolder);
 
                                     await tar.x({
                                         file: saveBuildPath,
                                         cwd: extractLastSaveFolder
-                                    }, ["settings.json"]);
+                                    }, ["settings.json"]);*/
+                                    // not exporting last build, already done from predeploy tests
 
                                     let lastSettings = JSON.parse(await pfs.readFile(path.join(extractLastSaveFolder, "settings.json")));
                                     if(lastSettings.build != undefined && lastSettings.build.mode == "image") {
@@ -286,7 +283,12 @@ function start() {
                                             return pfs.writeFile(filename, contents);
                                         }
 
-                                        let dockerUtils = {execCommand, readFile, exists, temporaryFile, writeFile};
+                                        let nextProtected = false;
+                                        let setNextProtected = (protection) => {
+                                            nextProtected = protection;
+                                        }
+
+                                        let dockerUtils = {execCommand, readFile, exists, temporaryFile, writeFile, setNextProtected};
                                         connection.write(" Started.\n");
 
                                         let lastNewLine = true;
@@ -351,7 +353,7 @@ function start() {
                                             throw "Buildpack error: " + e;
                                         }
 
-                                        let settings = {project: {type: type, entrypoint: startCmd, version: typeVersion}, build: {version: 2, mode: "archive"}};
+                                        let settings = {project: {type: type, entrypoint: startCmd, version: typeVersion}, build: {version: 3, mode: "archive", nextProtected}};
 
                                         if(hasRunAddons) {
                                             settings.build.mode = "image";
@@ -389,9 +391,7 @@ function start() {
                                 // new deployment is archive, so delete image if exists
                                 if(!hasAddons && lastSaveImage == undefined && buildImage != undefined) await buildImage.remove({force: true});
 
-                                connection.write(LINE + "Removing temporary deployment files...\n");
-                                await rmfr(buildFolder);
-                                connection.write(SPACES + "Temporary files removed.\n");
+                                await clearDeploy(buildFolder, connection, false);
 
                                 connection.write(LINE + "Updating database...");
                                 let newVersion = 0;
@@ -400,7 +400,7 @@ function start() {
                                         if(results == null || results.length != 1) reject("Unable to fetch database information.");
                                         else {
                                             newVersion = results[0].version+1;
-                                            resolve(database_server.database("projects").where("name", projectname).update({version: newVersion, type: type}));
+                                            resolve(database_server.database("projects").where("name", projectname).update({version: newVersion, type: type, forcepush: "false"}));
                                         }
                                     });
                                 });
@@ -461,6 +461,80 @@ function start() {
 
                             connection.end();
                             break;
+                        case "predeploy":
+                            let mode = parts[1].toLowerCase();
+                            projectname = parts[2];
+                            if(projectname != undefined) {
+                                if(mode == "msg") {
+                                    try {
+                                        await project_manager.projectExists(projectname);
+                                    } catch(error) { // normally this would not happen, because only called from hooks directory inside project folder
+                                        connection.write("-----> Cannot push " + projectname + ". This project doesn't exist.\n");
+                                        connection.end();
+                                        break;
+                                    }
+
+                                    let buildFolder = project_manager.getProjectDeployFolder(projectname, false);
+                                    let currentBuildPath = project_manager.getProjectBuild(projectname, false);
+
+                                    if(await clearDeploy(buildFolder, connection, true)) connection.write("\n");
+                                    await pfs.mkdir(buildFolder);
+
+                                    let lastBuildExists = false;
+                                    try {
+                                        await pfs.access(currentBuildPath);
+                                        lastBuildExists = true;
+                                    } catch(moveError) {
+                                        // no archive build
+                                    }
+
+                                    let canPush = true;
+                                    if(lastBuildExists) {
+                                        let lastExtracted = path.join(buildFolder, "lastExtracted");
+                                        await pfs.mkdir(lastExtracted);
+    
+                                        await tar.x({
+                                            file: currentBuildPath,
+                                            cwd: lastExtracted
+                                        }, ["settings.json"]);
+    
+                                        let lastSettings = JSON.parse(await pfs.readFile(path.join(lastExtracted, "settings.json")));
+                                        canPush = !(lastSettings.build != undefined && lastSettings.build.version >= 3 && lastSettings.build.nextProtected);
+
+                                        if(!canPush) {
+                                            let project = await project_manager.getProject(projectname);
+                                            canPush = project.forcepush;
+                                        }
+                                    }
+
+                                    if(canPush) {
+                                        predeploys[projectname] = true;
+                                        connection.write("-----> Accepting changes from local repository...\n");
+                                        connection.write(SPACES + "If you quit the git process, the deployment will continue in the background.\n\n");
+                                        connection.end();
+                                    } else {
+                                        predeploys[projectname] = false;
+                                        connection.write("-----> Cannot accept changes because the project " + projectname + " is protected.\n");
+                                        connection.write(SPACES + "Please open your admin panel and allow pushes for this project.\n");
+                                        connection.end();
+
+                                        await clearDeploy(buildFolder, undefined);
+                                    }
+
+                                    break;
+                                } else if(mode == "exit") {
+                                    let exitWithCode = (code) => {
+                                        connection.write(code.toString());
+                                        connection.end();
+                                    }
+
+                                    let lastStatus = predeploys[projectname] === true;
+                                    exitWithCode(lastStatus ? 0 : 1);
+                                    if(!lastStatus) delete predeploys[projectname];
+
+                                    break;
+                                }
+                            }
                         default:
                             connection.write("Unknown command.\n");
                             connection.end();
@@ -484,6 +558,20 @@ function start() {
     server.listen(8042, "127.0.0.1", () => {
         logger.info("Local server started.");
     });
+}
+
+async function clearDeploy(buildFolder, connection, lastTime = true) {
+    try {
+        await pfs.access(buildFolder);
+        // should be deleted
+        if(connection != undefined) connection.write((lastTime ? "-----> Deployment files from last version detected. Deleting..." : LINE + "Removing temporary deployment files...") + "\n");
+        await rmfr(buildFolder);
+        if(connection != undefined) connection.write(SPACES + (lastTime ? "Last deployment files deleted." : "Temporary files removed.") + "\n");
+        return true;
+    } catch(error) {
+        if(!lastTime) connection.write(SPACES + "Could not delete deployment files. Will be cleared next time.\n");
+        return false;
+    }
 }
 
 
