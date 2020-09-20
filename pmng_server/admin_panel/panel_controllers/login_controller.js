@@ -92,12 +92,12 @@ router.post("/install/user", async function(req, res) {
 router.get("/install/confirm", async function(req, res) {
     logger.info("WEB Installing database...");
     if(await database_server.installDatabase()) {
-        logger.info("WEB Database installed.");
+        logger.info("Database installed.");
         req.flash("success", "Database successfully installed.");
 
         res.redirect("/panel/login/install/user");
     } else {
-        logger.error("WEB Unable to install database.");
+        logger.error("Unable to install database.");
         req.flash("danger", "Unable to install database. See logs for details.");
 
         res.redirect("/panel/login/install/database");
