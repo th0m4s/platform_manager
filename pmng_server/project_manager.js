@@ -70,10 +70,15 @@ function addProject(projectname, ownerid, env, plugins) {
                 let repo = getProjectRepository(projectname);
                 return Promise.all([pfs.mkdir(repo), pfs.mkdir(getProjectLogsFolder(projectname))]).then(() => {
                     return simpleGit(repo).init(true).then(() => {
-                        let postUpdate = path.resolve(repo, "hooks", "post-update");
-                        return pfs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
-                            return pfs.chmod(postUpdate, "700"); // or 0o700
-                        });
+                        let postUpdate = path.resolve(repo, "hooks", "post-update"), preReceive = path.resolve(repo, "hooks", "pre-receive");
+                        return Promise.all([
+                            pfs.writeFile(preReceive, "#!/bin/bash\necho predeploy:msg:" + projectname + " | netcat localhost 8042\nexit $(($(echo predeploy:exit:" + projectname + " | netcat localhost 8042)))").then(() => {
+                                return pfs.chmod(preReceive, "700"); // or 0o700
+                            }),
+                            pfs.writeFile(postUpdate, "#!/bin/bash\ngit update-server-info\necho deploy:" + projectname + " | netcat localhost 8042").then(() => {
+                                return pfs.chmod(postUpdate, "700");
+                            })
+                        ]);
                     });
                 });
             });
