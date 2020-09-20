@@ -39,6 +39,8 @@ function init() {
         pluginsList.parent().show();
         $("#plugins-status").hide();
     } else $("#plugins-status").html("No plugins added to this project.");
+
+    updateForcepushText(window.project.forcepush).parent().removeAttr("disabled");
 }
 
 function getCollabModeText(mode) {
@@ -270,4 +272,36 @@ function toggleHiddenDetails() {
     detailsVisible = !detailsVisible;
 }
 
-window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete, editPlugin, pluginDetails, toggleHiddenDetails};
+function updateForcepushText(newState) {
+    if(newState) {
+        return $("#forcepush-text").html("Cancel git forced push");
+    } else {
+        return $("#forcepush-text").html("Allow git forced push");
+    }
+}
+
+function toggleForcePush() {
+    let newState = !window.project.forcepush;
+    let button = $("#toggle-forcepush-btn");
+    button.attr("disabled", "disabled");
+    // $("#forcepush-text").html("Loading...");
+    // don't show loading text because button's size changes too much
+
+    $.getJSON("/api/v1/projects/updateForcepush/" + window.project.name + "/" + newState).fail((xhr, status, error) => {
+        $.notify({message: `Unable to update forcepush.`}, {type: "danger"});
+        console.warn("Cannot update forcepush:", error);
+        textSpan.html("Server error");
+    }).done((response) => {
+        if(response.error) {
+            $.notify({message: `Unable to update forcepush.`}, {type: "danger"});
+            console.warn("Cannot update forcepush:", error);
+            textSpan.html("Application error");
+        } else {
+            button.removeAttr("disabled");
+            updateForcepushText(newState);
+            window.project.forcepush = newState;
+        }
+    });
+}
+
+window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete, editPlugin, pluginDetails, toggleHiddenDetails, toggleForcePush};

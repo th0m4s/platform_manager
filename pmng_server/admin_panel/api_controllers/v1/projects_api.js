@@ -439,4 +439,23 @@ router.get("/pluginDetails/:projectname/:pluginname", (req, res) => {
     });
 });
 
+router.get("/updateForcepush/:projectname/:newstate", (req, res) => {
+    api_auth(req, res, function(user) {
+        let projectname = req.params.projectname;
+        projects_manager.canAccessProject(projectname, user.id, false).then(() => {
+            let newstate = req.params.newstate;
+            if(["true", "false"].includes(newstate)) {
+                database_server.database("projects").where("name", projectname).update({forcepush: newstate}).then(() => {
+                    projects_manager.invalidateCachedProject(projectname);
+                    res.status(200).json({error: false, code: 200, message: "forcepush set to " + newstate});
+                }).catch((error) => {
+                    res.status(500).json({error: true, code: 500, message: "Database error while updating forcepush: " + error});
+                });
+            } else {
+                res.status(400).json({error: true, code: 400, message: "Invalid forcepush mode."});
+            }
+        });
+    });
+});
+
 module.exports = router;
