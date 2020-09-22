@@ -55,7 +55,7 @@ class CustomPortPlugin extends Plugin {
         });
     }
 
-    static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig) {
+    static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig, flags) {
         let port = pluginconfig.port;
         if(port > 0) {
             containerconfig.Env = containerconfig.Env.concat(["CUSTOM_PORT=" + port]);

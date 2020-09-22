@@ -46,7 +46,7 @@ async function configSaved(projectname, newconfig, oldconfig) {
 }
 
 class PlanLimiterPlugin extends Plugin {
-   static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig) {
+   static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig, flags) {
         let memory = pluginconfig.memory;
         if(memory >= 4)
             containerconfig.HostConfig.Memory = memory*1024*1024;

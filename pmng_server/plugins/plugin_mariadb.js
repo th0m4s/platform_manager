@@ -185,7 +185,7 @@ class MariaDBPlugin extends Plugin {
         });
     }
 
-    static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig) {
+    static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig, flags) {
         // mariadb is resolved as the container of the mariadb server into the mariadb docker bridge network
         containerconfig.Env = containerconfig.Env.concat(["DB_HOST=mariadb", "DB_PORT=3306", "DB_USER=dbu_" + projectname, "DB_PASSWORD=" + pluginconfig.password, "DB_NAME=db_" + projectname]);
         return containerconfig;

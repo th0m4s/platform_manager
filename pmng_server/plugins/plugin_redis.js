@@ -2,7 +2,7 @@ const docker_manager = require("../docker_manager");
 const Plugin = require("./lib_plugin");
 
 class RedisPlugin extends Plugin {
-    static startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig) {
+    static startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig, flags) {
         return docker_manager.docker.container.create({
             Image: "redis:alpine",
             Hostname: "redis",

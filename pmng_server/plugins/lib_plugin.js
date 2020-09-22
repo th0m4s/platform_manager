@@ -1,12 +1,12 @@
 class Plugin {
     static async startGlobalPlugin(plugindirectory, globalconfig, setconfig) { }
 
-    static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig) {
+    static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig, flags) {
         return containerconfig;
     }
 
-    static async stopProjectPlugin(projectname, pluginconfig, networkname) { }
     static async projectContainerCreated(projectname, containerconfig, networkname, plugincontainername, pluginconfig) { }
+    static async stopProjectPlugin(projectname, pluginconfig, networkname) { }
 
     static async installPlugin(projectname, pluginconfig) { }
     static async postInstall(projectname, allconfigs) { }

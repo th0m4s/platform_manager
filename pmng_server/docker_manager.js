@@ -564,10 +564,13 @@ function startProject(projectname) {
                 }
             };
 
+            // plugins can set options will be used by startProject that doesn't fit within containerconfig
+            let setupFlags = {removeEntries: []};
+
             // each plugin can modify the main container and can create another container based on the given name and correctly set label pmng.containertype to plugin
             let plugins = project.plugins;
             for(let [pluginName, pluginConfig] of Object.entries(plugins)) {
-                containerConfig = await plugins_manager.getPlugin(pluginName).startProjectPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig) || containerConfig;
+                containerConfig = await plugins_manager.getPlugin(pluginName).startProjectPlugin(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig, setupFlags) || containerConfig;
             }
 
             // create container
@@ -578,6 +581,10 @@ function startProject(projectname) {
             
             // archive without gzip project
             let archiveFiles = await pfs.readdir(projectFilesFolder);
+            for(let entry of (setupFlags.removeEntries || [])) {
+                let index = archiveFiles.indexOf(entry);
+                if(index >= 0) archiveFiles.splice(index, 1);
+            }
             await tar.c({
                 file: projectArchive,
                 cwd: projectFilesFolder
