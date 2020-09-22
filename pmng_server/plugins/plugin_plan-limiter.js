@@ -90,7 +90,8 @@ class PlanLimiterPlugin extends Plugin {
     static getConfigDetails() {
         return {
             saved: configSaved,
-            needRestart: (projectname, oldconfig, newconfig) => true
+            needRestart: (projectname, oldconfig, newconfig) => true,
+            detailsText: ""
         };
     }
 

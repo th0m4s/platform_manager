@@ -38,6 +38,9 @@ function init() {
                     };
                 }
                 break;
+            case "checkbox":
+                html += generateCheckboxBar(input.text, input.small || "", input.config);
+                break;
         }
     }
 
@@ -96,7 +99,7 @@ function save() {
             allowSave();
 
             let restartText = "<br/>Unable to check if this project is running.<br/>It may require a manual restart to apply the new configuration.";
-            if(containerRunning == 1) restartText = "Your project will be restarted to apply this configuration.";
+            if(containerRunning == 1) restartText = "Your project may be restarted to apply this configuration.";
             else if(containerRunning == -1) restartText = "This configuration will be used on the next start of your project.";
 
             $("#confirmModal-content").html("Do you want to save this configuration?<br/>" + restartText);
@@ -169,7 +172,7 @@ function getValue(type, config, convert) {
         case "number":
             return (convert ? parseInt : (x) => x)($("#input-" + config).val());
         case "checkbox":
-            return (convert ? (x) => (x ? "true" : "false") : (x) => x)($("#input-" + config).is(":checked"));
+            return (!convert ? (x) => (x ? "true" : "false") : (x) => x)($("#input-" + config).is(":checked")); // convert behaviour for boolean is inverted
     }
 }
 
@@ -188,7 +191,11 @@ function setValue(type, config, value) {
 }
 
 function generateInputBar(type, text, small, placeholder, config, hasRemoteCheck) {
-    return `<div class="form-group"><label for="input-collaborators" class="mb-1">${text}:</label><input required` + (hasRemoteCheck ? ` onchange="plugin_config.checkOne('${config}')"` : "") +` type="${type}" class="form-control" id="input-${config}" placeholder="${placeholder}">` + (small.length > 0 ? `<small id="small-${config}" class="form-text text-muted">${small}</small>` : "") + `</div>`;
+    return `<div class="form-group"><label for="input-${config}" class="mb-1">${text}:</label><input required` + (hasRemoteCheck ? ` onchange="plugin_config.checkOne('${config}')"` : "") +` type="${type}" class="form-control" id="input-${config}" placeholder="${placeholder}">` + (small.length > 0 ? `<small id="small-${config}" class="form-text text-muted">${small}</small>` : "") + `</div>`;
 }
 
-window.plugin_config = {init, save, checkOne, confirmSave};
+function generateCheckboxBar(text, small, config) {
+    return `<div class="form-check"><input class="form-check-input" type="checkbox" id="input-${config}"><label class="form-check-label" for="input-${config}">${text}</label>` + (small.length > 0 ? `<small id="small-${config}" class="form-text text-muted">${small}</small>` : "") + `</div>`
+}
+
+window.plugin_config = {init, save, checkOne, confirmSave, getChanges};

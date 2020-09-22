@@ -83,7 +83,8 @@ class CustomPortPlugin extends Plugin {
     static getConfigDetails() {
         return {
             saved: portSaved,
-            needRestart: (projectname, oldconfig, newconfig) => true
+            needRestart: (projectname, oldconfig, newconfig) => true,
+            detailsText: ""
         };
     }
 

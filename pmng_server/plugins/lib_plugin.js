@@ -16,7 +16,7 @@ class Plugin {
 
     static getDefaultConfig() { return {}; }
     static getConfigForm() { return []; }
-    static getConfigDetails() { return { needRestart: (projectname, newconfig, oldconfig) => true, saved: async (projectname, newconfig, oldconfig) => undefined }; };
+    static getConfigDetails() { return { needRestart: (projectname, newconfig, oldconfig) => true, saved: async (projectname, newconfig, oldconfig) => undefined, detailsText: "" }; };
 
     static getUserDetails(projectname, pluginconfig) { return projectname == undefined ? false : {type: "none"}; }
 

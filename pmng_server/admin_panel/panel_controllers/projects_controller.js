@@ -158,6 +158,7 @@ router.get("/pluginConfig/:project/:plugin", (req, res) => {
                     res.locals.pluginname = pluginname;
                     res.locals.config = project.plugins[pluginname];
                     res.locals.inputs = plugins_manager.getConfigForm(pluginname);
+                    res.locals.detailsText = plugins_manager.getPlugin(pluginname).getConfigDetails().detailsText;
 
                     req.setPage(res, "Plugin configuration", "plugin", "edit");
                     res.render("projects/plugin_config");

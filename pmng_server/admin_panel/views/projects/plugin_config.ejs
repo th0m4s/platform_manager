@@ -25,10 +25,13 @@
                 </div>
 
                 <form class="mt-3 w-100" onsubmit="return plugin_config.save();">
-                    <div id="inputs">
+                    <div id="inputs" class="mb-4">
                         Loading configuration...
                     </div>
-                    <button type="submit" disabled id="save-button" class="btn btn-primary btn-lg btn-block mt-5">Save this configuration</button>
+                    <% if(detailsText != undefined && detailsText.length > 0) { %>
+                        <p class="my-0"><%- detailsText %></p>
+                    <% } %>
+                    <button type="submit" disabled id="save-button" class="btn btn-primary btn-lg btn-block mt-3">Save this configuration</button>
                 </form>
             </div>
         </div>
