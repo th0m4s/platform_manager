@@ -595,7 +595,6 @@ function startProject(projectname) {
 
             // start the container
             await container.start();
-
             // attach logs
             await attachLogs(projectname, container);
 
@@ -609,6 +608,61 @@ function startProject(projectname) {
         }
     }).then(() => {
         logger.tag("DOCKER", "Project " + projectname + " started.");
+    });
+}
+
+async function execCommand(containerExec, command, logReceived = undefined, buffer = false, user = "root", wd = "/") {
+    let exec = await containerExec.create({
+        AttachStdin: false,
+        AttachStdout: true,
+        AttachStderr: true,
+        User: user,
+        WorkingDir: wd,
+        Cmd: ["/bin/bash", "-c", command]
+    });
+
+    let stream = await exec.start({
+        Detach: false
+    });
+
+    return new Promise((resolve, reject) => {
+        let out = logReceived == undefined ? "" : undefined;
+        let err = logReceived == undefined ? "" : undefined;
+        stream.on("data", (data) => {
+            if(out == undefined && buffer) {
+                logReceived(data);
+            } else {
+                let string = data.toString(), contents = string.substring(8), dataStream = string.charCodeAt(0);
+                if(out == undefined) {
+                    logReceived(dataStream, contents);
+                } else if(dataStream == 1) out += contents;
+                else err += contents;
+            }
+        });
+
+        stream.on("end", () => {
+            exec.status().then((result) => {
+                resolve({out, err, code: result.data.ExitCode});
+            });
+        });
+
+        stream.on("error", () => {
+            reject({out, err});
+        });
+    });
+}
+
+/**
+ * Checks if a path exists in the container
+ * @param {docker.exec} containerExec The exec controller of a docker container.
+ * @param {"f" | "d"} type Bash mode: *f* for file, *d* for directory.
+ * @param {string} path The container path to check from the root of the project.
+ */
+function pathExists(containerExec, type, path, wd = "/") {
+    if(!(["f", "d"].includes(type))) throw "Invalid check type.";
+    return execCommand(containerExec, "[[ -" + type + " " + path + " ]]", undefined, false, "root", wd).then(({out, err, code}) => {
+        if(err.length > 0) throw err;
+        else return code == 0;
     });
 }
 
@@ -865,6 +919,7 @@ function registerEvents(callback) {
 module.exports.docker = docker;
 module.exports.isProjectContainerRunning = isProjectContainerRunning;
 module.exports.areProjectContainersRunning = areProjectContainersRunning;
+module.exports.utils = {execCommand, pathExists};
 module.exports.getRunningContainers = getRunningContainers;
 module.exports.getContainerDetails = getContainerDetails;
 module.exports.listNetworks = listNetworks;

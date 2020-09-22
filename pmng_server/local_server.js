@@ -209,45 +209,8 @@ function start() {
                                         }
                                     
 
-                                        let execCommand = async (command, logReceived = undefined, buffer = false, user = "project", wd = "/var/project") => {
-                                            let exec = await container.exec.create({
-                                                AttachStdin: false,
-                                                AttachStdout: true,
-                                                AttachStderr: true,
-                                                User: user,
-                                                WorkingDir: wd,
-                                                Cmd: ["/bin/bash", "-c", command]
-                                            });
-                                    
-                                            let stream = await exec.start({
-                                                Detach: false
-                                            });
-                                    
-                                            return new Promise((resolve, reject) => {
-                                                let out = logReceived == undefined ? "" : undefined;
-                                                let err = logReceived == undefined ? "" : undefined;
-                                                stream.on("data", (data) => {
-                                                    if(out == undefined && buffer) {
-                                                        logReceived(data);
-                                                    } else {
-                                                        let string = data.toString(), contents = string.substring(8), dataStream = string.charCodeAt(0);
-                                                        if(out == undefined) {
-                                                            logReceived(dataStream, contents);
-                                                        } else if(dataStream == 1) out += contents;
-                                                        else err += contents;
-                                                    }
-                                                });
-                                    
-                                                stream.on("end", () => {
-                                                    exec.status().then((result) => {
-                                                        resolve({out, err, code: result.data.ExitCode});
-                                                    });
-                                                });
-                                    
-                                                stream.on("error", () => {
-                                                    reject({out, err});
-                                                });
-                                            });
+                                        let execCommand = (command, logReceived = undefined, buffer = false, user = "project", wd = "/var/project") => {
+                                            return docker_manager.utils.execCommand(container.exec, command, logReceived, buffer, user, wd);
                                         };
 
                                         let readFile = (filename) => {
@@ -257,19 +220,8 @@ function start() {
                                             return pfs.readFile(filename);
                                         }
 
-                                        /**
-                                         * Checks if a path exists in the container
-                                         * @param {"f" | "d"} type Bash mode: *f* for file, *d* for directory .
-                                         * @param {string} path The container path to check from the root of the project.
-                                         */
                                         let exists = (type, name) => {
-                                            // TODO: rewrite with local files
-                                            if(!(["f", "d"].includes(type))) throw "Invalid check type.";
-                                            let fullpath = path.resolve("/var/project", name);
-                                            return execCommand("[[ -" + type + " " + fullpath + " ]]").then(({out, err, code}) => {
-                                                if(err.length > 0) throw err;
-                                                else return code == 0;
-                                            });
+                                            return docker_manager.utils.pathExists(container.exec, type, name, "/var/project");
                                         }
 
                                         let temporaryFile = (name) => {
