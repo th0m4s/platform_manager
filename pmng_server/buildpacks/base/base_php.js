@@ -8,9 +8,8 @@ class BasePHPBuildpack extends Buildpack {
     static async build(projectName, projectData, utils, logger, hasAddons) {
         logger("Analyzing project...");
     
-        if(!utils.exists("d", "public")) {
-            throw "Cannot build PHP project. Only files in the public directory are served and no matching directory was found.";
-        }
+        if(!utils.exists("d", "public"))
+            throw "Cannot build PHP project. Only files in the public directory are served and it was not found (to use livestorage, enable the option from the persistent-storage plugin options).";
 
         if(!utils.exists("d", "temp"))
             await utils.execCommand("mkdir ./temp");
