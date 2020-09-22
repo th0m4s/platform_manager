@@ -1,4 +1,5 @@
 const project_manager = require("../project_manager");
+const docker_manager = require("../docker_manager");
 const pfs = require("fs").promises;
 const getfoldersize = require("get-folder-size");
 const string_utils = require("../string_utils");
@@ -37,6 +38,15 @@ function _getUsage(projectname) {
     });
 };
 
+async function checkBoolean(value) {
+    if(typeof value == "boolean") return value;
+    
+    value = value.toLowerCase();
+    if(value == "true") return true;
+    else if(value == "false") return false;
+    else throw "Invalid type: Not a boolean.";
+}
+
 const BLOCK_SIZE = 4096;
 class PersistentStoragePlugin extends Plugin {
     static startGlobalPlugin(plugindirectory) {
@@ -74,11 +84,47 @@ class PersistentStoragePlugin extends Plugin {
         });
     }
 
+    static getConfigForm() {
+        return [
+            {config: "livestorage", text: "Enable live storage mounting (only works for PHP-based buildpacks)", small: "Binds the public directory of the storage (/var/storage/public) to the project public directory (/var/project/public) to edit your website on the fly.", type: "checkbox", localCheck: checkBoolean},
+        ];
+    }
+
+    // no prepareRouter because boolean is already validated
+
+    static getConfigDetails() {
+        return {
+            saved: async (projectname, oldconfig, newconfig) => undefined,
+            needRestart: (projectname, oldconfig, newconfig) => true,
+            detailsText: "To resize the storage, use the <i>plan-limiter</i> plugin and edit the storage option."
+        };
+    }
+
     // not using docker volumes, just binding a directory from host to container
     // mounted folder will be temp converted to volume and remounted into the container
     // because volumes cannot be accessed outside docker (via ftp for example)
-    static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig) {
-        containerconfig.HostConfig.Binds = [project_manager.getProjectStorage(projectname) + ":/var/storage"];
+    static async startProjectPlugin(projectname, containerconfig, networkname, plugincontainername, pluginconfig, flags) {
+        let storageDir = project_manager.getProjectStorage(projectname);
+
+        if(containerconfig.HostConfig.Binds == undefined) containerconfig.HostConfig.Binds = [];
+        containerconfig.HostConfig.Binds.push(storageDir + ":/var/storage");
+
+        if(pluginconfig.livestorage) {
+            let project = await project_manager.getProject(projectname), type = project.type;
+            if(type.endsWith("-php")) {
+                let publicStorageDir = path.resolve(storageDir, "public");
+                try {
+                    let stats = await pfs.stat(publicStorageDir);
+                    if(stats.isDirectory()) {
+                        containerconfig.HostConfig.Binds.push(publicStorageDir + ":/var/project/public");
+                        flags.removeEntries.push("public");
+                    }
+                } catch(error) {
+                    // no public dir, not mounting livestorage
+                }
+            }
+        }
+
         return containerconfig;
     }
 
@@ -157,6 +203,10 @@ class PersistentStoragePlugin extends Plugin {
         }
 
         await _mountProject(projectname);
+    }
+
+    static getDefaultConfig() {
+        return {livestorage: false};
     }
 }
 
