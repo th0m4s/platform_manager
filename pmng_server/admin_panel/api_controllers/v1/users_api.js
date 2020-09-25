@@ -73,8 +73,10 @@ router.post("/edit/:username", (req, res) => {
                         if(!isNaN(scope) && scope > 0 && scope < 100) update.scope = scope;
                     }
 
-                    if(req.body.password != undefined && req.body.password.trim().length >= 8)
+                    if(req.body.password != undefined && req.body.password.trim().length >= 8) {
                         update.password = await database_server.hashPassword(req.body.password.trim());
+                        await database_server.getPluginKnex().then((plk) => plk.raw("ALTER USER '" + name + "' IDENTIFIED BY '" + req.body.password.trim() + "';"));
+                    }
 
                     if(Object.keys(update).length == 0) res.status(400).json({error: true, code: 400, message: "Invalid update: No changes."});
                     else {
@@ -135,7 +137,7 @@ router.post("/me", (req, res) => {
 
             if(changes.password != undefined && changes.password.trim().length > 0) {
                 update.password = await database_server.hashPassword(changes.password.trim());
-                await database_server.database.raw("ALTER USER '" + user.name + "' IDENTIFIED BY '" + changes.password.trim() + "';");
+                await database_server.getPluginKnex().then((plk) => plk.raw("ALTER USER '" + user.name + "' IDENTIFIED BY '" + changes.password.trim() + "';"));
             }
 
             if(Object.keys(update).length == 0) res.status(400).json({error: true, code: 400, message: "Invalid update: No changes."});
