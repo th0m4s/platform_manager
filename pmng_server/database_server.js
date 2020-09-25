@@ -344,6 +344,7 @@ function checkScope(userScopeId, requestedScope) {
     return SCOPES.hasOwnProperty(requestedScope) && userScopeId <= SCOPES[requestedScope];
 }
 
+module.exports.DB_NAME = DB_NAME;
 module.exports.database = knex;
 module.exports.findUserByName = findUserByName;
 module.exports.findUserById = findUserById;
