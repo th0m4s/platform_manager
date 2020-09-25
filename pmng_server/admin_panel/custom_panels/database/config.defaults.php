@@ -8,6 +8,7 @@ $cfg['ShowStats'] = false;
 $cfg['NavigationTreeEnableGrouping'] = false;
 $cfg['ShowCreateDb'] = false;
 $cfg['VersionCheck'] = false;
+$cfg['ShowChgPassword'] = false;
 
 $cfg['TitleTable'] = "@VSERVER@ / @DATABASE@ / @TABLE@ | @PHPMYADMIN@";
 $cfg['TitleDatabase'] = "@VSERVER@ / @DATABASE@ | @PHPMYADMIN@";
