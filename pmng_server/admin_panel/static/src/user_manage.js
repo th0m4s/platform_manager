@@ -175,4 +175,21 @@ function confirmSave() {
     });
 }
 
-window.user_manage = {init, confirm, confirmSave, getUserForm, getChanges};
+function resetSSOPassword() {
+    let button = $("#reset-dbautopass").attr("disabled", "disabled");
+    $.getJSON("/api/v1/users/edit/" + values.name + "/resetdbautopass").fail((xhr, status, error) => {
+        $.notify({message: "Unable to reset the database SSO password. See console for details."}, {type: "danger"});
+        console.warn("Unable to reset dbautopass (server error):", error);
+    }).done((response) => {
+        if(response.error) {
+            $.notify({message: "Unable to reset the database SSO password. See console for details."}, {type: "danger"});
+            console.warn("Unable to reset dbautopass (application error):", error);
+        } else {
+            $.notify({message: "Database SSO password reset."}, {type: "success"});
+        }
+    }).always(() => {
+        button.removeAttr("disabled");
+    });
+}
+
+window.user_manage = {init, confirm, confirmSave, getUserForm, getChanges, resetSSOPassword};

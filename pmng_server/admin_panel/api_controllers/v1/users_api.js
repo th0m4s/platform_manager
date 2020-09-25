@@ -1,6 +1,7 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../../database_server");
 const project_manager = require("../../../project_manager");
+const string_utils = require("../../../string_utils");
 const api_auth = require("./api_auth");
 
 router.get("/exists/:username", (req, res) => {
@@ -93,6 +94,28 @@ router.post("/edit/:username", (req, res) => {
     });
 });
 
+router.get("/edit/:username/resetdbautopass", (req, res) => {
+    api_auth(req, res, function(user) {
+        if(database_server.checkScope(user.scope, "admin")) {
+            let name = req.params.username;
+            database_server.findUserByName(name).then(async (existingUser) => {
+                if(existingUser != null) {
+                    let newDbautopass = string_utils.generatePassword(16, 24);
+                    database_server.database("users").where("name", name).update({dbautopass: newDbautopass}).then(() => {
+                        res.status(200).json({error: false, code: 200, message: "User dbautopass reset."});
+                    }).catch((error) => {
+                        res.status(500).json({error: true, code: 500, message: "Cannot reset user dbautopass: " + error});
+                    });
+                } else res.status(404).json({error: true, code: 404, message: "This user doesn't exist."});
+            }).catch((error) => {
+                res.status(500).json({error: true, code: 500, message: "Cannot check existing database: " + error});
+            });
+        } else {
+            res.status(403).json({error: true, code: 403, message: "Not enough permissions to reset this user's dbautopass."});
+        }
+    });
+});
+
 // edition of current account
 router.post("/me", (req, res) => {
     api_auth(req, res, function(user) {
@@ -122,6 +145,17 @@ router.post("/me", (req, res) => {
             }
         }).catch((error) => {
             res.status(403).json({error: true, code: 403, message: "Cannot update user: " + error});
+        });
+    });
+});
+
+router.get("/me/resetdbautopass", (req, res) => {
+    api_auth(req, res, function(user) {
+        let newDbautopass = string_utils.generatePassword(16, 24);
+        database_server.database("users").where("name", user.name).update({dbautopass: newDbautopass}).then(() => {
+            res.status(200).json({error: false, code: 200, message: "dbautopass reset."});
+        }).catch((error) => {
+            res.status(500).json({error: true, code: 500, message: "Cannot reset dbautopass: " + error});
         });
     });
 });
