@@ -44,6 +44,23 @@ function checkDatabaseUser(dbKnex, userId, dbUsername, dbPassword) {
 
 const passport = require('passport'), PassportLocalStrategy = require('passport-local').Strategy;
 
+let errorCategories = {"default": {"unknown": {title: "Unknown error", message: "An unknown occured and was redirecting to this page.", link: undefined}}};
+/**
+ * Registers an error page for the panel.
+ * @param {string} category Category of the error.
+ * @param {string} error Error identifier of the error.
+ * @param {string} title Title of the error panel.
+ * @param {string} message Body of the error.
+ * @param {*} link *false* to hide the link, *undefined* to redirect to the dashboard or a *string*.
+ */
+function addErrorPage(category, error, title, message, link) {
+    if(errorCategories[category] == undefined) errorCategories[category] = {};
+    
+    if(errorCategories[category] != undefined) {
+        errorCategories[category][error] = {title, message, link};
+    }
+}
+
 let routerReady = false;
 function getRouter(headerLinks) {
     if(!routerReady) {
@@ -166,6 +183,18 @@ function getRouter(headerLinks) {
             res.redirect("/panel/login");
         });
 
+        router.all("/error/:category/:error", (req, res) => {
+            let category = req.params.category, error = req.params.error;
+            if(errorCategories[category] == undefined) category = "default";
+            if(errorCategories[category][error] == undefined) error = "unknown";
+
+            let errorPage = errorCategories[category][error];
+
+            req.setPage(res, "Error", "error");
+            res.locals.error = errorPage;
+            res.render("default/error");
+        });
+
         router.use("/login", require("./panel_controllers/login_controller"));
         router.use("/dashboard", require("./panel_controllers/dashboard_controller"));
         router.use("/projects", require("./panel_controllers/projects_controller"));
@@ -180,3 +209,4 @@ function getRouter(headerLinks) {
 }
 
 module.exports.getRouter = getRouter;
+module.exports.addErrorPage = addErrorPage;

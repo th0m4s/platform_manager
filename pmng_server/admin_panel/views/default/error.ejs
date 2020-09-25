@@ -1,0 +1,25 @@
+<html>
+	<head>
+		<%- include("../default/head.ejs") %>
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+                <div class="col-12 col-md-6 mx-auto">
+                    <div class="card mt-4 w-100 text-center">
+                        <div class="card-body">
+                            <h2><%- error.title %></h2>
+							<p><%- error.message %></p>
+							
+							<% if(error.link === undefined) { %>
+								<a href="/">Return to home</a>
+							<% } else if(error.link !== false) { %>
+								<a href="<%= error.link %>">Continue</a>
+							<% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+		</div>
+	</body>
+</html>

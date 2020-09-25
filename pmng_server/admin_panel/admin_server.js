@@ -7,6 +7,7 @@ const privileges = require("../privileges");
 const socket_auth = require("./socket_controllers/socket_auth");
 const socketio_auth = require("socketio-auth");
 const fs = require("fs");
+const panelRouter = require("./panel_router");
 
 let utilsPanels = {};
 function handleCustomPanel(route, panel) {
@@ -28,7 +29,7 @@ for(let name of fs.readdirSync(path.resolve(__dirname, "custom_panels"))) {
                 let route = panel.route();
 
                 if(route != undefined) {
-                    panel.startPanel();
+                    panel.startPanel(panelRouter);
                     headerLinks = headerLinks.concat(panel.getHeaderLinks() || []);
                     if(panel.requiresUtils()) utilsPanels[route] = panel;
                     else admin.use("/" + route, handleCustomPanel(route, panel));
@@ -69,7 +70,7 @@ admin.get("/favicon.ico", function(req, res) {
 });
 
 admin.use("/api", require("./api_router"));
-admin.use("/panel", require("./panel_router").getRouter(headerLinks));
+admin.use("/panel", panelRouter.getRouter(headerLinks));
 
 admin.all("/", function(req, res) {
     res.redirect("/panel");

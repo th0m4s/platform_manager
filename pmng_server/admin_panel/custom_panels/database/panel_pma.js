@@ -34,7 +34,10 @@ class DatabasePanel extends CustomPanel {
         return [["Databases", "/databases/" + (process.env.DB_MODE == "socket" ? "index.php?server=2" : "")]];
     }
 
-    static async startPanel() {
+    static async startPanel(mainPanelInstance) {
+        mainPanelInstance.addErrorPage("dbsso", "pdo", "SSO database error", "Unable to connect to the SSO database.<br/>Please manually use your credentials to login.", "/databases/");
+        mainPanelInstance.addErrorPage("dbsso", "uid", "SSO database error", "Invalid user id from token.<br/>Please manually use your credentials to login.", "/databases/");
+
         await docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=phpmyadmin"]}}).then(async (containers) => {
             if(containers.length == 0 || forceRestart || containers[0].data.Labels["pmng.panelversion"] != panel_version) {
                 if(containers.length > 0) await containers[0].stop();
