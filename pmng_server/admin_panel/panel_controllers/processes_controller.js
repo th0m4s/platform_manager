@@ -40,6 +40,11 @@ router.get("/", (req, res) => {
             usage: "The panel you're currently on to manage the platform.",
             special: 2
         },
+        "pma_panel": {
+            name: "phpMyAdmin panel",
+            usage: "The phpMyAdmin panel (running in a Docker container) to manage projects and administration databases.",
+            special: 0
+        },
         "git_web_server": {
             name: "Git server",
             usage: "Binds git to an HTTP server for remote usage.",

@@ -1,6 +1,7 @@
 const docker_manager = require("../../../docker_manager");
 const plugins_manager = require("../../../plugins_manager");
 const string_utils = require("../../../string_utils");
+const subprocess_util = require("../../../subprocess_util");
 const database_server = require("../../../database_server");
 const path = require("path");
 const pfs = require("fs").promises;
@@ -29,6 +30,79 @@ async function replaceContents(contents) {
     return contents;
 }
 
+function checkAndStart(shouldRestart) {
+    return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=phpmyadmin"]}}).then(async (containers) => {
+        if(containers.length == 0 || shouldRestart || containers[0].data.Labels["pmng.panelversion"] != panel_version) {
+            if(containers.length > 0) await containers[0].stop();
+
+            let configFile = path.resolve(__dirname, "config.inc.php");
+            let defaultsConfigFile = path.resolve(__dirname, "config.defaults.php");
+
+            let configCtn = await replaceContents((await pfs.readFile(defaultsConfigFile)).toString());
+            await pfs.writeFile(configFile, configCtn);
+
+
+            let createFile = path.resolve(__dirname, "create_tables.inc.sh");
+            let defaultsCreateFile = path.resolve(__dirname, "create_tables.defaults.sh");
+
+            let createCtn = await replaceContents((await pfs.readFile(defaultsCreateFile)).toString());
+            await pfs.writeFile(createFile, createCtn);
+            await pfs.chmod(createFile, "755");
+
+            let Binds = [
+                configFile + ":/etc/phpmyadmin/config.inc.php",
+                createFile + ":/var/start/create_tables.inc.sh"
+            ];
+
+            if(process.env.DB_MODE == "socket") {
+                let ssoLoginFile = path.resolve(__dirname, "login.sso.inc.php");
+                let defaultsSsoLoginFile = path.resolve(__dirname, "login.sso.defaults.php");
+    
+                // let ssoPassword = string_utils.generatePassword(16, 24), ssoUsername = "ssologin";
+                let ssoLogin = await replaceContents((await pfs.readFile(defaultsSsoLoginFile)).toString());
+                await pfs.writeFile(ssoLoginFile, ssoLogin);
+
+                /*let ssoUserResults = await database_server.database.raw("SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '" + ssoUsername + "') AS 'exists';");
+                let ssoUserExists = ssoUserResults[0][0].exists != 0;
+                if(!ssoUserExists)
+                    await database_server.database.raw("CREATE USER '" + ssoUsername + "' IDENTIFIED BY '" + ssoPassword + "';");
+                else database_server.database.raw("ALTER USER '" + ssoUsername + "'@'%' IDENTIFIED BY '" + ssoPassword + "';");*/
+
+                Binds.push(ssoLoginFile + ":/var/project/public/login.sso.php");
+                Binds.push(process.env.DB_SOCKET + ":/var/start/mysqld.sock");
+            }
+
+            // now create pma container
+            await docker_manager.docker.container.create({
+                Image: "pmng/panel-pma",
+                Hostname: "phpmyadmin",
+                name: "pmng_panel_pma",
+                Labels: {
+                    "pmng.containertype": "panel",
+                    "pmng.panel": "phpmyadmin",
+                    "pmng.panelversion": panel_version
+                },
+                Env: [
+                    "PORT=33307"
+                ],
+                StopTimeout: 1,
+                HostConfig: {
+                    AutoRemove: true,
+                    NetworkMode: mariadb_network,
+                    PortBindings: {
+                        "33307/tcp": [{HostPort: "33307"}]
+                    },
+                    Binds
+                }
+            }).then((container) => {
+                return container.start();
+            }).then(() => {
+                logger.info("phpMyAdmin custom admin panel started.");
+            });
+        }
+    });
+}
+
 const panel_version = "8"; // used to restart the panel container if changes are made
 const forceRestart = false; // for debug purposes, should not be true on git
 class DatabasePanel extends CustomPanel {
@@ -40,76 +114,15 @@ class DatabasePanel extends CustomPanel {
         mainPanelInstance.addErrorPage("dbsso", "pdo", "SSO database error", "Unable to connect to the SSO database.<br/>Please manually use your credentials to login.", "/databases/");
         mainPanelInstance.addErrorPage("dbsso", "uid", "SSO database error", "Invalid user id from token.<br/>Please manually use your credentials to login.", "/databases/");
 
-        await docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=phpmyadmin"]}}).then(async (containers) => {
-            if(containers.length == 0 || forceRestart || containers[0].data.Labels["pmng.panelversion"] != panel_version) {
-                if(containers.length > 0) await containers[0].stop();
-
-                let configFile = path.resolve(__dirname, "config.inc.php");
-                let defaultsConfigFile = path.resolve(__dirname, "config.defaults.php");
-    
-                let configCtn = await replaceContents((await pfs.readFile(defaultsConfigFile)).toString());
-                await pfs.writeFile(configFile, configCtn);
-
-
-                let createFile = path.resolve(__dirname, "create_tables.inc.sh");
-                let defaultsCreateFile = path.resolve(__dirname, "create_tables.defaults.sh");
-
-                let createCtn = await replaceContents((await pfs.readFile(defaultsCreateFile)).toString());
-                await pfs.writeFile(createFile, createCtn);
-                await pfs.chmod(createFile, "755");
-
-                let Binds = [
-                    configFile + ":/etc/phpmyadmin/config.inc.php",
-                    createFile + ":/var/start/create_tables.inc.sh"
-                ];
-
-                if(process.env.DB_MODE == "socket") {
-                    let ssoLoginFile = path.resolve(__dirname, "login.sso.inc.php");
-                    let defaultsSsoLoginFile = path.resolve(__dirname, "login.sso.defaults.php");
-        
-                    // let ssoPassword = string_utils.generatePassword(16, 24), ssoUsername = "ssologin";
-                    let ssoLogin = await replaceContents((await pfs.readFile(defaultsSsoLoginFile)).toString());
-                    await pfs.writeFile(ssoLoginFile, ssoLogin);
-
-                    /*let ssoUserResults = await database_server.database.raw("SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '" + ssoUsername + "') AS 'exists';");
-                    let ssoUserExists = ssoUserResults[0][0].exists != 0;
-                    if(!ssoUserExists)
-                        await database_server.database.raw("CREATE USER '" + ssoUsername + "' IDENTIFIED BY '" + ssoPassword + "';");
-                    else database_server.database.raw("ALTER USER '" + ssoUsername + "'@'%' IDENTIFIED BY '" + ssoPassword + "';");*/
-
-                    Binds.push(ssoLoginFile + ":/var/project/public/login.sso.php");
-                    Binds.push(process.env.DB_SOCKET + ":/var/start/mysqld.sock");
-                }
-
-                // now create pma container
-                await docker_manager.docker.container.create({
-                    Image: "pmng/panel-pma",
-                    Hostname: "phpmyadmin",
-                    name: "pmng_panel_pma",
-                    Labels: {
-                        "pmng.containertype": "panel",
-                        "pmng.panel": "phpmyadmin",
-                        "pmng.panelversion": panel_version
-                    },
-                    Env: [
-                        "PORT=33307"
-                    ],
-                    StopTimeout: 1,
-                    HostConfig: {
-                        AutoRemove: true,
-                        NetworkMode: mariadb_network,
-                        PortBindings: {
-                            "33307/tcp": [{HostPort: "33307"}]
-                        },
-                        Binds
-                    }
-                }).then((container) => {
-                    return container.start();
-                }).then(() => {
-                    logger.info("phpMyAdmin custom admin panel started.");
-                });
-            }
+        subprocess_util.fakeFork("pma_panel", () => {
+            return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=phpmyadmin"]}}).then((containers) => {
+                return containers.length > 0;
+            });
+        }, async () => {
+            await checkAndStart(true);
         });
+
+        await checkAndStart(forceRestart);
     }
 
     static route() {

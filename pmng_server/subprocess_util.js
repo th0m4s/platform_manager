@@ -13,6 +13,27 @@ const intercom = require("./intercom/intercom_client").connect();
  */
 
 /**
+ * Creates intercom handler for a process that doesn't belong to a file with custom restart and isRunning methods.
+ * @param {string} id Internal process name.
+ * @param {function} isRunning Should returns *true* if the fake fork is running, *false* otherwise.
+ * @param {function} restart Should restart the fake fork.
+ */
+function fakeFork(id, isRunning, restart) {
+    intercom.subscribe(["subprocess:" + id], async (message, respond) => {
+        let command = message.command;
+        switch(command) {
+            case "restart":
+                await restart();
+                respond({error: false, message: "Restart signal sent. Wait and check for isRunning if necessary."});
+                break;
+            case "isRunning":
+                respond({error: false, running: await isRunning()});
+                break;
+        }
+    });
+}
+
+/**
  * Forks a process from a JS file, restart it automatically when necessary and uses callbacks events.
  * @param {string} file The JS file to fork.
  * @param {string} id The process internal name
@@ -105,4 +126,5 @@ function responder() {
 
 module.exports.fork = fork;
 module.exports.forkNamed = forkNamed;
+module.exports.fakeFork = fakeFork;
 module.exports.responder = responder;
