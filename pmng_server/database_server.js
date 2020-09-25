@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const logger = require("./platform_logger").logger();
 const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const plugin_mdb = require("./plugins/plugin_mariadb");
+const string_utils = require("./string_utils");
 const intercom = require("./intercom/intercom_client").connect();
 
 const DB_NAME = "platform_manager";
@@ -106,6 +107,7 @@ function installDatabase() {
             users.text("fullname");
             users.text("email");
             users.text("password");
+            users.text("dbautopass");
             users.integer("scope");
             users.integer("plan").defaultTo(1);
         }).then(() => {
@@ -220,9 +222,9 @@ async function getPluginKnex(db) {
 }
 
 function isUsernameValid(username) {
-    // maybe deny underscore in username (it will disable all names starting with dbu_)
+    // maybe deny underscore in username (it will disable all names starting with dbu_/dbau_)
     // same regex as in the users/manage view
-    return username.match(/^(?!dbu_.*$)[a-z][a-z0-9_-]{3,15}$/) != null;
+    return username.match(/^(?!db(a|)u_.*$)[a-z][a-z0-9_-]{3,15}$/) != null;
 }
 
 /**
@@ -237,10 +239,14 @@ function isUsernameValid(username) {
  */
 function addUser(name, fullname, password, email, scope, plan) {
     if(!isUsernameValid(name)) return Promise.reject("Invalid username.");
+    let autoDatabasePassword = string_utils.generatePassword(16, 24);
 
     return Promise.all([hashPassword(password).then((hash) => {
         return knex("users").insert({name, fullname, password: hash, email, scope, plan});
-    }), getPluginKnex().then((plk) => plk.raw("CREATE USER '" + name + "' IDENTIFIED BY '" + password + "';"))]).then(() => {
+    }), getPluginKnex().then((plk) => Promise.all([
+        plk.raw("CREATE USER '" + name + "' IDENTIFIED BY '" + password + "';"),
+        plk.raw("CREATE USER 'dbau_" + name + "' IDENTIFIED BY '" + autoDatabasePassword + "';")
+    ]))]).then(() => {
         return findUserId(name);
     }).then((id) => {
         intercom.send("usersevents", {event: "add", user: {id, name, fullname, email, scope}})
@@ -248,7 +254,7 @@ function addUser(name, fullname, password, email, scope, plan) {
 }
 
 function removeUser(username) {
-    return Promise.all([knex("users").where("name", username).delete(), getPluginKnex().then((plk) => plk.raw("DROP USER '" + username + "';"))]).then(() => {
+    return Promise.all([knex("users").where("name", username).delete(), getPluginKnex().then((plk) => Promise.all([plk.raw("DROP USER '" + username + "';"), plk.raw("DROP USER 'dbau_" + username + "';")]))]).then(() => {
         intercom.send("usersevents", {event: "remove", user: username});
     });
 }

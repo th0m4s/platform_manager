@@ -21,11 +21,48 @@ router.get("/logout", async function(req, res) {
     res.redirect("/panel/login");
 });
 
-router.post('/', passport.authenticate('local', { session: true, successRedirect: '/panel/dashboard', failureRedirect: '/panel/login', failureFlash: true, successFlash: "Login successful." }));
+let SSO_TYPES = {"database": "/databases/login.sso.php"}
+router.post('/', (req, res, next) => {
+    let ssotype = req.body.sso;
+    let ssoredirect = ssotype == undefined ? undefined : SSO_TYPES[ssotype];
+
+    let successRedirect = "/panel/dashboard", failureRedirect = "/panel/login";
+    if(ssoredirect != undefined) {
+        failureRedirect = "/panel/login/sso/" + ssotype;
+        successRedirect = failureRedirect;
+    }
+
+    let processAuth = passport.authenticate('local', { session: true, successRedirect, failureRedirect, failureFlash: true, successFlash: "Login successful." });
+    processAuth(req, res, next);
+});
 router.get("/", async function(req, res) {
     if(await database_server.isInstalled()) {
         req.setPage(res, "Login");
+        res.locals.sso = undefined;
         res.render("login/login");
+    } else {
+        res.redirect("/panel/login/install");
+    }
+});
+
+router.get("/sso/:sso_type", async (req, res) => {
+    if(await database_server.isInstalled()) {
+        let ssotype = req.params.sso_type;
+        let ssoredirect = SSO_TYPES[ssotype];
+        if(ssoredirect == undefined) {
+            res.redirect("/panel/login");
+        } else {
+            if(req.user != undefined) {
+                if(ssoredirect.includes("?")) ssoredirect += "&";
+                else ssoredirect += "?";
+                
+                res.redirect(ssoredirect + "key=" + req.user.key);
+            } else {
+                req.setPage(res, "Login");
+                res.locals.sso = ssotype;
+                res.render("login/login");
+            }
+        }
     } else {
         res.redirect("/panel/login/install");
     }

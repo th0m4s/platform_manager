@@ -11,7 +11,7 @@
 						<div class="card-body">
 							<h4 class="card-title text-center mb-4 mt-1"><%= site.title %></h4>
 							<hr>
-							<form method="POST">
+							<form method="POST" action="/panel/login">
 								<div class="form-group">
 									<div class="input-group">
 										<div class="input-group-prepend">
@@ -28,6 +28,9 @@
 										<input class="form-control" type="password" name="password" placeholder="Password" type="password">
 									</div>
 								</div>
+								<% if(sso != undefined) { %>
+									<input type="hidden" name="sso" value="<%- sso %>">
+								<% } %>
 								<div class="form-group">
 									<button type="submit" class="btn btn-primary btn-block">Login</button>
 								</div>

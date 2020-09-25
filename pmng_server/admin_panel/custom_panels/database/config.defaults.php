@@ -44,7 +44,7 @@ function addPmaFeatures($cfg, $i) {
 $i++;
 $cfg['Servers'][$i]['host'] = "mariadb";
 $cfg['Servers'][$i]['port'] = "3306";
-$cfg['Servers'][$i]['verbose'] = "Projects server";
+$cfg['Servers'][$i]['verbose'] = "Projects server".(__ALLOW_ADMIN ? " (manual)" : "");
 $cfg['Servers'][$i]['hide_db'] = '^(information_schema)$';
 $cfg['Servers'][$i]['controluser'] = "__CTRLUSER";
 $cfg['Servers'][$i]['controlpass'] = "__CTRLPASS";
@@ -52,10 +52,24 @@ $cfg = addPmaFeatures($cfg, $i);
 
 if(__ALLOW_ADMIN) {
     $i++;
+    $cfg['Servers'][$i]['host'] = "mariadb";
+    $cfg['Servers'][$i]['port'] = "3306";
+    $cfg['Servers'][$i]['verbose'] = "Projects server (SSO)";
+    $cfg['Servers'][$i]['hide_db'] = '^(information_schema)$';
+    $cfg['Servers'][$i]['auth_type'] = "signon";
+    $cfg['Servers'][$i]['SignonSession'] = "PMNGSignonSession";
+    $cfg['Servers'][$i]['SignonURL'] = "/databases/login.sso.php";
+    $cfg['Servers'][$i]['controluser'] = "__CTRLUSER";
+    $cfg['Servers'][$i]['controlpass'] = "__CTRLPASS";
+    $cfg = addPmaFeatures($cfg, $i);
+
+    $i++;
     $cfg['Servers'][$i]['socket'] = "__DBSOCKET";
     $cfg['Servers'][$i]['AllowDeny']['order'] = 'explicit';
     $cfg['Servers'][$i]['AllowDeny']['rules'] = ['allow root from all'];
     $cfg['Servers'][$i]['verbose'] = "Platform administration";
+    $cfg['Servers'][$i]['controluser'] = "__DBUSER";
+    $cfg['Servers'][$i]['controlpass'] = "__DBPASS";
     $cfg = addPmaFeatures($cfg, $i);
 }
 
