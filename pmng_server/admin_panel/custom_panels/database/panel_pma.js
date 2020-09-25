@@ -27,8 +27,8 @@ async function replaceContents(contents) {
     return contents;
 }
 
-const panel_version = "6"; // used to restart the panel container if changes are made
-const forceRestart = true; // for debug purposes, should not be true on git
+const panel_version = "7"; // used to restart the panel container if changes are made
+const forceRestart = false; // for debug purposes, should not be true on git
 class DatabasePanel extends CustomPanel {
     static getHeaderLinks() {
         return [["Databases", "/databases/" + (process.env.DB_MODE == "socket" ? "index.php?server=2" : "")]];
