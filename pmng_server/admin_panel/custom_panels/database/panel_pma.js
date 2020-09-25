@@ -66,7 +66,7 @@ function checkAndStart(shouldRestart) {
                 let ssoUserExists = ssoUserResults[0][0].exists != 0;
                 if(!ssoUserExists)
                     await database_server.database.raw("CREATE USER '" + ssoUsername + "' IDENTIFIED BY '" + ssoPassword + "';");
-                else database_server.database.raw("ALTER USER '" + ssoUsername + "'@ IDENTIFIED BY '" + ssoPassword + "';");*/
+                else database_server.database.raw("ALTER USER '" + ssoUsername + "' IDENTIFIED BY '" + ssoPassword + "';");*/
 
                 Binds.push(ssoLoginFile + ":/var/project/public/login.sso.php");
                 Binds.push(process.env.DB_SOCKET + ":/var/start/mysqld.sock");
