@@ -26,6 +26,10 @@ async function replaceContents(contents) {
 
 const panel_version = "5"; // used to restart the panel container if changes are made
 class DatabasePanel extends CustomPanel {
+    static getHeaderLinks() {
+        return [["Databases", "/databases/" + (process.env.DB_MODE == "socket" ? "index.php?server=2" : "")]];
+    }
+
     static async startPanel() {
         await docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=phpmyadmin"]}}).then(async (containers) => {
             if(containers.length == 0 || containers[0].data.Labels["pmng.panelversion"] != panel_version) {

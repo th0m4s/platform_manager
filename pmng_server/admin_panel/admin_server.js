@@ -16,6 +16,7 @@ function handleCustomPanel(route, panel) {
     };
 }
 
+let headerLinks = [];
 for(let name of fs.readdirSync(path.resolve(__dirname, "custom_panels"))) {
     let fullpath = path.resolve(__dirname, "custom_panels", name);
     let stat = fs.statSync(fullpath);
@@ -28,6 +29,7 @@ for(let name of fs.readdirSync(path.resolve(__dirname, "custom_panels"))) {
 
                 if(route != undefined) {
                     panel.startPanel();
+                    headerLinks = headerLinks.concat(panel.getHeaderLinks() || []);
                     if(panel.requiresUtils()) utilsPanels[route] = panel;
                     else admin.use("/" + route, handleCustomPanel(route, panel));
 
@@ -67,7 +69,7 @@ admin.get("/favicon.ico", function(req, res) {
 });
 
 admin.use("/api", require("./api_router"));
-admin.use("/panel", require("./panel_router"));
+admin.use("/panel", require("./panel_router").getRouter(headerLinks));
 
 admin.all("/", function(req, res) {
     res.redirect("/panel");

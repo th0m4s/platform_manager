@@ -46,9 +46,11 @@
                     </div>
                 </li>
             <% } %>
-            <li class="nav-item mr-2">
-                <a class="nav-link" href="/databases/">Databases</a>
-            </li>
+            <% for(let headerLink of headerLinks) { %>
+                <li class="nav-item mr-2">
+                    <a class="nav-link" href="<%= headerLink[1] %>"><%= headerLink[0] %></a>
+                </li>
+            <% } %>
         </ul>
         <ul class="navbar-nav ml-auto">
             <li class="nav-item mr-2 <%= isActive('users', 'me') %>">
