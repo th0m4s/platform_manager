@@ -17,6 +17,8 @@ $cfg['TitleDefault'] = "Platform Manager Databases | @PHPMYADMIN@";
 $i = 0;
 
 function addPmaFeatures($cfg, $i) {
+    $cfg['Servers'][$i]['LogoutURL'] = "__DOMAIN/panel/dashboard";
+
     $cfg['Servers'][$i]['pmadb'] = 'phpmyadmin';
     $cfg['Servers'][$i]['bookmarktable'] = 'pma__bookmark';
     $cfg['Servers'][$i]['relation'] = 'pma__relation';

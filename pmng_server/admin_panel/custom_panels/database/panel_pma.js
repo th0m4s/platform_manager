@@ -18,6 +18,8 @@ async function replaceContents(contents) {
         contents = contents.replace(/__DBNAME/g, database_server.DB_NAME);
     } else contents = contents.replace(/__ALLOW_ADMIN/g, "false");
 
+    contents = contents.replace(/__DOMAIN/g, "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") +"://admin." + process.env.ROOT_DOMAIN);
+
     contents = contents.replace(/__CTRLUSER/g, "root");
     contents = contents.replace(/__CTRLPASS/g, (await plugins_manager.getPluginGlobalConfig("mariadb")).adminPassword);
 
@@ -27,7 +29,7 @@ async function replaceContents(contents) {
     return contents;
 }
 
-const panel_version = "7"; // used to restart the panel container if changes are made
+const panel_version = "8"; // used to restart the panel container if changes are made
 const forceRestart = false; // for debug purposes, should not be true on git
 class DatabasePanel extends CustomPanel {
     static getHeaderLinks() {
