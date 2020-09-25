@@ -101,7 +101,8 @@ router.get("/edit/:username/resetdbautopass", (req, res) => {
             database_server.findUserByName(name).then(async (existingUser) => {
                 if(existingUser != null) {
                     let newDbautopass = string_utils.generatePassword(16, 24);
-                    database_server.database("users").where("name", name).update({dbautopass: newDbautopass}).then(() => {
+                    Promise.all([database_server.database("users").where("name", name).update({dbautopass: newDbautopass}),
+                        database_server.database.raw("ALTER USER 'dbau_" + name + "'@'%' IDENTIFIED BY '" + newDbautopass + "';")]).then(() => {
                         res.status(200).json({error: false, code: 200, message: "User dbautopass reset."});
                     }).catch((error) => {
                         res.status(500).json({error: true, code: 500, message: "Cannot reset user dbautopass: " + error});
@@ -132,8 +133,10 @@ router.post("/me", (req, res) => {
             if(changes.email != undefined && changes.email.trim().length > 0)
                 update.email = changes.email.trim();
 
-            if(changes.password != undefined && changes.password.trim().length > 0)
-                update.password = await database_server.hashPassword(changes.password);
+            if(changes.password != undefined && changes.password.trim().length > 0) {
+                update.password = await database_server.hashPassword(changes.password.trim());
+                await database_server.database.raw("ALTER USER '" + user.name + "'@'%' IDENTIFIED BY '" + changes.password.trim() + "';");
+            }
 
             if(Object.keys(update).length == 0) res.status(400).json({error: true, code: 400, message: "Invalid update: No changes."});
             else {
@@ -152,7 +155,8 @@ router.post("/me", (req, res) => {
 router.get("/me/resetdbautopass", (req, res) => {
     api_auth(req, res, function(user) {
         let newDbautopass = string_utils.generatePassword(16, 24);
-        database_server.database("users").where("name", user.name).update({dbautopass: newDbautopass}).then(() => {
+        Promise.all([database_server.database("users").where("name", user.name).update({dbautopass: newDbautopass}),
+            database_server.database.raw("ALTER USER 'dbau_" + name + "'@'%' IDENTIFIED BY '" + newDbautopass + "';")]).then(() => {
             res.status(200).json({error: false, code: 200, message: "dbautopass reset."});
         }).catch((error) => {
             res.status(500).json({error: true, code: 500, message: "Cannot reset dbautopass: " + error});
