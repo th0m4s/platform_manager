@@ -817,6 +817,8 @@ function sortContainer(id, name, labels, image) {
                 return {category: "platform", result: {name, id, kind: "globalplugin", pluginname}};
             case "panel":
                 return {category: "platform", result: {name, id, kind: "panel", panel: labels["pmng.panel"]}}
+            case "server":
+                return {category: "platform", result: {name, id, kind: "server", server: labels["pmng.server"]}}
             default:
                 return {category: "others", result: {name, id, kind: "not_reco", image}};
         }

@@ -152,11 +152,11 @@ function listContainers() {
 }
 
 function _getPlatformKindDisplay(kind) {
-    return {globalplugin: "Global plugin", plugin: "Plugin", deployment: "Deployment", panel: "Custom admin panel"}[kind] || "";
+    return {globalplugin: "Global plugin", plugin: "Plugin", deployment: "Deployment", panel: "Custom admin panel", server: "Server tools for"}[kind] || "";
 }
 
 function _getOtherKindDisplay(kind) {
-    return {"not_reco": "Unrecognized PMNG container", "not_pmng": "Third party container"}[kind] || "";
+    return {"not_reco": "Unrecognized container", "not_pmng": "Third party container"}[kind] || "";
 }
 
 function showContainerDetails(containerName) {
