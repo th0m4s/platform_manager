@@ -89,9 +89,9 @@ function findUserByKey(key) {
     });
 }
 
-function createTableIfNotExists(name, schemaCallback) {
-    return knex.schema.hasTable(name).then((result) => {
-        if(!result) return knex.schema.createTable(name, schemaCallback);
+function createTableIfNotExists(name, schemaCallback, currentKnex = knex) {
+    return currentKnex.schema.hasTable(name).then((result) => {
+        if(!result) return currentKnex.schema.createTable(name, schemaCallback);
     });
 }
 
@@ -351,6 +351,7 @@ function checkScope(userScopeId, requestedScope) {
 }
 
 module.exports.DB_NAME = DB_NAME;
+module.exports.DB_CONFIG = DB_CONFIG;
 module.exports.database = knex;
 module.exports.findUserByName = findUserByName;
 module.exports.findUserById = findUserById;
@@ -361,6 +362,7 @@ module.exports.hasDatabase = hasDatabase;
 module.exports.hasAdminUser = hasAdminUser;
 module.exports.isInstalled = isInstalled;
 module.exports.getPluginKnex = getPluginKnex;
+module.exports.createTableIfNotExists = createTableIfNotExists;
 module.exports.addUser = addUser;
 module.exports.removeUser = removeUser;
 module.exports.hashPassword = hashPassword;
