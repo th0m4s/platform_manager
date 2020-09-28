@@ -8,6 +8,7 @@ class Plugin {
     static async projectContainerCreated(projectname, containerconfig, networkname, plugincontainername, pluginconfig) { }
     static async stopProjectPlugin(projectname, pluginconfig, networkname) { }
 
+    static isProjectBased() { return true; }
     static async installPlugin(projectname, pluginconfig) { }
     static async postInstall(projectname, allconfigs) { }
     static async uninstallPlugin(projectname, pluginconfig) { }

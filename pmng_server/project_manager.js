@@ -90,6 +90,8 @@ function addProject(projectname, ownerid, env, plugins) {
         let configs = {}, pluginProm = [];
         plugins.forEach((plugin) => {
             if(plugin.trim().length > 0) {
+                if(!plugins_manager.getPlugin(plugin).isProjectBased()) return;
+
                 configs[plugin] = plugins_manager.getDefaultConfig(plugin);
                 pluginProm.push(plugins_manager.install(plugin, projectname, configs[plugin]));
             }

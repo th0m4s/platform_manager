@@ -200,6 +200,8 @@ router.post("/edit/:projectname", function(req, res) {
                 }).then(() => {
                     if(differences.plugins.add.length > 0 || differences.plugins.remove.length > 0) {
                         differences.plugins.add.forEach((item) => {
+                            if(!plugins_manager.getPlugin(item).isProjectBased()) return;
+                            
                             originalproject.plugins[item] = plugins_manager.getDefaultConfig(item);
                             promises.push(plugins_manager.install(item, projectname, originalproject.plugins[item]));
                         });
