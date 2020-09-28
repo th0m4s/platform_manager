@@ -1,0 +1,5 @@
+user = __DBMAIL_USER
+password = __DBMAIL_PASS
+hosts = __DBMAIL_HOST
+dbname = __DBMAIL_NAME
+query = SELECT 1 FROM virtual_users WHERE email='%s'

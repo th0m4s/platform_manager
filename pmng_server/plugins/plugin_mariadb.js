@@ -48,6 +48,10 @@ async function updatePrivileges(project, collaboratorId, mode, knex) {
 
 class MariaDBPlugin extends Plugin {
     static async startGlobalPlugin(plugindirectory, globalconfig, setconfig) {
+        try { // create plugin dir if it doesn't exist
+            await pfs.access(plugindirectory);
+        } catch(error) { await pfs.mkdir(plugindirectory); }
+
         if(globalconfig.adminPassword == undefined) {
             globalconfig.adminPassword = string_utils.generatePassword(28, 40);
             await setconfig(globalconfig);
