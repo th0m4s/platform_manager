@@ -6669,6 +6669,11 @@ unique-string@^1.0.0:
   dependencies:
     crypto-random-string "^1.0.0"
 
+unixcrypt@^1.0.13:
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/unixcrypt/-/unixcrypt-1.0.13.tgz#7ceeb9498e179a410bdd1cc7f7893d0486ef992d"
+  integrity sha512-KyY6/zwyLqE91unElQwvCVaXQLdvAC94rQkadozmY6IMIMWL3a7IR4T09+Kl8NFKWfSVMUd7oq/OSBRg2dqXXA==
+
 unpipe@1.0.0, unpipe@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/unpipe/-/unpipe-1.0.0.tgz#b2bf4ee8514aae6165b4817829d21b2ef49904ec"
