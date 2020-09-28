@@ -11,6 +11,7 @@ const logger = require("../../../platform_logger").logger();
 const mariadb_network = require("../../../plugins/plugin_mariadb").NETWORK_NAME;
 
 async function replaceContents(contents) {
+    // TODO: use string_utils.replaceArgs();
     if(process.env.DB_MODE == "socket") {
         contents = contents.replace(/__ALLOW_ADMIN/g, "true");
         contents = contents.replace(/__DBSOCKET/g, "/var/start/mysqld.sock"); // path of mounted db_socket
@@ -50,7 +51,7 @@ function checkAndStart(shouldRestart) {
             await pfs.chmod(createFile, "755");
 
             let Binds = [
-                configFile + ":/etc/phpmyadmin/config.inc.php",
+                configFile + ":/var/project/public/config.inc.php",
                 createFile + ":/var/start/create_tables.inc.sh"
             ];
 
@@ -98,6 +99,8 @@ function checkAndStart(shouldRestart) {
                 return container.start();
             }).then(() => {
                 logger.info("phpMyAdmin custom admin panel started.");
+            }).catch((error) => {
+                logger.error("Cannot start PMA panel: " + error);
             });
         }
     });
