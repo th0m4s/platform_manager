@@ -53,7 +53,7 @@ RUN set -ex; \
     gpgconf --kill all; \
     rm -r "$GNUPGHOME" phpMyAdmin.tar.xz phpMyAdmin.tar.xz.asc; \
     rm -rf /var/project/public/setup/ /var/project/public/examples/ /var/project/public/test/ /var/project/public/po/ /var/project/public/composer.json /var/project/public/RELEASE-DATE-$VERSION; \
-    sed -i "s@define('CONFIG_DIR'.*@define('CONFIG_DIR', '/etc/phpmyadmin/');@" /var/project/public/libraries/vendor_config.php; \
+    sed -i "s@define('CONFIG_DIR'.*@define('CONFIG_DIR', '/var/project/public/');@" /var/project/public/libraries/vendor_config.php; \
     apk del --no-network .fetch-deps
 
 RUN apk add --no-cache mariadb-client
