@@ -1,7 +1,8 @@
 let socket = undefined, loaded = 0;
 
 function init() {
-    utils.showInfiniteLoading("Loading projects...");
+    //utils.showInfiniteLoading("Loading projects...");
+    window.hideMain();
     socket = io("/v1/projects");
 
     socket.on("connect", function(){
@@ -13,12 +14,14 @@ function init() {
 
             requestOwned(requestLimit).always(() => {
                 requestCollab(requestLimit).always(() => {
-                    utils.hideLoading();
+                    //utils.hideLoading();
+                    window.showMain();
                 });
             });
         });
         socket.on("unauthorized", function(err) {
-            utils.hideLoading();
+            //utils.hideLoading();
+            window.showMain();
             for(let projectname of allProjects) {
                 setProjectWarning(projectname);
             }
@@ -93,7 +96,8 @@ function init() {
     });
 
     socket.on("error", (err) => {
-        utils.hideLoading();
+        //utils.hideLoading();
+        window.showMain();
         for(let projectname of allProjects) {
             setProjectWarning(projectname);
         }

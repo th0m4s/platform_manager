@@ -1,5 +1,6 @@
 function init() {
-    utils.showInfiniteLoading("Loading network details..."),
+    //utils.showInfiniteLoading("Loading network details...");
+    window.hideMain();
     window.refreshInterval = setInterval(refreshDetails, 10*1000);
     refreshDetails();
 }
@@ -80,7 +81,8 @@ function refreshDetails() {
             }
             
             loadHidden = true;
-            utils.hideLoading();
+            //utils.hideLoading();
+            window.showMain();
         }
     });
 }

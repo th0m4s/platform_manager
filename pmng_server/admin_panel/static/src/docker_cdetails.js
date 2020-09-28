@@ -1,7 +1,8 @@
 let socketClosed = false, socket;
 
 function init() {
-    utils.showInfiniteLoading("Loading container details..."),
+    //utils.showInfiniteLoading("Loading container details...");
+    window.hideMain();
     window.refreshInterval = setInterval(refreshDetails, 10*1000);
     socket = io("/v1/docker");
 
@@ -16,7 +17,8 @@ function init() {
             refreshDetails();
         });
         socket.on("unauthorized", function(err) {
-            utils.hideLoading();
+            //utils.hideLoading();
+            window.showMain();
             $.notify({message: "Unable to authenticate to the socket. Usage statistics will not be displayed."}, {type: "danger"});
             $("#info-stats").html("Cannot load container stats.");
 
@@ -25,7 +27,8 @@ function init() {
     });
 
     socket.on("error", (err) => {
-        utils.hideLoading();
+        //utils.hideLoading();
+        window.showMain();
         $.notify({message: "Connection with the socket lost. You may need to reload the page (container stats will not work anymore)."}, {type: "danger"});
         $("#info-stats").html("Cannot load container stats: socket error.");
 
@@ -161,7 +164,8 @@ function refreshDetails() {
             }
             
             loadHidden = true;
-            utils.hideLoading();
+            //utils.hideLoading();
+            window.showMain();
         }
     });
 }

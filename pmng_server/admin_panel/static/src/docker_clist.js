@@ -1,7 +1,8 @@
 let socket = undefined;
 
 function init() {
-    utils.showInfiniteLoading("Loading containers..."),
+    //utils.showInfiniteLoading("Loading containers...");
+    window.hideMain();
     socket = io("/v1/docker");
 
     socket.on("connect", function(){
@@ -14,7 +15,8 @@ function init() {
             listContainers();
         });
         socket.on("unauthorized", function(err) {
-            utils.hideLoading();
+            //utils.hideLoading();
+            window.showMain();
             $.notify({message: "Unable to authenticate to the socket. You may need to reload the page."}, {type: "danger"});
 
             console.log("Unauthorized from the socket", err);
@@ -22,7 +24,8 @@ function init() {
     });
 
     socket.on("error", (err) => {
-        utils.hideLoading();
+        //utils.hideLoading();
+        window.showMain();
         $.notify({message: "Connection with the socket lost. You may need to reload the page."}, {type: "danger"});
 
         console.log("Socket error", err);
@@ -87,7 +90,7 @@ function addProjectContainer(container) {
 
 function addPlatformContainer(container) {
     let content = `<li class="list-group-item line-platform" id="line-${container.name}">`
-    + `<b>${_getPlatformKindDisplay(container.kind) + (container.kind != "deployment" ? " " + (container.pluginname || (container.panel || "<i>Unknown</i>")) : "") + (container.kind == "plugin" ? ` (for project <i>${container.projectname}</i>)` : (container.kind == "deployment" ? ` of project ${container.projectname}` : ""))} : </b> Running in container <i>${getCDetailsLink(container.name)}</i> (id ${getCDetailsLink(container.id)})`
+    + `<b>${_getPlatformKindDisplay(container.kind) + (container.kind != "deployment" ? " " + (container.pluginname || (container.panel || (container.server || "<i>Unknown</i>"))) : "") + (container.kind == "plugin" ? ` (for project <i>${container.projectname}</i>)` : (container.kind == "deployment" ? ` of project ${container.projectname}` : ""))} : </b> Running in container <i>${getCDetailsLink(container.name)}</i> (id ${getCDetailsLink(container.id)})`
     + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="docker_clist.showContainerDetails('${container.name}')"><i class="fas fa-info-circle"></i> Details</button></div></span> </li>`;
 
     $("#platform-list").append(content);
@@ -147,7 +150,8 @@ function listContainers() {
             }
         }
     }).always(() => {
-        utils.hideLoading();
+        //utils.hideLoading();
+        window.showMain();
     });
 }
 

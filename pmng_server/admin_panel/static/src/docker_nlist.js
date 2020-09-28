@@ -1,7 +1,8 @@
 let socket = undefined;
 
 function init() {
-    utils.showInfiniteLoading("Loading networks..."),
+    //utils.showInfiniteLoading("Loading networks...");
+    window.hideMain();
     socket = io("/v1/docker");
 
     socket.on("connect", function(){
@@ -14,7 +15,8 @@ function init() {
             listNetworks();
         });
         socket.on("unauthorized", function(err) {
-            utils.hideLoading();
+            //utils.hideLoading();
+            window.showMain();
             $.notify({message: "Unable to authenticate to the socket. You may need to reload the page."}, {type: "danger"});
 
             console.log("Unauthorized from the socket", err);
@@ -22,7 +24,8 @@ function init() {
     });
 
     socket.on("error", (err) => {
-        utils.hideLoading();
+        //utils.hideLoading();
+        window.showMain();
         $.notify({message: "Connection with the socket lost. You may need to reload the page."}, {type: "danger"});
 
         console.log("Socket error", err);
@@ -92,7 +95,8 @@ function listNetworks() {
             }
         }
     }).always(() => {
-        utils.hideLoading();
+        //utils.hideLoading();
+        window.showMain();
     });
 }
 

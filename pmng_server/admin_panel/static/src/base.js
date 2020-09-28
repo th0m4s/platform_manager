@@ -20,13 +20,18 @@ $(document).ready(() => {
     $('[data-toggle="tooltip"]').tooltip();
 });
 
-function showMain() {
+window.hideMain = () => {
+    $("#loading-container").show();
+    $("#main-container").hide();
+}
+
+window.showMain = () => {
     $("#loading-container").hide();
     $("#main-container").show();
 }
 
 let noLoadingTimeout = setTimeout(() => {
-    showMain();
+    window.showMain();
 }, 500);
 
 function load(nextScripts) {
@@ -35,7 +40,7 @@ function load(nextScripts) {
         if(isRequirement) {
             load(nextScripts);
         } else {
-            showMain();
+            window.showMain();
             window[script].init();
         }
     });
