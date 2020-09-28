@@ -3,6 +3,11 @@ const logger_tools = require("./pmng_server/platform_logger");
 const child_process = require('child_process');
 // should be using subprocess_util instead of child_process
 
+if(process.getuid() > 0) {
+    console.error("Platform Manager master process should be run with root privileges.");
+    process.exit(1);
+}
+
 (async function() {
     const pmng_directory = __dirname;
     process.chdir(pmng_directory);
