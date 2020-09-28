@@ -56,7 +56,41 @@ function validParseFloat(value) {
     return numberRegex.test(value) ? parseFloat(value) : NaN;
 }
 
+function replaceArgs(text, args) {
+    for(let arg of Object.entries(args)) {
+        text = text.replace(new RegExp(arg[0], "g"), arg[1]);
+    }
+
+    return text;
+}
+
+function keepConfigLines(text, keepLines, removeLines = []) {
+    let newLines = [];
+    for(let line of text.split("\n")) {
+        let keep = true;
+        for(let keep of keepLines) {
+            if(line.startsWith(keep + ":")) {
+                line = line.substring(keep.length+1);
+                break;
+            }
+        }
+
+        for(let rem of removeLines) {
+            if(line.startsWith(rem + ":")) {
+                keep = false;
+                break;
+            }
+        }
+
+        if(keep) newLines.push(line);
+    }
+
+    return newLines.join("\n");
+}
+
 module.exports.generatePassword = generatePassword;
 module.exports.formatBytes = formatBytes;
 module.exports.validParseFloat = validParseFloat;
 module.exports.parseBytesSize = parseBytesSize;
+module.exports.replaceArgs = replaceArgs;
+module.exports.keepConfigLines = keepConfigLines;
