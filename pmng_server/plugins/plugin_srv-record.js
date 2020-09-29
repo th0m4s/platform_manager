@@ -85,7 +85,7 @@ function cacheProject(projectname, config) {
 
 let configsCache = {};
 class SRVRecordPlugin extends Plugin {
-    static startGlobalPlugin(plugindirectory) {
+    static async startGlobalPlugin(plugindirectory) {
         database_server.isInstalled().then((installed) => {
             if(installed) {
                 plugins_manager.getAllConfigs("srv-record").then((configs) => {

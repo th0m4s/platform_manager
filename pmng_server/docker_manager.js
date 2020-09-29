@@ -150,6 +150,8 @@ async function maininstance() {
                     prom.push(plugin.startGlobalPlugin(path.join(process.env.PLUGINS_PATH, pluginname), config[pluginname], (newConfig) => {
                         config[pluginname] = newConfig;
                         return pfs.writeFile(pluginsConfigFile, JSON.stringify(config));
+                    }).catch((error) => {
+                        throw {pluginname, error};
                     }));
                 }
             });
@@ -163,7 +165,7 @@ async function maininstance() {
             Promise.allSettled(prom).then((states) => {
                 states.forEach((state) => {
                     if(state.status != "fulfilled") {
-                        logger.warn("Cannot start global plugin: " + state.reason);
+                        logger.warn("Cannot start global plugin " + state.reason.pluginname + ": " + state.reason.error);
                     }
                 });
             });

@@ -24,7 +24,7 @@ function localCheck(port, projectname) {
 }
 
 class CustomPortPlugin extends Plugin {
-    static startGlobalPlugin(plugindirectory) {
+    static async startGlobalPlugin(plugindirectory) {
         database_server.isInstalled().then((installed) => {
             if(installed) {
                 plugins_manager.getAllConfigs("custom-port").then((configs) => {
