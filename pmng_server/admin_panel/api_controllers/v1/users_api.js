@@ -178,6 +178,7 @@ router.get("/delete/:username", (req, res) => {
                     // not using list(Owned/Collab)Projects because want only the names (and without limit)
                     database_server.database("projects").where("ownerid", existingUser.id).select("name").then((results) => {
                         let promises = [];
+                        // could have removed projects lines with foreign keys, but deleting a project requires code to be executed
                         for(let result of results) promises.push(project_manager.deleteProject(result.name));
 
                         return Promise.all(promises);
@@ -185,14 +186,15 @@ router.get("/delete/:username", (req, res) => {
                         // remove own collabs
                         return database_server.database("collabs").where("userid", existingUser.id).select(["id", "projectname"]);
                     }).then((results) => {
-                        let promises = [];
+                        //let promises = [];
                         for(let result of results) {
-                            promises.push(database_server.database("collabs").where("id", result.id).delete().then(() => {
+                            //promises.push(database_server.database("collabs").where("id", result.id).delete().then(() => {
+                                // collabs removed from database with foreign relations
                                 intercom.send("projectsevents", {event: "update_collab", project: result.projectname, mode: "remove", collaboratorId: existingUser.id});
-                            }));
+                            //}));
                         }
 
-                        return Promise.all(promises);
+                        //return Promise.all(promises);
                     }).then(() => {
                         // remove user
                         return database_server.removeUser(name);

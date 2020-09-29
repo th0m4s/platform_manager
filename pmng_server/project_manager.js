@@ -157,8 +157,8 @@ function deleteProject(projectname) {
     }).then(() => {
         return Promise.all([
             database_server.database("projects").where("name", projectname).delete(),
-            database_server.database("domains").where("projectname", projectname).delete(),
-            database_server.database("collabs").where("projectname", projectname).delete(),
+            /*database_server.database("domains").where("projectname", projectname).delete(),
+            database_server.database("collabs").where("projectname", projectname).delete(),*/
             rmfr(getProjectFolder(projectname))
         ]);
     }).then(() => {

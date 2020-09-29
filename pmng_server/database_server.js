@@ -100,30 +100,20 @@ function createTableIfNotExists(name, schemaCallback, currentKnex = knex) {
  * @returns {Promise<boolean>} A promise resolved with *true* if the installation was successfull (all required tables created), *false* otherwise.
  */
 function installDatabase() {
-    return Promise.all([
-        createTableIfNotExists("users", (users) => {
-            users.increments("id").primary().index();
-            users.text("name").unique();
-            users.text("fullname");
-            users.text("email");
-            users.text("password");
-            users.text("dbautopass");
-            users.integer("scope");
-            users.integer("plan").defaultTo(1);
-        }).then(() => {
-            return true;
-        }), createTableIfNotExists("keys", (keys) => {
-            keys.increments("id").primary();
-            keys.string("key", 64).unique().index();
-            keys.integer("userid");
-            keys.enum("expired", ["true", "false"]).defaultTo("false");
-            keys.enum("mode", ["session", "api"]);
-        }).then(() => {
-            return true;
-        }), createTableIfNotExists("projects", (projects) => {
+    return createTableIfNotExists("users", (users) => {
+        users.increments("id").primary().index();
+        users.text("name").unique();
+        users.text("fullname");
+        users.text("email");
+        users.text("password");
+        users.text("dbautopass");
+        users.integer("scope");
+        users.integer("plan").defaultTo(1);
+    }).then(() => {
+        return createTableIfNotExists("projects", (projects) => {
             projects.increments("id").primary();
-            projects.text("name").unique().index();
-            projects.integer("ownerid");
+            projects.string("name", 32).unique().index();
+            projects.integer("ownerid", 10).unsigned();
             projects.text("userenv");
             projects.text("type");
             projects.integer("version").defaultTo(0);
@@ -131,41 +121,56 @@ function installDatabase() {
             projects.enum("autostart", ["true", "false"]).defaultTo("false");
             projects.enum("forcepush", ["true", "false"]).defaultTo("false");
             projects.enum("allow_https", ["true", "false"]).defaultTo("true");
-        }).then(() => {
-            return true;
-        }), createTableIfNotExists("collabs", (collabs) => {
-            collabs.increments("id").primary();
-            collabs.text("projectname").index();
-            collabs.integer("userid");
-            collabs.text("mode");
-        }).then(() => {
-            return true;
-        }), createTableIfNotExists("domains", (domains) => {
-            domains.increments("id");
-            domains.text("domain");
-            domains.text("projectname").notNullable();
-            domains.enum("enablesub", ["true", "false"]).defaultTo("true");
-        }).then(() => {
-            return true;
-        }), createTableIfNotExists("plans", (plans) => {
-            plans.increments("id");
-            plans.text("name");
-            plans.text("usage").defaultTo("{}");
-            plans.decimal("price", 3, 2).defaultTo(0);
-            plans.enum("restricted", ["true", "false"]).defaultTo("false");
-        }).then(() => {
-            return hasDefaultPlans();
-        }).then((exists) => {
-            if(!exists) return knex("plans").insert([
-                {name: "default", usage: JSON.stringify({projects: {max: 10}, docker: {memory: 512}, storages: {max: 10737418240}})},
-                {name: "admin", usage: JSON.stringify({projects: {max: 0}, docker: {memory: 0}, storages: {max: 0}}), restricted: "true"}
-            ]);
-        }).then(() => {
-            return true;
+            projects.foreign("ownerid").references("id").inTable("users");
         })
-    ]).then((results) => {
-        return !results.includes(false);
-    }).catch((e) => { logger.error(e); return false; }); 
+    }).then(() => {
+        return Promise.all([
+            createTableIfNotExists("keys", (keys) => {
+                keys.increments("id").primary();
+                keys.string("key", 64).unique().index();
+                keys.integer("userid", 10).unsigned().nullable();
+                keys.enum("expired", ["true", "false"]).defaultTo("false");
+                keys.enum("mode", ["session", "api"]);
+                keys.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
+            }).then(() => {
+                return true;
+            }), createTableIfNotExists("collabs", (collabs) => {
+                collabs.increments("id").primary();
+                collabs.string("projectname", 32).index();
+                collabs.integer("userid", 10);
+                collabs.enum("mode", ["view", "manage"]).defaultTo("view");
+                collabs.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
+                collabs.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
+            }).then(() => {
+                return true;
+            }), createTableIfNotExists("domains", (domains) => {
+                domains.increments("id");
+                domains.text("domain");
+                domains.string("projectname", 32).notNullable();
+                domains.enum("enablesub", ["true", "false"]).defaultTo("true");
+                domains.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
+            }).then(() => {
+                return true;
+            }), createTableIfNotExists("plans", (plans) => {
+                plans.increments("id");
+                plans.text("name");
+                plans.text("usage").defaultTo("{}");
+                plans.decimal("price", 3, 2).defaultTo(0);
+                plans.enum("restricted", ["true", "false"]).defaultTo("false");
+            }).then(() => {
+                return hasDefaultPlans();
+            }).then((exists) => {
+                if(!exists) return knex("plans").insert([
+                    {name: "default", usage: JSON.stringify({projects: {max: 10}, docker: {memory: 512}, storages: {max: 10737418240}})},
+                    {name: "admin", usage: JSON.stringify({projects: {max: 0}, docker: {memory: 0}, storages: {max: 0}}), restricted: "true"}
+                ]);
+            }).then(() => {
+                return true;
+            })
+        ]).then((results) => {
+            return !results.includes(false);
+        }).catch((e) => { logger.error(e); return false; }); 
+    })
 }
 
 function hasDefaultPlans() {
