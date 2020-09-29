@@ -25,18 +25,12 @@ function getMailDatabase() {
 }
 
 function _mailDbInstalled() {
-    return database_server.database.raw("SHOW DATABASES;").then((results) => {
-        let dbs = [];
-        for(let result of results[0])
-            dbs.push(result.Database);
-
-        if(!dbs.includes(MAIL_DBNAME)) return false;
-        let mailKnex = getMailDatabase();
-        return Promise.all([
-            mailKnex.schema.hasTable("virtual_domains"), mailKnex.schema.hasTable("virtual_users"), mailKnex.schema.hasTable("virtual_aliases")]).then((results) => {
-            return !results.includes(false) ? true : undefined;
-          }).catch(() => { return false; });
-    })
+    let mailKnex = getMailDatabase();
+    if(mailKnex == undefined) return Promise.resolve(false);
+    return Promise.all([
+        mailKnex.schema.hasTable("virtual_domains"), mailKnex.schema.hasTable("virtual_users"), mailKnex.schema.hasTable("virtual_aliases")]).then((results) => {
+        return !results.includes(false) ? true : undefined;
+    }).catch(() => { return false; });
 }
 
 function isMailInstalled() {
@@ -65,6 +59,7 @@ function installMailDatabase() {
         return database_server.createTableIfNotExists("virtual_domains", (domains) => {
             domains.increments("id").primary().index().notNullable();
             domains.string("name", 50).notNullable();
+            domains.enum("system", ["true", "false"]).defaultTo("false");
         }, mailKnex).then(() => {
             return Promise.all([
                 database_server.createTableIfNotExists("virtual_users", (users) => {
@@ -72,6 +67,8 @@ function installMailDatabase() {
                     users.integer("domain_id", 10).unsigned().notNullable();
                     users.string("password", 106).notNullable();
                     users.string("email", 100).notNullable().unique();
+                    users.enum("system", ["true", "false"]).defaultTo("false");
+                    users.enum("pwdset", ["true", "false"]).defaultTo("true"); // should manually set to false when auto-creating mail users
                     users.foreign("domain_id").references("id").inTable("virtual_domains").onDelete("CASCADE");
                 }, mailKnex).then(() => {
                     return true;
@@ -81,6 +78,7 @@ function installMailDatabase() {
                     aliases.integer("domain_id", 10).unsigned().notNullable();
                     aliases.string("source", 100).notNullable()/*.unique()*/;
                     aliases.string("destination", 100).notNullable();
+                    aliases.enum("system", ["true", "false"]).defaultTo("false");
                     aliases.foreign("domain_id").references("id").inTable("virtual_domains").onDelete("CASCADE");
                 }, mailKnex).then(() => {
                     return true;
@@ -158,13 +156,16 @@ function checkAndStart(maildirectory, shouldRestart) {
                 dvFileConfig = string_utils.keepConfigLines(dvFileConfig, enableSSL ? ["tlsonly"] : ["notls"], enableSSL ? ["notls"] : ["tlsonly"]);
                 let dvIncFile = path.resolve(dovecotDefaultDir, path.basename(dvFile).replace(".defaults", ".inc"));
                 await pfs.writeFile(dvIncFile, dvFileConfig);
-                Binds.push(dvIncFile + ":/etc/dovecot/" + dvFile.replace(".inc", ""));
+                Binds.push(dvIncFile + ":/etc/dovecot/" + dvFile.replace(".defaults", ""));
             }
 
-            let portBindings = {"587/tcp": [{HostPort: "578"}]};
+            let portBindings = {"25/tcp": [{HostPort: "25"}]};
+            // normally 25 is not encrypted and should not be available if enableSSL is true
             if(enableSSL) {
                 portBindings["993/tcp"] = [{HostPort: "993"}];
                 portBindings["995/tcp"] = [{HostPort: "995"}];
+                portBindings["587/tcp"] = [{HostPort: "587"}];
+                portBindings["465/tcp"] = [{HostPort: "465"}];
             } else {
                 portBindings["143/tcp"] = [{HostPort: "143"}];
                 portBindings["110/tcp"] = [{HostPort: "110"}];
@@ -188,16 +189,74 @@ function checkAndStart(maildirectory, shouldRestart) {
                 }
             }).then((container) => {
                 return container.start();
-            }).then(() => {
+            }).then(async () => {
                 logger.info("Mail server container started.");
+                let mailDb = getMailDatabase(), mailDomainsDb = () => mailDb("virtual_domains");
+                // mailDomainsDb is a function because each request needs a different object
+
+                // check all virtual_domains
+                await mailDomainsDb().where("name", process.env.ROOT_DOMAIN).select("*").then((result) => {
+                    if(result.length == 0) return mailDomainsDb().insert({name: process.env.ROOT_DOMAIN, system: "true"});
+                    else if(result[0].system != "true") return mailDomainsDb().where("name", process.env.ROOT_DOMAIN).update({system: "true"});
+                });
+
+                let requiredDomains = {};
+                await database_server.database("projects").select("name").then((projects) => {
+                    for(let project of projects) {
+                        requiredDomains[project.name] = true;
+                    }
+                });
+
+                // if full_dns == false, sending will work, but not receiving unless mx records are set correctly
+                await database_server.database("domains")/*.where("full_dns", "true")*/.select("domain").then((domains) => {
+                    for(let domain of domains) {
+                        requiredDomains[domain.domain] = false;
+                    }
+                });
+
+                // select doesn't need "*" if there is no where() (else it crashes because the query builder asks for 'select *,* from...')
+                await mailDomainsDb().select().then((domains) => {
+                    let prom = [];
+                    for(let {name, system} of domains) {
+                        let requiredSystem = requiredDomains[name];
+                        if(requiredSystem == undefined) {
+                            if(name != process.env.ROOT_DOMAIN) prom.push(mailDomainsDb().where("name", name).delete());
+                        } else {
+                            if(requiredSystem != (system.toLowerCase() == "true"))
+                                prom.push(mailDomainsDb().where("name", name).update({system: requiredSystem ? "true" : "false"}));
+                            delete requiredDomains[name];
+                        }
+                    }
+
+                    return Promise.all(prom);
+                });
+
+                let newRows = [];
+                for(let [domain, requiredSystem] of Object.entries(requiredDomains))
+                    newRows.push({name: domain, system: requiredSystem ? "true" : "false"});
+                if(newRows.length > 0) await mailDomainsDb().insert(newRows);
+
+                
+
+                // check all virtual_users
+                let mailUsersDb = () => mailDb("virtual_users");
             }).catch((error) => {
-                logger.error("Cannot start mail server container: " + error);
+                logger.error("Cannot start mail server container.");
+                throw error;
             });
         }
     });
 }
 
 async function initialize(maildirectory) {
+    await database_server.database.raw("SHOW DATABASES;").then((results) => {
+        let dbs = [];
+        for(let result of results[0])
+            dbs.push(result.Database);
+
+        if(!dbs.includes(MAIL_DBNAME)) return database_server.database.raw("CREATE DATABASE `" + MAIL_DBNAME + "`;");
+    });
+
     if(!(await isMailInstalled())) await installMailDatabase();
     return checkAndStart(maildirectory, forceRestart);
 }
