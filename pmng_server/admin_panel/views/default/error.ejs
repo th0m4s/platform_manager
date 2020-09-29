@@ -13,9 +13,14 @@
 							
 							<% if(error.link === undefined) { %>
 								<a href="/">Return to home</a>
+								<script>let returnPage = "/";</script>
 							<% } else if(error.link !== false) { %>
 								<a href="<%= error.link %>">Continue</a>
+								<script>let returnPage = "<%= error.link %>";</script>
 							<% } %>
+							<script>
+								window.history.replaceState(null,"", returnPage);
+							</script>
                         </div>
                     </div>
                 </div>
