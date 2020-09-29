@@ -106,7 +106,7 @@ function checkAndStart(shouldRestart) {
     });
 }
 
-const panel_version = "9"; // used to restart the panel container if changes are made
+const panel_version = "10"; // used to restart the panel container if changes are made
 const forceRestart = false; // for debug purposes, should not be true on git
 class DatabasePanel extends CustomPanel {
     static getHeaderLinks() {

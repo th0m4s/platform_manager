@@ -35,7 +35,7 @@ if(isset($_GET["key"])) {
     $_SESSION['PMA_single_signon_HMAC_secret'] = hash('sha1', uniqid(strval(rand()), true));
     session_write_close();
 
-    header('Location: ./index.php');
+    header('Location: ./index.php?server=2');
 } else {
     header("Location: $loginUrl");
 }
