@@ -15,6 +15,7 @@ router.get("/logout", async function(req, res) {
     if(req.user !== undefined) {
         await database_server.revokeKey(req.user.key);
 
+        delete req.session.account;
         req.logout();
         req.flash("info", "Logout successful.");
     } else req.flash("warn", "You were not logged in.");
@@ -32,8 +33,7 @@ router.post('/', (req, res, next) => {
         successRedirect = failureRedirect;
     }
 
-    let processAuth = passport.authenticate('local', { session: true, successRedirect, failureRedirect, failureFlash: true, successFlash: "Login successful." });
-    processAuth(req, res, next);
+    passport.authenticate('local', { session: true, successRedirect, failureRedirect, failureFlash: true, successFlash: "Login successful." })(req, res, next);
 });
 router.get("/", async function(req, res) {
     if(await database_server.isInstalled()) {

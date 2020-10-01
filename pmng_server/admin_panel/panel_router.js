@@ -78,7 +78,7 @@ function getRouter(headerLinks) {
 
         
         router.use(passport.initialize()); router.use(passport.session());
-        passport.use(new PassportLocalStrategy(async function(username, password, done) {
+        passport.use(new PassportLocalStrategy({passReqToCallback: true}, async function(req, username, password, done) {
                 try {
                     let user = await database_server.findUserByName(username);
                     if(user == null) return done(null, false, {message: "Unable to find this user."});
@@ -88,6 +88,7 @@ function getRouter(headerLinks) {
                     if(check) {
                         let key = await database_server.generateKey(user.id, "session");
                         user.key = key;
+                        req.session.account = {};
 
                         await database_server.getPluginKnex().then((pluginKnex) => {
                             // TODO: grant privileges where needed
@@ -177,7 +178,7 @@ function getRouter(headerLinks) {
             }
 
             next();
-        })
+        });
 
         router.get("/", function(req, res) {
             res.redirect("/panel/login");
