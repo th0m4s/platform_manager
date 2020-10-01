@@ -6,7 +6,7 @@ const path = require("path");
 const pfs = require("fs").promises;
 const mdb = require('knex-mariadb');
 const logger = require("../platform_logger").logger();
-const intercom = require("../intercom/intercom_client").connect();
+const unixcrypt = require("unixcrypt");
 
 let _mailKnex = undefined;
 const MAIL_DBNAME = "mail_server";
@@ -94,6 +94,51 @@ function installMailDatabase() {
             throw error;
         });
     });
+}
+
+// checks for default system accounts
+async function checkDomainIdUsers(domainId) {
+    let tableName = undefined, mailDb = (tn) => getMailDatabase()(tn || tableName);
+    let mailDomainResult = await mailDb("virtual_domains").where("id", domainId).select(["name", "system"]);
+    if(mailDomainResult.length == 0) throw "Invalid domain id.";
+
+    let isSystem = mailDomainResult[0].system.toLowerCase() == "true";
+    tableName = "virtual_" + (isSystem ? "users" : "aliases");
+    let domain = mailDomainResult[0].name;
+
+    let projectName = "";
+    if(!isSystem) {
+        let projectNameResult = await database_server.database("domains").where("domain", domain).select("projectname");
+        if(projectNameResult.length == 0) throw "Invalid domain bound to project (" + domain + ").";
+        projectName = projectNameResult[0].projectname;
+    } else if(domain != process.env.ROOT_DOMAIN) projectName = domain.substring(0, domain.length-process.env.ROOT_DOMAIN.length-1);
+
+    let usersResults = await mailDb().where("domain_id", domainId).select("*"), selectKey = isSystem ? "email" : "source";
+    let inserts = [], proms = [], requiredMails = ["abuse", "postmaster", "webmaster", "hostmaster"];
+    for(let result of usersResults) {
+        let name = result[selectKey].split("@")[0];
+        if(requiredMails.includes(name)) {
+            requiredMails.splice(requiredMails.indexOf(name), 1);
+            let mailIsSystem = result.system.toLowerCase() == "true", updates = {};
+            if(!mailIsSystem) updates.system = "true";
+            let reqMail = name + "@" + (projectName == "" ? "" : projectName + ".") + process.env.ROOT_DOMAIN;
+            if(!isSystem) {
+                if(result.destination != reqMail) updates.destination = reqMail;
+            } else if(result.email != reqMail) {
+                updates.email = reqMail;
+            }
+
+            if(Object.keys(updates).length > 0) proms.push(mailDb().where("id", result.id).update(updates));
+        }
+    }
+
+    for(let remainingName of requiredMails) {
+        let mail = remainingName + "@" + (projectName == "" ? "" : projectName + ".") + process.env.ROOT_DOMAIN;
+        if(isSystem) inserts.push({system: "true", pwdset: "false", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId});
+        else inserts.push({system: "true", domain_id: domainId, source: remainingName + "@" + domain, destination: mail});
+    }
+    
+    return Promise.all(proms.concat(mailDb().insert(inserts)));
 }
 
 const server_version = "9"; // |   like panel_pma to restart container when config is changed
@@ -195,34 +240,34 @@ function checkAndStart(maildirectory, shouldRestart) {
                 // mailDomainsDb is a function because each request needs a different object
 
                 // check all virtual_domains
+                logger.tag("MAIL", "Checking virtual domains...");
                 await mailDomainsDb().where("name", process.env.ROOT_DOMAIN).select("*").then((result) => {
                     if(result.length == 0) return mailDomainsDb().insert({name: process.env.ROOT_DOMAIN, system: "true"});
                     else if(result[0].system != "true") return mailDomainsDb().where("name", process.env.ROOT_DOMAIN).update({system: "true"});
                 });
 
                 let requiredDomains = {};
-                await database_server.database("projects").select("name").then((projects) => {
-                    for(let project of projects) {
-                        requiredDomains[project.name] = true;
-                    }
+                await database_server.database("projects").select(["name", "id"]).then((projects) => {
+                    for(let project of projects)
+                        requiredDomains[project.name + "." + process.env.ROOT_DOMAIN] = true;
                 });
 
                 // if full_dns == false, sending will work, but not receiving unless mx records are set correctly
                 await database_server.database("domains")/*.where("full_dns", "true")*/.select("domain").then((domains) => {
-                    for(let domain of domains) {
+                    for(let domain of domains)
                         requiredDomains[domain.domain] = false;
-                    }
                 });
 
                 // select doesn't need "*" if there is no where() (else it crashes because the query builder asks for 'select *,* from...')
                 await mailDomainsDb().select().then((domains) => {
                     let prom = [];
-                    for(let {name, system} of domains) {
+                    for(let {id, name, system} of domains) {
                         let requiredSystem = requiredDomains[name];
                         if(requiredSystem == undefined) {
                             if(name != process.env.ROOT_DOMAIN) prom.push(mailDomainsDb().where("name", name).delete());
                         } else {
-                            if(requiredSystem != (system.toLowerCase() == "true"))
+                            system = system.toLowerCase() == "true";
+                            if(requiredSystem != system)
                                 prom.push(mailDomainsDb().where("name", name).update({system: requiredSystem ? "true" : "false"}));
                             delete requiredDomains[name];
                         }
@@ -236,16 +281,30 @@ function checkAndStart(maildirectory, shouldRestart) {
                     newRows.push({name: domain, system: requiredSystem ? "true" : "false"});
                 if(newRows.length > 0) await mailDomainsDb().insert(newRows);
 
-                
+                let requiredDomainIds = []; // refetch domains because new ones were inserted, others deleted
+                // TODO: don't do a refetch (difficult because need new ids)
+                await mailDomainsDb().select().then((domains) => {
+                    requiredDomainIds = domains.map((domain) => domain.id);
+                });
+
 
                 // check all virtual_users
-                let mailUsersDb = () => mailDb("virtual_users");
+                logger.tag("MAIL", "Checking virtual users and aliases...");
+                let usersProm = [];
+                for(let domainId of requiredDomainIds)
+                    usersProm.push(checkDomainIdUsers(domainId));
+                await Promise.all(usersProm);
+                logger.tag("MAIL", "Mail ready!");
             }).catch((error) => {
                 logger.error("Cannot start mail server container.");
                 throw error;
             });
         }
     });
+}
+
+function cryptPassword(password) {
+    return unixcrypt.encrypt(password);
 }
 
 async function initialize(maildirectory) {
@@ -267,4 +326,6 @@ module.exports.isMailInstalled = isMailInstalled;
 module.exports.isMailInstalledCache = isMailInstalledCache;
 module.exports.getMailDatabase = getMailDatabase;
 module.exports.installMailDatabase = installMailDatabase;
+module.exports.checkDomainIdUsers = checkDomainIdUsers;
+module.exports.cryptPassword = cryptPassword;
 module.exports.initialize = initialize;
