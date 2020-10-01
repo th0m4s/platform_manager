@@ -1,6 +1,7 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../database_server");
 const plugins_manager = require("../plugins_manager");
+const mail_manager = require("../mails/mail_manager");
 
 const session = require("express-session");
 const KnexSessionStore = require("connect-session-knex")(session);
@@ -102,6 +103,12 @@ function getRouter(headerLinks) {
                             ]);
                         });
 
+                        let result = await mail_manager.getMailDatabase("virtual_users").whereIn("projectname", function () {
+                            this.where("ownerid", user.id).select("name").from(database_server.DB_NAME + ".projects");
+                        }).andWhere("pwdset", "false").count("* as count");
+                        if(result[0].count > 0)
+                            req.session.account.mailsNeedPwd = true;
+                        
                         return done(null, user);
 
                     }
@@ -146,6 +153,11 @@ function getRouter(headerLinks) {
         });
 
         router.get("*", function(req, res, next) {
+            if(req.user != null && !req.url.startsWith("/login") && req.session.account.mailsNeedPwd && req.url != "/mails/setPasswords") {
+                res.redirect("/panel/mails/setPasswords");
+                return;
+            }
+
             req.setPage = function(r, title, active, sub) { r.locals.page = {title: title, active: active || "none", sub: sub || "none"}; }
             res.locals.site = {title: "Platform Manager"};
             res.locals.user = req.user;
@@ -204,6 +216,7 @@ function getRouter(headerLinks) {
         router.use("/docker", require("./panel_controllers/docker_controller"));
         router.use("/processes", require("./panel_controllers/processes_controller"));
         router.use("/users", require("./panel_controllers/users_controller"));
+        router.use("/mails", require("./panel_controllers/mails_controller"));
 
         routerReady = true;
     }

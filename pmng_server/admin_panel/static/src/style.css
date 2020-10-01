@@ -57,3 +57,23 @@
 .previous-log-line {
     filter: opacity(0.5);
 }
+
+.mail-passwords-showHover {
+    display: none;
+}
+
+.passwords-col:hover .mail-passwords-showHover {
+    display: inline-block;
+}
+
+.mail-passwords-main {
+    min-width: 50% !important;
+}
+
+.passwords-row:last-child .mail-passwords-copyNext {
+    display: none;
+}
+
+.passwords-row:first-child .mail-passwords-copyBefore {
+    display: none;
+}

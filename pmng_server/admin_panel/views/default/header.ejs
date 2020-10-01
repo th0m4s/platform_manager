@@ -18,6 +18,15 @@
                         <a class="dropdown-item <%= isActive('projects', 'create') %>" href="/panel/projects/create">Create a project</a>
                     </div>
                 </li>
+                <li class="nav-item dropdown <%= isActive('mails') %>">
+                    <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
+                        Mails
+                    </a>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item <%= isActive('mails', 'domains') %>" href="/panel/mails/domains">Domains</a>
+                        <a class="dropdown-item <%= isActive('mails', 'users') %>" href="/panel/mails/users">Users and aliases</a>
+                    </div>
+                </li>
                 <% if(hasAccess('docker')) { %>
                     <li class="nav-item dropdown <%= isActive('docker') %>">
                         <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
