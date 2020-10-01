@@ -8,54 +8,58 @@
             <li class="nav-item <%= isActive('home') %>">
                 <a class="nav-link" href="/panel/dashboard">Dashboard</a>
             </li>
-            <li class="nav-item dropdown <%= isActive('projects') %>">
-                <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
-                    Projects
-                </a>
-                <div class="dropdown-menu">
-                    <a class="dropdown-item <%= isActive('projects', 'list') %>" href="/panel/projects/list">List projects</a>
-                    <a class="dropdown-item <%= isActive('projects', 'create') %>" href="/panel/projects/create">Create a project</a>
-                </div>
-            </li>
-            <% if(hasAccess('docker')) { %>
-                <li class="nav-item dropdown <%= isActive('docker') %>">
+            <% if(allHeader) { %>     
+                <li class="nav-item dropdown <%= isActive('projects') %>">
                     <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
-                        Docker
+                        Projects
                     </a>
                     <div class="dropdown-menu">
-                        <a class="dropdown-item <%= isActive('docker', 'containers') %>" href="/panel/docker/containers/list">List containers</a>
-                        <a class="dropdown-item <%= isActive('docker', 'networks') %>" href="/panel/docker/networks/list">List networks</a>
+                        <a class="dropdown-item <%= isActive('projects', 'list') %>" href="/panel/projects/list">List projects</a>
+                        <a class="dropdown-item <%= isActive('projects', 'create') %>" href="/panel/projects/create">Create a project</a>
                     </div>
                 </li>
-            <% } %>
+                <% if(hasAccess('docker')) { %>
+                    <li class="nav-item dropdown <%= isActive('docker') %>">
+                        <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
+                            Docker
+                        </a>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item <%= isActive('docker', 'containers') %>" href="/panel/docker/containers/list">List containers</a>
+                            <a class="dropdown-item <%= isActive('docker', 'networks') %>" href="/panel/docker/networks/list">List networks</a>
+                        </div>
+                    </li>
+                <% } %>
 
-            <% if(hasAccess('system')) { %>
-                <li class="nav-item <%= isActive('processes', 'platform') %>">
-                    <a class="nav-link" href="/panel/processes">Processes</a>
-                </li>
-            <% } %>
+                <% if(hasAccess('system')) { %>
+                    <li class="nav-item <%= isActive('processes', 'platform') %>">
+                        <a class="nav-link" href="/panel/processes">Processes</a>
+                    </li>
+                <% } %>
 
-            <% if(hasAccess('admin')) { %>
-                <li class="nav-item dropdown <%= isActive('users') %>">
-                    <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
-                        Users
-                    </a>
-                    <div class="dropdown-menu">
-                        <a class="dropdown-item <%= isActive('users', 'add') %>" href="/panel/users/all">List users</a>
-                        <a class="dropdown-item <%= isActive('users', 'create') %>" href="/panel/users/create">Create a user</a>
-                    </div>
-                </li>
-            <% } %>
-            <% for(let headerLink of headerLinks) { %>
-                <li class="nav-item mr-2">
-                    <a class="nav-link" href="<%= headerLink[1] %>"><%= headerLink[0] %></a>
-                </li>
+                <% if(hasAccess('admin')) { %>
+                    <li class="nav-item dropdown <%= isActive('users') %>">
+                        <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
+                            Users
+                        </a>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item <%= isActive('users', 'add') %>" href="/panel/users/all">List users</a>
+                            <a class="dropdown-item <%= isActive('users', 'create') %>" href="/panel/users/create">Create a user</a>
+                        </div>
+                    </li>
+                <% } %>
+                <% for(let headerLink of headerLinks) { %>
+                    <li class="nav-item mr-2">
+                        <a class="nav-link" href="<%= headerLink[1] %>"><%= headerLink[0] %></a>
+                    </li>
+                <% } %>
             <% } %>
         </ul>
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item mr-2 <%= isActive('users', 'me') %>">
-                <a class="nav-link" href="/panel/users/me">Account</a>
-            </li>
+            <% if(allHeader) { %>
+                <li class="nav-item mr-2 <%= isActive('users', 'me') %>">
+                    <a class="nav-link" href="/panel/users/me">Account</a>
+                </li>
+            <% } %>
             <li class="nav-item">
                 <a class="nav-link" href="/panel/login/logout">Logout</a>
             </li>

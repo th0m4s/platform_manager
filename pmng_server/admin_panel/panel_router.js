@@ -150,6 +150,8 @@ function getRouter(headerLinks) {
             res.locals.site = {title: "Platform Manager"};
             res.locals.user = req.user;
             res.locals.headerLinks = headerLinks;
+            res.locals.allHeader = true;
+            req.setAllHeader = (allHeader) => { res.locals.allHeader = allHeader; }
             
             res.locals.isActive = function(page, sub) {
                 sub = sub || "*";
