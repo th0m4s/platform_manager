@@ -1,7 +1,5 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../database_server");
-const docker_manager = require("../../docker_manager");
-const logger = require("../../platform_logger").logger();
 
 router.all("*", async function(req, res, next) {
     if(!(await database_server.isInstalled())) {
