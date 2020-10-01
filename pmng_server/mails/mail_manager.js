@@ -10,7 +10,7 @@ const unixcrypt = require("unixcrypt");
 
 let _mailKnex = undefined;
 const MAIL_DBNAME = "mail_server";
-function getMailDatabase() {
+function getMailDatabase(table) {
     if(_mailKnex == undefined) {
         let config = Object.assign({}, database_server.DB_CONFIG);
         config.database = MAIL_DBNAME;
@@ -21,7 +21,7 @@ function getMailDatabase() {
         });
     }
 
-    return _mailKnex;
+    return table == undefined ? _mailKnex : _mailKnex(table);
 }
 
 function _mailDbInstalled() {
@@ -67,9 +67,11 @@ function installMailDatabase() {
                     users.integer("domain_id", 10).unsigned().notNullable();
                     users.string("password", 106).notNullable();
                     users.string("email", 100).notNullable().unique();
+                    users.string("projectname", 32).nullable();
                     users.enum("system", ["true", "false"]).defaultTo("false");
                     users.enum("pwdset", ["true", "false"]).defaultTo("true"); // should manually set to false when auto-creating mail users
                     users.foreign("domain_id").references("id").inTable("virtual_domains").onDelete("CASCADE");
+                    users.foreign("projectname").references("name").inTable(database_server.DB_NAME + ".projects").onDelete("CASCADE").onUpdate("SET NULL");
                 }, mailKnex).then(() => {
                     return true;
                 }),
@@ -78,8 +80,10 @@ function installMailDatabase() {
                     aliases.integer("domain_id", 10).unsigned().notNullable();
                     aliases.string("source", 100).notNullable()/*.unique()*/;
                     aliases.string("destination", 100).notNullable();
+                    aliases.string("projectname", 32).nullable();
                     aliases.enum("system", ["true", "false"]).defaultTo("false");
                     aliases.foreign("domain_id").references("id").inTable("virtual_domains").onDelete("CASCADE");
+                    aliases.foreign("projectname").references("name").inTable(database_server.DB_NAME + ".projects").onDelete("CASCADE").onUpdate("SET NULL");
                 }, mailKnex).then(() => {
                     return true;
                 })
@@ -134,8 +138,8 @@ async function checkDomainIdUsers(domainId) {
 
     for(let remainingName of requiredMails) {
         let mail = remainingName + "@" + (projectName == "" ? "" : projectName + ".") + process.env.ROOT_DOMAIN;
-        if(isSystem) inserts.push({system: "true", pwdset: "false", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId});
-        else inserts.push({system: "true", domain_id: domainId, source: remainingName + "@" + domain, destination: mail});
+        if(isSystem) inserts.push({system: "true", pwdset: "false", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId, projectName: projectName == "" ? undefined : projectName});
+        else inserts.push({system: "true", domain_id: domainId, source: remainingName + "@" + domain, destination: mail, projectName: projectName == "" ? undefined : projectName});
     }
     
     return Promise.all(proms.concat(mailDb().insert(inserts)));
