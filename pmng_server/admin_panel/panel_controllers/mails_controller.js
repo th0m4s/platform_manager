@@ -30,8 +30,11 @@ router.get("/", (req, res) => {
     res.redirect("/panel/mails/domains");
 });
 
-router.get("/domains", (req, res) => {
-    res.send("notdoneyet");
+router.get("/domains", async (req, res) => {
+    res.locals.domains = await mail_manager.getMailDatabase("virtual_domains").where(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope)).select("*");
+
+    req.setPage(res, "Mail domains", "mails", "domains");
+    res.render("mails/domains");
 });
 
 router.get("/users", (req, res) => {
@@ -39,5 +42,5 @@ router.get("/users", (req, res) => {
 });
 
 
-router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/mails/domains");});
+router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/mails/users");});
 module.exports = router;
