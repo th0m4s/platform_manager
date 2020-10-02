@@ -103,7 +103,7 @@ function getRouter(headerLinks) {
                             ]);
                         });
 
-                        let mailMissingCount = await mail_manager.getUserMissingPasswords(user.id, true);
+                        let mailMissingCount = await mail_manager.getUserMissingPasswords(user.id, user.scope, true);
                         if(mailMissingCount > 0)
                             req.session.account.mailsNeedPwd = true;
                         

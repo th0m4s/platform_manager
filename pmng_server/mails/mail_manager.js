@@ -307,11 +307,24 @@ function checkAndStart(maildirectory, shouldRestart) {
     });
 }
 
-function getUserMissingPasswords(userId, count = false) {
-    let queryBuilder = getMailDatabase("virtual_users").whereIn("projectname", function () {
-            this.where("ownerid", userId).select("name").from(database_server.DB_NAME + ".projects");
-        }).andWhere("pwdset", "false");
+function knexProjectnameSelector(userId, adminOrScope) {
+    if(typeof adminOrScope == "number") adminOrScope = database_server.checkScope(adminOrScope, "ADMIN");
 
+    return function() {
+        this.whereIn("projectname", function () {
+            this.where("ownerid", userId).select("name").from(database_server.DB_NAME + ".projects");
+        });
+    
+        this.orWhereIn("projectname", function() {
+            this.where("userid", userId).andWhere("mode", "manage").select("projectname").from(database_server.DB_NAME + ".collabs");
+        });
+    
+        if(adminOrScope) this.orWhere("projectname", null);
+    };
+}
+
+function getUserMissingPasswords(userId, userScope = 99, count = false) {
+    let queryBuilder = getMailDatabase("virtual_users").where(knexProjectnameSelector(userId, userScope)).andWhere("pwdset", "false");
     return count ? queryBuilder.count("* as count").then((x) => x[0].count) : queryBuilder.select(["id", "email"]);
 }
 
@@ -341,4 +354,5 @@ module.exports.installMailDatabase = installMailDatabase;
 module.exports.checkDomainIdUsers = checkDomainIdUsers;
 module.exports.cryptPassword = cryptPassword;
 module.exports.getUserMissingPasswords = getUserMissingPasswords;
+module.exports.knexProjectnameSelector = knexProjectnameSelector;
 module.exports.initialize = initialize;

@@ -14,13 +14,13 @@ router.all("*", async function(req, res, next) {
 
 router.get("/setPasswords", async (req, res) => {
     if(req.session.account.mailsNeedPwd === true) {
-        res.locals.emails = await mail_manager.getUserMissingPasswords(req.user.id);
+        res.locals.emails = await mail_manager.getUserMissingPasswords(req.user.id, req.user.scope, false);
         if(res.locals.emails.length == 0) {
             delete req.session.account.mailsNeedPwd;
             res.redirect("/panel/dashboard");
         } else {
             req.setAllHeader(false);
-            req.setPage(res, "Missing passwords", "mails", "passwords");
+            req.setPage(res, "Missing mail passwords", "mails", "passwords");
             res.render("mails/passwords");
         }
     } else res.redirect("/panel/mails");

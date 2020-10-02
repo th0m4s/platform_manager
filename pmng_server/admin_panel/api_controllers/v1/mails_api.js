@@ -10,7 +10,7 @@ router.post("/setPasswords", (req, res) => {
 
         if(passwords.length > 0) {
             try {
-                let ids = (await mail_manager.getUserMissingPasswords(user.id, false)).map((r) => r.id), error = undefined;
+                let ids = (await mail_manager.getUserMissingPasswords(user.id, user.scope, false)).map((r) => r.id), error = undefined;
                 for(let {id} of passwords) {
                     if(!ids.includes(parseInt(id))) {
                         error = id;
