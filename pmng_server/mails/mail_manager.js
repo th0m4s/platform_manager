@@ -149,8 +149,8 @@ async function checkDomainIdUsers(domainId) {
     return Promise.all(proms.concat(mailDb().insert(inserts)));
 }
 
-const server_version = "9"; // |   like panel_pma to restart container when config is changed
-const forceRestart = true; //  |
+const server_version = "10"; // |   like panel_pma to restart container when config is changed
+const forceRestart = true; //   |
 function checkAndStart(maildirectory, shouldRestart) {
     return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=server", "pmng.server=mails"]}}).then(async (containers) => {
         if(containers.length == 0 || shouldRestart || containers[0].data.Labels["pmng.serverversion"] != server_version) {
@@ -234,6 +234,7 @@ function checkAndStart(maildirectory, shouldRestart) {
                     "pmng.serverversion": server_version
                 },
                 StopTimeout: 2,
+                ExposedPorts: Object.fromEntries(Object.entries(portBindings).map((pb) => {pb[1] = {}; return pb;})),
                 HostConfig: {
                     PortBindings: portBindings,
                     AutoRemove: true,
