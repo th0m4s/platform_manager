@@ -59,7 +59,11 @@ function installMailDatabase() {
         return database_server.createTableIfNotExists("virtual_domains", (domains) => {
             domains.increments("id").primary().index().notNullable();
             domains.string("name", 50).notNullable();
+            domains.string("projectname", 32).nullable();
+            domains.integer("cdomainid", 10).nullable().unsigned();
             domains.enum("system", ["true", "false"]).defaultTo("false");
+            domains.foreign("projectname").references("name").inTable(database_server.DB_NAME + ".projects").onDelete("CASCADE").onUpdate("SET NULL");
+            domains.foreign("cdomainid").references("id").inTable(database_server.DB_NAME + ".domains").onDelete("CASCADE").onUpdate("SET NULL");
         }, mailKnex).then(() => {
             return Promise.all([
                 database_server.createTableIfNotExists("virtual_users", (users) => {
@@ -253,26 +257,35 @@ function checkAndStart(maildirectory, shouldRestart) {
                 let requiredDomains = {};
                 await database_server.database("projects").select(["name", "id"]).then((projects) => {
                     for(let project of projects)
-                        requiredDomains[project.name + "." + process.env.ROOT_DOMAIN] = true;
+                        requiredDomains[project.name + "." + process.env.ROOT_DOMAIN] = {system: true, projectname: project.name, cdomainid: null};
                 });
 
                 // if full_dns == false, sending will work, but not receiving unless mx records are set correctly
-                await database_server.database("domains")/*.where("full_dns", "true")*/.select("domain").then((domains) => {
+                await database_server.database("domains")/*.where("full_dns", "true")*/.select(["domain", "projectname", "id"]).then((domains) => {
                     for(let domain of domains)
-                        requiredDomains[domain.domain] = false;
+                        requiredDomains[domain.domain] = {system: false, projectname: domain.projectname, cdomainid: domain.id};
                 });
 
                 // select doesn't need "*" if there is no where() (else it crashes because the query builder asks for 'select *,* from...')
                 await mailDomainsDb().select().then((domains) => {
                     let prom = [];
-                    for(let {id, name, system} of domains) {
-                        let requiredSystem = requiredDomains[name];
-                        if(requiredSystem == undefined) {
+                    for(let {id, name, system, projectname, cdomainid} of domains) {
+                        let requiredDomain = requiredDomains[name];
+                        if(requiredDomain == undefined) {
                             if(name != process.env.ROOT_DOMAIN) prom.push(mailDomainsDb().where("name", name).delete());
                         } else {
                             system = system.toLowerCase() == "true";
-                            if(requiredSystem != system)
-                                prom.push(mailDomainsDb().where("name", name).update({system: requiredSystem ? "true" : "false"}));
+                            let domUpdates = {};
+                            if(requiredDomain.system != system)
+                                domUpdates.system = requiredDomain.system ? "true" : "false";
+                            
+                            if(requiredDomain.projectname != projectname)
+                                domUpdates.projectname = requiredDomain.projectname;
+
+                            if(requiredDomain.cdomainid != cdomainid)
+                                domUpdates.cdomainid = requiredDomain.cdomainid;
+
+                            if(Object.keys(domUpdates).length > 0) prom.push(mailDomainsDb().where("name", name).update(domUpdates));
                             delete requiredDomains[name];
                         }
                     }
@@ -281,8 +294,8 @@ function checkAndStart(maildirectory, shouldRestart) {
                 });
 
                 let newRows = [];
-                for(let [domain, requiredSystem] of Object.entries(requiredDomains))
-                    newRows.push({name: domain, system: requiredSystem ? "true" : "false"});
+                for(let [domain, requiredDomain] of Object.entries(requiredDomains))
+                    newRows.push({name: domain, system: requiredDomain.system ? "true" : "false", projectname: requiredDomain.projectname, cdomainid: requiredDomain.cdomainid});
                 if(newRows.length > 0) await mailDomainsDb().insert(newRows);
 
                 let requiredDomainIds = []; // refetch domains because new ones were inserted, others deleted
