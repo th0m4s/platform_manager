@@ -103,10 +103,8 @@ function getRouter(headerLinks) {
                             ]);
                         });
 
-                        let result = await mail_manager.getMailDatabase("virtual_users").whereIn("projectname", function () {
-                            this.where("ownerid", user.id).select("name").from(database_server.DB_NAME + ".projects");
-                        }).andWhere("pwdset", "false").count("* as count");
-                        if(result[0].count > 0)
+                        let mailMissingCount = await mail_manager.getUserMissingPasswords(user.id, true);
+                        if(mailMissingCount > 0)
                             req.session.account.mailsNeedPwd = true;
                         
                         return done(null, user);

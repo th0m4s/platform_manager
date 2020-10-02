@@ -14,13 +14,15 @@ router.all("*", async function(req, res, next) {
 
 router.get("/setPasswords", async (req, res) => {
     if(req.session.account.mailsNeedPwd === true) {
-        res.locals.emails = await mail_manager.getMailDatabase("virtual_users").whereIn("projectname", function () {
-            this.where("ownerid", req.user.id).select("name").from(database_server.DB_NAME + ".projects");
-        }).andWhere("pwdset", "false").select(["id", "email"]);
-
-        req.setAllHeader(false);
-        req.setPage(res, "Missing passwords", "mails", "passwords");
-        res.render("mails/passwords");
+        res.locals.emails = await mail_manager.getUserMissingPasswords(req.user.id);
+        if(res.locals.emails.length == 0) {
+            delete req.session.account.mailsNeedPwd;
+            res.redirect("/panel/dashboard");
+        } else {
+            req.setAllHeader(false);
+            req.setPage(res, "Missing passwords", "mails", "passwords");
+            res.render("mails/passwords");
+        }
     } else res.redirect("/panel/mails");
 });
 

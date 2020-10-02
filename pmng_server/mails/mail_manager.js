@@ -307,6 +307,14 @@ function checkAndStart(maildirectory, shouldRestart) {
     });
 }
 
+function getUserMissingPasswords(userId, count = false) {
+    let queryBuilder = getMailDatabase("virtual_users").whereIn("projectname", function () {
+            this.where("ownerid", userId).select("name").from(database_server.DB_NAME + ".projects");
+        }).andWhere("pwdset", "false");
+
+    return count ? queryBuilder.count("* as count").then((x) => x[0].count) : queryBuilder.select(["id", "email"]);
+}
+
 function cryptPassword(password) {
     return unixcrypt.encrypt(password);
 }
@@ -332,4 +340,5 @@ module.exports.getMailDatabase = getMailDatabase;
 module.exports.installMailDatabase = installMailDatabase;
 module.exports.checkDomainIdUsers = checkDomainIdUsers;
 module.exports.cryptPassword = cryptPassword;
+module.exports.getUserMissingPasswords = getUserMissingPasswords;
 module.exports.initialize = initialize;

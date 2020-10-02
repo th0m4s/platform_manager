@@ -1,0 +1,1 @@
+window.unixcrypt = require("unixcrypt");
