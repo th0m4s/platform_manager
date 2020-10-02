@@ -27,7 +27,7 @@ router.get("/setPasswords", async (req, res) => {
 });
 
 router.get("/", (req, res) => {
-    res.redirect("/panel/mails/domains");
+    res.redirect("/panel/mails/users");
 });
 
 router.get("/domains", async (req, res) => {
@@ -37,8 +37,13 @@ router.get("/domains", async (req, res) => {
     res.render("mails/domains");
 });
 
-router.get("/users", (req, res) => {
-    res.send("notdoneyet");
+router.get("/users", async (req, res) => {
+    let selector = mail_manager.knexProjectnameSelector(req.user.id, req.user.scope);
+    res.locals.users = (await mail_manager.getMailDatabase("virtual_users").where(selector).select(["id", "domain_id", "email", "projectname", "system"])).map((x) => {x.system = x.system == "true"; return x;});
+    res.locals.aliases = (await mail_manager.getMailDatabase("virtual_aliases").where(selector).select(["id", "domain_id", "source", "destination", "projectname", "system"])).map((x) => {x.system = x.system == "true"; return x;});
+
+    req.setPage(res, "Mail users and aliases", "mails", "users");
+    res.render("mails/users");
 });
 
 
