@@ -23,17 +23,6 @@ function hideLoading() {
     $("#modal-loading").modal("hide");
 }
 
-$(document).ready(() => {
-    $("#modal-loading").on("shown.bs.modal", () => {
-        if(!modalShown) hideLoading();
-    }); 
-    $("#modal-loading").on("hidden.bs.modal", () => {
-        if(modalShown) showInfiniteLoading(lastText);
-    });
-
-    updateTagsInputWidth();
-});
-
 function updateTagsInputWidth() {
     let inputs = $(".bootstrap-tagsinput input");
     for(let i = 0; i < inputs.length; i++) {
@@ -64,5 +53,29 @@ function showCookieNotifications() {
     Cookies.remove("notifications");
 }
 
+function setBackCookie() {
+    Cookies.set("listback", location.href);
+}
+
+function useBackCookie() {
+    Cookies.remove("listback");
+}
+
+$(document).ready(() => {
+    $("#modal-loading").on("shown.bs.modal", () => {
+        if(!modalShown) hideLoading();
+    }); 
+    $("#modal-loading").on("hidden.bs.modal", () => {
+        if(modalShown) showInfiniteLoading(lastText);
+    });
+
+    updateTagsInputWidth();
+
+    let backCookie = Cookies.get("listback");
+    if(backCookie != undefined)
+        $(".back-button").attr("href", backCookie).on("click", useBackCookie);
+});
+
+
 let string_utils = require("../../../string_utils");
-window.utils = {disableButton, showInfiniteLoading, hideLoading, generateAlert, enableButton, updateTagsInputWidth, addNotification, showCookieNotifications, updateTagsInputWidth, string: string_utils};
+window.utils = {disableButton, showInfiniteLoading, hideLoading, generateAlert, enableButton, updateTagsInputWidth, addNotification, showCookieNotifications, updateTagsInputWidth, string: string_utils, setBackCookie, useBackCookie};
