@@ -7,6 +7,7 @@ const simpleGit = require("simple-git/promise");
 const intercom = require("./intercom/intercom_client").connect();
 const docker_manager = require("./docker_manager");
 const plans_manager = require("./plans_manager");
+const mail_manager = require("./mails/mail_manager");
 const rmfr = require("rmfr");
 
 const pfs = require("fs").promises;
@@ -220,7 +221,12 @@ function checkCustomDomain(custom_domain, useSub) {
  */
 function addCustomDomain(projectname, custom_domain, enablesub, full_dns) {
     intercom.send("greenlock", {command: "addCustom", domain: custom_domain, full_dns}) // if https not enabled, no greenlock callback will be executed
-    return database_server.database("domains").insert({domain: custom_domain, projectname: projectname, enablesub: enablesub ? "true" : "false", full_dns: full_dns ? "true" : "false"});
+    return database_server.database("domains").insert({domain: custom_domain, projectname, enablesub: enablesub ? "true" : "false", full_dns: full_dns ? "true" : "false"}).then(() => {
+        return database_server.database("domains").where("domain", custom_domain).select("id");
+    }).then((results) => {
+        if(results.length == 0) throw "Cannot add custom domain into database (empty id result.)";
+        return mail_manager.getMailDatabase("virtual_domains").insert({name: custom_domain, projectname, cdomainid: results[0].id, system: "false"});
+    });
 }
 
 /**
