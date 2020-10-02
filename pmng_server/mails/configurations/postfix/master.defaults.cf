@@ -14,28 +14,22 @@ smtp      inet  n       -       y       -       -       smtpd
 #smtpd     pass  -       -       y       -       -       smtpd
 #dnsblog   unix  -       -       y       -       0       dnsblog
 #tlsproxy  unix  -       -       y       -       0       tlsproxy
-tlsonly:submission inet n       -       y       -       -       smtpd
+tlsonly:submission inet n       -       y      -       -       smtpd
 tlsonly:  -o syslog_name=postfix/submission
 tlsonly:  -o smtpd_tls_security_level=encrypt
 tlsonly:  -o smtpd_sasl_auth_enable=yes
-tlsonly:  -o smtpd_tls_auth_only=yes
+tlsonly:  -o smtpd_sasl_type=dovecot
+tlsonly:  -o smtpd_sasl_path=private/auth
 tlsonly:  -o smtpd_reject_unlisted_recipient=no
-tlsonly:  -o smtpd_client_restrictions=$mua_client_restrictions
-tlsonly:  -o smtpd_helo_restrictions=$mua_helo_restrictions
-tlsonly:  -o smtpd_sender_restrictions=$mua_sender_restrictions
-tlsonly:  -o smtpd_recipient_restrictions=
-tlsonly:  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
-tlsonly:  -o milter_macro_daemon_name=ORIGINATING
-tlsonly:smtps     inet  n       -       y       -       -       smtpd
+tlsonly:  -o smtpd_client_restrictions=permit_sasl_authenticated,reject
+tlsonly: -o milter_macro_daemon_name=ORIGINATING
+tlsonly:smtps     inet  n       -       -       -       -       smtpd
 tlsonly:  -o syslog_name=postfix/smtps
 tlsonly:  -o smtpd_tls_wrappermode=yes
 tlsonly:  -o smtpd_sasl_auth_enable=yes
-tlsonly:  -o smtpd_reject_unlisted_recipient=no
-tlsonly:  -o smtpd_client_restrictions=$mua_client_restrictions
-tlsonly:  -o smtpd_helo_restrictions=$mua_helo_restrictions
-tlsonly:  -o smtpd_sender_restrictions=$mua_sender_restrictions
-tlsonly:  -o smtpd_recipient_restrictions=
-tlsonly:  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject
+tlsonly:  -o smtpd_sasl_type=dovecot
+tlsonly:  -o smtpd_sasl_path=private/auth
+tlsonly:  -o smtpd_client_restrictions=permit_sasl_authenticated,reject
 tlsonly:  -o milter_macro_daemon_name=ORIGINATING
 #628       inet  n       -       y       -       -       qmqpd
 pickup    unix  n       -       y       60      1       pickup
