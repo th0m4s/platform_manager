@@ -173,8 +173,8 @@ function checkAndStart(maildirectory, shouldRestart) {
                 pfMainArgs.__TLS_FULLCHAIN = "/var/spool/postfix/fullchain.pem";
                 pfMainArgs.__TLS_PRIVKEY = "/var/spool/postfix/privkey.pem";
 
-                Binds.push(path.join(__dirname, "./https/greenlock.d/live/" + process.env.ROOT_DOMAIN + "/fullchain.pem") + ":/var/spool/postfix/fullchain.pem:ro");
-                Binds.push(path.join(__dirname, "./https/greenlock.d/live/" + process.env.ROOT_DOMAIN + "/privkey.pem") + ":/var/spool/postfix/privkey.pem:ro");
+                Binds.push(path.join(__dirname, "../https/greenlock.d/live/" + process.env.ROOT_DOMAIN + "/fullchain.pem") + ":/var/spool/postfix/fullchain.pem:ro");
+                Binds.push(path.join(__dirname, "../https/greenlock.d/live/" + process.env.ROOT_DOMAIN + "/privkey.pem") + ":/var/spool/postfix/privkey.pem:ro");
             }
             postfixMainConfig = string_utils.replaceArgs(postfixMainConfig, pfMainArgs);
             let pfMainIncFile = path.resolve(postfixDefaultDir, "main.inc.cf");
