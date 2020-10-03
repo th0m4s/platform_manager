@@ -1,0 +1,5 @@
+user = __DBMAIL_USER
+password = __DBMAIL_PASS
+hosts = __DBMAIL_HOST
+dbname = __DBMAIL_NAME
+query = SELECT destination FROM virtual_aliases WHERE source='%s'

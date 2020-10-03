@@ -38,6 +38,7 @@ smtpd_recipient_restrictions =
         reject_unlisted_recipient,
         reject_unauth_destination
 smtpd_sender_restrictions =
+        reject_authenticated_sender_login_mismatch,
         permit_mynetworks,
         permit_sasl_authenticated,
         reject_non_fqdn_sender,
@@ -68,6 +69,9 @@ virtual_mailbox_domains = mysql:/etc/postfix/mysql-virtual-mailbox-domains.cf
 virtual_mailbox_maps = mysql:/etc/postfix/mysql-virtual-mailbox-maps.cf
 virtual_alias_maps = mysql:/etc/postfix/mysql-virtual-alias-maps.cf,
         mysql:/etc/postfix/mysql-virtual-email2email.cf
+smtpd_sender_login_maps = mysql:/etc/postfix/mysql-smtpd-sender-login-maps.cf,
+        mysql:/etc/postfix/mysql-virtual-email2email.cf
+
 
 # Even more Restrictions
 disable_vrfy_command = yes

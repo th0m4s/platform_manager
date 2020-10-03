@@ -149,7 +149,7 @@ async function checkDomainIdUsers(domainId) {
     return Promise.all(proms.concat(mailDb().insert(inserts)));
 }
 
-const server_version = "14"; // |   like panel_pma to restart container when config is changed
+const server_version = "15"; // |   like panel_pma to restart container when config is changed
 const forceRestart = false; //   |
 function checkAndStart(maildirectory, shouldRestart) {
     return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=server", "pmng.server=mails"]}}).then(async (containers) => {
@@ -181,7 +181,7 @@ function checkAndStart(maildirectory, shouldRestart) {
             await pfs.writeFile(pfMainIncFile, postfixMainConfig);
             Binds.push(pfMainIncFile + ":/etc/postfix/main.cf");
 
-            let pfSqlFiles = ["mysql-virtual-mailbox-domains", "mysql-virtual-mailbox-maps", "mysql-virtual-alias-maps", "mysql-virtual-email2email"];
+            let pfSqlFiles = ["mysql-virtual-mailbox-domains", "mysql-virtual-mailbox-maps", "mysql-virtual-alias-maps", "mysql-virtual-email2email", "mysql-smtpd-sender-login-maps"];
             for(let pfSqlFile of pfSqlFiles) {
                 let sqlFileConfig = await pfs.readFile(path.resolve(postfixDefaultDir, pfSqlFile + ".defaults.cf"), "utf-8");
                 sqlFileConfig = string_utils.replaceArgs(sqlFileConfig, sqlReplaceArgs);
