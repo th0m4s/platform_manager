@@ -3,6 +3,7 @@
 smtpd_banner = $myhostname ESMTP $mail_name (PlatformManager on Ubuntu)
 biff = no
 
+maillog_file=/var/log/postfix.log
 append_dot_mydomain = no
 readme_directory = no
 
@@ -70,7 +71,7 @@ virtual_alias_maps = mysql:/etc/postfix/mysql-virtual-alias-maps.cf,
 # Even more Restrictions
 disable_vrfy_command = yes
 strict_rfc821_envelopes = yes
-smtpd_reject_unlisted_sender = yes
+smtpd_reject_unlisted_sender = no
 smtpd_reject_unlisted_recipient = yes
 smtpd_delay_reject = yes
 smtpd_helo_required = yes
