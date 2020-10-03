@@ -64,7 +64,7 @@ async function prepareSocketError() {
 
 // 8042 is for local server, 8043 for intercom
 // projects start at 11000
-const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort}; // ftp is bound to error port when using http
+const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort, "mail": errorPort}; // ftp/mail are bound to error port when using http
 let isInstalled = false;
 async function _getPort(host) {
     host = host.toLowerCase();

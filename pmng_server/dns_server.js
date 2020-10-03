@@ -39,6 +39,29 @@ dns_server.on("request", async function(request, response) {
                 }
             }
 
+            response.answer.push(dns.TXT({
+                name: requestedName,
+                data: ["v=spf1" + (A_ENABLED ? " ip4:" + process.env.HOST_A : "") + (AAAA_ENABLED ? " ip6:" + process.env.HOST_AAAA : "") + " ~all"],
+                ttl: 900
+            }));
+
+            break;
+
+        case "MX":
+            response.answer.push(dns.MX({
+                name: requestedName,
+                ttl: 900,
+                exchange: "mail." + process.env.ROOT_DOMAIN,
+                priority: 10
+            }));
+
+            response.answer.push(dns.MX({
+                name: requestedName,
+                ttl: 86400, // 24*3600 = a day
+                exchange: process.env.ROOT_DOMAIN,
+                priority: 100
+            }));
+
             break;
 
         case "AAAA":
