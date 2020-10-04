@@ -22,7 +22,7 @@ router.get("/logout", async function(req, res) {
     res.redirect("/panel/login");
 });
 
-let SSO_TYPES = {"database": "/databases/login.sso.php"}
+let SSO_TYPES = {"database": "/databases/login.sso.php", "webmail": "/webmail/"}
 router.post('/', (req, res, next) => {
     let ssotype = req.body.sso;
     let ssoredirect = ssotype == undefined ? undefined : SSO_TYPES[ssotype];

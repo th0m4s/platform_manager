@@ -21,7 +21,7 @@ if(isset($_GET["key"])) {
     $userId = $keyResult["userid"];
     $userStatement = $db->query("SELECT `dbautopass`,`name` FROM `users` WHERE `id`=$userId");
     $userResult = $userStatement->fetch();
-    if($userStatement === false)
+    if($userResult === false)
         die(header("Location: /panel/error/dbsso/uid"));
 
     $dbAutoPass = $userResult["dbautopass"];

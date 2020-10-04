@@ -41,8 +41,9 @@ RUN chmod +x /var/start/install_plugin.sh;
 
 RUN /var/start/install_plugin.sh contextmenu johndoh/roundcube-contextmenu 3.2
 RUN /var/start/install_plugin.sh logout_redirect marneu/logout_redirect master
+RUN mkdir /var/project/public/plugins/pmng_sso
+# pmng_sso plugin will be mounted on startup with configuration
 
-# configuration should be mounted when starting
 EXPOSE 8025
 
 COPY --chown=1000:1000 rc_entrypoint.sh /var/start

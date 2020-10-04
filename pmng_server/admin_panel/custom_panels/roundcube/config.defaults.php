@@ -19,7 +19,8 @@ $config['plugins'] = array(
     'archive',
     'zipdownload',
     'contextmenu',
-    'logout_redirect'
+    'logout_redirect',
+    'pmng_sso'
 );
 
 $config['skin'] = 'elastic';

@@ -3,6 +3,7 @@ const plugins_manager = require("../../../plugins_manager");
 const string_utils = require("../../../string_utils");
 const subprocess_util = require("../../../subprocess_util");
 const database_server = require("../../../database_server");
+const mail_manager = require("../../../mails/mail_manager");
 const path = require("path");
 const pfs = require("fs").promises;
 const httpProxyServer = require("http-proxy").createProxyServer();
@@ -33,8 +34,15 @@ function checkAndStart(shouldRestart) {
             await pfs.writeFile(initDbFile, initDbCtn);
             await pfs.chmod(initDbFile, "755");
 
+            let ssoPluginFile = path.resolve(__dirname, "pmng_sso.inc.php");
+            let defaultsSsoPluginFile = path.resolve(__dirname, "pmng_sso.defaults.php");
+
+            let ssoPluginCtn = string_utils.replaceArgs((await pfs.readFile(defaultsSsoPluginFile)).toString(), {__MAIL_DBNAME: mail_manager.MAIL_DBNAME, __DBSOCKET: "/var/start/mysqld.sock", __DBNAME: database_server.DB_NAME, __DBUSER: process.env.DB_USER, __DBPASS: process.env.DB_PASSWORD});
+            await pfs.writeFile(ssoPluginFile, ssoPluginCtn);
+
             let Binds = [
                 configFile + ":/var/project/public/config/config.inc.php",
+                ssoPluginFile + ":/var/project/public/plugins/pmng_sso/pmng_sso.php",
                 initDbFile + ":/var/start/init_db.inc.sh",
                 process.env.DB_SOCKET + ":/var/start/mysqld.sock"
             ];
@@ -74,7 +82,7 @@ function checkAndStart(shouldRestart) {
     });
 }
 
-const panel_version = "11";   // |
+const panel_version = "15";   // |
 const forceRestart = false;  // | like pma_panel
 class WebmailPanel extends CustomPanel {
     static setHeaderLinks(headerLinks) {
@@ -91,6 +99,10 @@ class WebmailPanel extends CustomPanel {
 
     static async startPanel(mainPanelInstance) {
         if(process.env.DB_MODE == "socket") {
+            mainPanelInstance.addErrorPage("mailsso", "pdo", "SSO database error", "Unable to connect to the SSO database.<br/>Please manually use your credentials to login.", "/webmail/");
+            mainPanelInstance.addErrorPage("mailsso", "uid", "SSO database error", "Unable to find a matching email account based on your request.<br/>Please manually use your credentials to login.", "/webmail/");
+            mainPanelInstance.addErrorPage("mailsso", "scope", "Permission error", "Your account access scope doesn't permit you to access this account.", "/webmail/");
+
             subprocess_util.fakeFork("rc_panel", () => {
                 return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=roundcube"]}}).then((containers) => {
                     return containers.length > 0;
