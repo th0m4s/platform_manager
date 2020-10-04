@@ -2,6 +2,7 @@ const express = require('express'), router = express.Router();
 const database_server = require("../database_server");
 const plugins_manager = require("../plugins_manager");
 const mail_manager = require("../mails/mail_manager");
+const unixcrypt = require("unixcrypt");
 
 const session = require("express-session");
 const KnexSessionStore = require("connect-session-knex")(session);
@@ -103,10 +104,22 @@ function getRouter(headerLinks) {
                             ]);
                         });
 
+                        // checks mail missing user passwords
                         let mailMissingCount = await mail_manager.getUserMissingPasswords(user.id, user.scope, true);
                         if(mailMissingCount > 0)
                             req.session.account.mailsNeedPwd = true;
                         
+                        // checks mail missing sso passwords
+                        let mailDb = mail_manager.getMailDatabase();
+                        let mailMissingSso = await mailDb("virtual_users").where("sso_decrypt", null).orWhere("sso_encrypt", null).select("id");
+                        let mmSsoProms = [];
+                        for(let missingSso of mailMissingSso) {
+                            let mailSsoPassword = string_utils.generatePassword(16, 24);
+                            let encrypted = unixcrypt.encrypt(mailSsoPassword);
+                            mmSsoProms.push(mailDb("virtual_users").where("id", missingSso.id).update({sso_decrypt: mailSsoPassword, sso_encrypt: encrypted}));
+                        }
+                        if(mmSsoProms.length > 0) await Promise.all(mmSsoProms);
+
                         return done(null, user);
 
                     }

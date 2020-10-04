@@ -1,0 +1,4 @@
+driver = mysql
+connect = host=__DBMAIL_HOST dbname=__DBMAIL_NAME user=__DBMAIL_USER password=__DBMAIL_PASS
+default_pass_scheme = SHA512-CRYPT
+password_query = SELECT email as user, sso_encrypt as password FROM virtual_users WHERE email='%u';
