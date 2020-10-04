@@ -12,7 +12,7 @@ function init() {
         }
 
         usersList.append(`<li class="list-group-item row-user${systemClass}"><b>Mail user #${user.id}:</b> ${user.email}<span class="mx-3">(${flags.join(", ")})</span>
-        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/mails/edit/user/${user.id}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a><button class="btn btn-sm btn-danger"${user.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
+        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/login/sso/webmail?uid=${user.id}" class="btn btn-sm btn-info"><i class="fas fa-sign-in-alt"></i> Webmail</a><a href="/panel/mails/edit/user/${user.id}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a><button class="btn btn-sm btn-danger"${user.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
     } 
 
     let aliasesList = $("#aliases-list");
