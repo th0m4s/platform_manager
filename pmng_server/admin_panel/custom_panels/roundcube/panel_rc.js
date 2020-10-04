@@ -37,12 +37,20 @@ function checkAndStart(shouldRestart) {
             let ssoPluginFile = path.resolve(__dirname, "pmng_sso.inc.php");
             let defaultsSsoPluginFile = path.resolve(__dirname, "pmng_sso.defaults.php");
 
-            let ssoPluginCtn = string_utils.replaceArgs((await pfs.readFile(defaultsSsoPluginFile)).toString(), {__MAIL_DBNAME: mail_manager.MAIL_DBNAME, __DBSOCKET: "/var/start/mysqld.sock", __DBNAME: database_server.DB_NAME, __DBUSER: process.env.DB_USER, __DBPASS: process.env.DB_PASSWORD});
+            let mainSqlArgs = {__MAIL_DBNAME: mail_manager.MAIL_DBNAME, __DBSOCKET: "/var/start/mysqld.sock", __DBNAME: database_server.DB_NAME, __DBUSER: process.env.DB_USER, __DBPASS: process.env.DB_PASSWORD};
+            let ssoPluginCtn = string_utils.replaceArgs((await pfs.readFile(defaultsSsoPluginFile)).toString(), mainSqlArgs);
             await pfs.writeFile(ssoPluginFile, ssoPluginCtn);
+
+            let aliasesPluginFile = path.resolve(__dirname, "pmng_aliases.inc.php");
+            let defaultsAliasesPluginFile = path.resolve(__dirname, "pmng_aliases.defaults.php");
+
+            let aliasesPluginCtn = string_utils.replaceArgs((await pfs.readFile(defaultsAliasesPluginFile)).toString(), Object.assign({}, mainSqlArgs, {__DBNAME: mail_manager.MAIL_DBNAME}));
+            await pfs.writeFile(aliasesPluginFile, aliasesPluginCtn);
 
             let Binds = [
                 configFile + ":/var/project/public/config/config.inc.php",
                 ssoPluginFile + ":/var/project/public/plugins/pmng_sso/pmng_sso.php",
+                aliasesPluginFile + ":/var/project/public/plugins/pmng_aliases/pmng_aliases.php",
                 initDbFile + ":/var/start/init_db.inc.sh",
                 process.env.DB_SOCKET + ":/var/start/mysqld.sock"
             ];
@@ -83,7 +91,7 @@ function checkAndStart(shouldRestart) {
 }
 
 const panel_version = "15";   // |
-const forceRestart = false;  // | like pma_panel
+const forceRestart = true;  // | like pma_panel
 class WebmailPanel extends CustomPanel {
     static setHeaderLinks(headerLinks) {
         if(process.env.DB_MODE == "socket") {
