@@ -7,4 +7,5 @@ docker build -t pmng/apache2-php7 ./apache-php
 docker build -t pmng/nginx-php7 ./nginx-php
 docker build -t pmng/plugin-mariadb ./alpine-mariadb
 docker build -t pmng/panel-pma ./alpine-phpmyadmin
-docker build -t pmng/server-mail ./alpine-mailer
+docker build -t pmng/server-mail ./mails/alpine-mailer
+docker build -t pmng/panel-rc ./mails/alpine-roundcube
