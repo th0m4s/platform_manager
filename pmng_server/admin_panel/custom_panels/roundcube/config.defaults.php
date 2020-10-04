@@ -19,7 +19,7 @@ $config['plugins'] = array(
     'archive',
     'zipdownload',
     'contextmenu',
-    'logoutredirect'
+    'logout_redirect'
 );
 
 $config['skin'] = 'elastic';

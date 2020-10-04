@@ -40,7 +40,7 @@ COPY --chown=1000:1000 install_plugin.sh /var/start
 RUN chmod +x /var/start/install_plugin.sh;
 
 RUN /var/start/install_plugin.sh contextmenu johndoh/roundcube-contextmenu 3.2
-RUN /var/start/install_plugin.sh logoutredirect marneu/logout_redirect master
+RUN /var/start/install_plugin.sh logout_redirect marneu/logout_redirect master
 
 # configuration should be mounted when starting
 EXPOSE 8025
