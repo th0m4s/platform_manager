@@ -9,7 +9,7 @@ app.get("/style.css", (req, res) => {
     res.sendFile(stylePath);
 });
 
-const errorRedirects = {mails: "__HTTPSadmin.__ROOT_DOMAIN/webmail"};
+const errorRedirects = {mail: "__HTTPSadmin.__ROOT_DOMAIN/webmail"};
 app.get("/", (req, res, next) => {
     let host = req.headers.host;
     if(host.endsWith(process.env.ROOT_DOMAIN)) {
