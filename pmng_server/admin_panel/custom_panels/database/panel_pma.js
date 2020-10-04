@@ -74,7 +74,7 @@ function checkAndStart(shouldRestart) {
             }
 
             // now create pma container
-            await docker_manager.docker.container.create({
+            return docker_manager.docker.container.create({
                 Image: "pmng/panel-pma",
                 Hostname: "phpmyadmin",
                 name: "pmng_panel_pma",
@@ -99,14 +99,16 @@ function checkAndStart(shouldRestart) {
                 return container.start();
             }).then(() => {
                 logger.info("phpMyAdmin custom admin panel started.");
+                return true;
             }).catch((error) => {
                 logger.error("Cannot start PMA panel: " + error);
+                return false;
             });
         }
     });
 }
 
-const panel_version = "10"; // used to restart the panel container if changes are made
+const panel_version = "11"; // used to restart the panel container if changes are made
 const forceRestart = false; // for debug purposes, should not be true on git
 class DatabasePanel extends CustomPanel {
     static getHeaderLinks() {
@@ -125,7 +127,7 @@ class DatabasePanel extends CustomPanel {
             await checkAndStart(true);
         });
 
-        await checkAndStart(forceRestart);
+        return checkAndStart(forceRestart);
     }
 
     static route() {
