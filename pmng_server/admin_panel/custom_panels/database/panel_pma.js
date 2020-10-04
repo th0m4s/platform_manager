@@ -104,7 +104,7 @@ function checkAndStart(shouldRestart) {
                 logger.error("Cannot start PMA panel: " + error);
                 return false;
             });
-        }
+        } else return true; // already started
     });
 }
 

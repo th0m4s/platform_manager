@@ -70,7 +70,7 @@ function checkAndStart(shouldRestart) {
                 logger.error("Cannot start RC panel: " + error);
                 return false;
             });
-        }
+        } else return true; // already started
     });
 }
 
