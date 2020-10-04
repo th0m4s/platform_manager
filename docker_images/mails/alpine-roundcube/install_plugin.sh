@@ -14,7 +14,7 @@ dl_name=plugin_$name.tar.gz
 mkdir /var/project/public/plugins/$name
 
 echo "Downloading..."
-curl -fsSL -o $dl_name "https://github.com/johndoh/roundcube-contextmenu/archive/$vers.tar.gz"
+curl -fsSL -o $dl_name "https://github.com/$repo/archive/$vers.tar.gz"
 echo "Extracting..."
 tar -xzf $dl_name -C /var/project/public/plugins/$name --strip-components=1
 echo "Plugin installed."
