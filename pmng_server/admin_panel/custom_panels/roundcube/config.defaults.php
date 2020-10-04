@@ -18,7 +18,8 @@ $config['des_key'] = '__RCDESKEY';
 $config['plugins'] = array(
     'archive',
     'zipdownload',
-    'contextmenu'
+    'contextmenu',
+    'logoutredirect'
 );
 
 $config['skin'] = 'elastic';
@@ -34,3 +35,5 @@ $config['sql_debug'] = true;
 $config['imap_debug'] = true;
 $config['ldap_debug'] = true;
 $config['smtp_debug'] = true;
+
+$config['logout_redirect_url'] = 'http'.(__enableSSL ? "s" : "").'://admin.__ROOT_DOMAIN/panel/dashboard';

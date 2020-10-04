@@ -42,7 +42,7 @@ function checkAndStart(shouldRestart) {
             // now create rc container
             return docker_manager.docker.container.create({
                 Image: "pmng/panel-rc",
-                Hostname: "rouncube",
+                Hostname: "roundcube",
                 name: "pmng_panel_rc",
                 Labels: {
                     "pmng.containertype": "panel",
@@ -74,7 +74,7 @@ function checkAndStart(shouldRestart) {
     });
 }
 
-const panel_version = "9";   // |
+const panel_version = "10";   // |
 const forceRestart = false;  // | like pma_panel
 class WebmailPanel extends CustomPanel {
     static getHeaderLinks() {
