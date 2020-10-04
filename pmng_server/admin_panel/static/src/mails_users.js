@@ -11,7 +11,7 @@ function init() {
             flags.push("<i>system</i>");
         }
 
-        usersList.append(`<li class="list-group-item row-user${systemClass}"><b>Mail user #${user.id}:</b> ${user.email}<span class="mx-3">(${flags.join(", ")})</span>
+        usersList.append(`<li class="list-group-item row-user${systemClass}" data-sort="${user.id}"><b>Mail user #${user.id}:</b> ${user.email}<span class="mx-3">(${flags.join(", ")})</span>
         <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/login/sso/webmail?uid=${user.id}" class="btn btn-sm btn-info"><i class="fas fa-sign-in-alt"></i> Webmail</a><a href="/panel/mails/edit/user/${user.id}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a><button class="btn btn-sm btn-danger"${user.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
     } 
 
@@ -25,7 +25,7 @@ function init() {
             flags.push("<i>system</i>");
         }
 
-        aliasesList.append(`<li class="list-group-item row-alias${systemClass}"><b>Alias #${alias.id}:</b> ${alias.source} <i>to</i> ${alias.destination} <span class="mx-3">(${flags.join(", ")})</span>
+        aliasesList.append(`<li class="list-group-item row-alias${systemClass}" data-sort="${alias.id}"><b>Alias #${alias.id}:</b> ${alias.source} <i>to</i> ${alias.destination} <span class="mx-3">(${flags.join(", ")})</span>
         <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/mails/edit/alias/${alias.id}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a><button class="btn btn-sm btn-danger"${alias.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
     } 
 
@@ -47,6 +47,8 @@ function setPanelView(panel) {
         $(".chevron-" + panel).addClass("fa-chevron-down").removeClass("fa-chevron-right").css("margin-left", "-6px");
     }
 
+    updateNoUsers();
+    updateNoAliases();
     currentPanel = panel;
 }
 
@@ -60,9 +62,14 @@ function hideSystemUsers(hide, setCheckbox = true) {
     if(setCheckbox && hide) checkbox.prop("checked", true);
     else if(setCheckbox) checkbox.prop("checked", false);
 
-    if(hide) $(".user-system").hide();
-    else $(".user-system").show();
+    if(hide) $(".user-system").appendTo("#hidden-users");
+    else $(".user-system").appendTo("#users-list");
+    updateListOrder("#users-list", ".row-user");
 
+    updateNoUsers();
+}
+
+function updateNoUsers() {
     if($(".row-user:visible").length > 0)
         $("#no-users").hide();
     else $("#no-users").show();
@@ -73,12 +80,34 @@ function hideSystemAliases(hide, setCheckbox = true) {
     if(setCheckbox && hide) checkbox.prop("checked", true);
     else if(setCheckbox) checkbox.prop("checked", false);
 
-    if(hide) $(".alias-system").hide();
-    else $(".alias-system").show();
+    if(hide) $(".alias-system").appendTo("#hidden-aliases");
+    else $(".alias-system").appendTo("#aliases-list");
+    updateListOrder("#aliases-list", ".row-alias");
 
+    updateNoAliases();
+}
+
+function updateNoAliases() {
     if($(".row-alias:visible").length > 0)
         $("#no-aliases").hide();
     else $("#no-aliases").show();
+}
+
+function updateListOrder(listId, childrenSelector) {
+    let list = $(listId);
+    let array = $.makeArray(list.children(childrenSelector));
+
+    array = array.sort((a, b) => {
+        let valA = parseInt($(a).attr("data-sort")), valB = parseInt($(b).attr("data-sort"));
+        if(valA < valB) return -1;
+        else if(valA > valB) return 1;
+        else return 0;
+    });
+
+    list.html("");
+    $.each(array, function() {
+        list.append(this);
+    });
 }
 
 function updateSystemCounters() {
