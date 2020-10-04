@@ -18,6 +18,7 @@ $config['des_key'] = '__RCDESKEY';
 $config['plugins'] = array(
     'archive',
     'zipdownload',
+    'contextmenu'
 );
 
 $config['skin'] = 'elastic';

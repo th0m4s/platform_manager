@@ -36,10 +36,16 @@ RUN set -ex; \
     rm -rf /var/project/public/installer/ /var/project/public/INSTALL /var/project/public/README.md /var/project/public/UPGRADING /var/project/public/composer.json /var/project/public/composer.json-dist /var/project/public/CHANGELOG \
     apk del .fetch-deps
 
+COPY --chown=1000:1000 install_plugin.sh /var/start
+RUN chmod +x /var/start/install_plugin.sh;
+
+RUN /var/start/install_plugin.sh contextmenu johndoh/roundcube-contextmenu 3.2
+
 # configuration should be mounted when starting
 EXPOSE 8025
 
 COPY --chown=1000:1000 rc_entrypoint.sh /var/start
-RUN chmod +x /var/start/rc_entrypoint.sh; chown -R 1000:1000 /var/project
+RUN chmod +x /var/start/rc_entrypoint.sh && \
+    chown -R 1000:1000 /var/project
 
 ENTRYPOINT /var/start/rc_entrypoint.sh
