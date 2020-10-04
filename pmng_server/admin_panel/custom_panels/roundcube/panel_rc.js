@@ -74,7 +74,7 @@ function checkAndStart(shouldRestart) {
     });
 }
 
-const panel_version = "6";   // |
+const panel_version = "7";   // |
 const forceRestart = true;  // | like pma_panel
 class WebmailPanel extends CustomPanel {
     static getHeaderLinks() {
