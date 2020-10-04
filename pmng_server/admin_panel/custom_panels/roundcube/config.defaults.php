@@ -4,14 +4,15 @@ $config = array();
 
 $config['db_dsnw'] = 'mysql://__DBUSER:__DBPASS@unix(__DBSOCKET)/__DBNAME';
 
-$config['default_host'] = 'mail.__ROOT_DOMAIN';
-$config['smtp_server'] = 'mail.__ROOT_DOMAIN';
-$config['smtp_port'] = 587;
+$config['default_host'] = (__enableSSL ? "ssl://" : "").'mail.__ROOT_DOMAIN';
+$config['default_port'] = __enableSSL ? 993 : 143;
+$config['smtp_server'] = (__enableSSL ? "tls://" : "").'mail.__ROOT_DOMAIN';
+$config['smtp_port'] = __enableSSL ? 587 : 25;
 $config['smtp_user'] = '%u';
 $config['smtp_pass'] = '%p';
 
 $config['support_url'] = '';
-$config['product_name'] = 'PlatformManager Webamil';
+$config['product_name'] = 'PlatformManager Webmail';
 $config['des_key'] = '__RCDESKEY';
 
 $config['plugins'] = array(
