@@ -109,7 +109,7 @@ function checkAndStart(shouldRestart) {
 }
 
 const panel_version = "11"; // used to restart the panel container if changes are made
-const forceRestart = false; // for debug purposes, should not be true on git
+const forceRestart = process.env.NODE_ENV == "development";
 class DatabasePanel extends CustomPanel {
     static setHeaderLinks(headerLinks) {
         headerLinks.databases = {

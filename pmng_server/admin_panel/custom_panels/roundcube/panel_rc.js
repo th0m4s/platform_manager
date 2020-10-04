@@ -90,8 +90,8 @@ function checkAndStart(shouldRestart) {
     });
 }
 
-const panel_version = "16";   // |
-const forceRestart = false;  // | like pma_panel
+const panel_version = "16";
+const forceRestart = process.env.NODE_ENV == "development";
 class WebmailPanel extends CustomPanel {
     static setHeaderLinks(headerLinks) {
         if(process.env.DB_MODE == "socket") {
