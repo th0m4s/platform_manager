@@ -23,7 +23,7 @@ function checkAndStart(shouldRestart) {
             let configFile = path.resolve(__dirname, "config.inc.php");
             let defaultsConfigFile = path.resolve(__dirname, "config.defaults.php");
 
-            let configCtn = string_utils.replaceArgs((await pfs.readFile(defaultsConfigFile)).toString(), Object.assign({__RCDESKEY: process.env.RC_DESKEY, __ROOT_DOMAIN: process.env.ROOT_DOMAIN}, sqlArgs));
+            let configCtn = string_utils.replaceArgs((await pfs.readFile(defaultsConfigFile)).toString(), Object.assign({__RCDESKEY: process.env.RC_DESKEY, __ROOT_DOMAIN: process.env.ROOT_DOMAIN, __enableSSL: process.env.ENABLE_HTTPS.toLowerCase() == "true"}, sqlArgs));
             await pfs.writeFile(configFile, configCtn);
 
             let initDbFile = path.resolve(__dirname, "init_db.inc.sh");
@@ -74,7 +74,7 @@ function checkAndStart(shouldRestart) {
     });
 }
 
-const panel_version = "10";   // |
+const panel_version = "11";   // |
 const forceRestart = false;  // | like pma_panel
 class WebmailPanel extends CustomPanel {
     static setHeaderLinks(headerLinks) {
