@@ -43,6 +43,11 @@ router.get("/", (req, res) => {
             usage: "The phpMyAdmin panel (running in a Docker container) to manage projects and administration databases.",
             special: 0
         },
+        "rc_panel": {
+            name: "Rouncube panel",
+            usage: "The Rouncube panel (running in a Docker container) running a webmail.",
+            special: 0
+        },
         "git_web_server": {
             name: "Git server",
             usage: "Binds git to an HTTP server for remote usage.",
@@ -67,6 +72,9 @@ router.get("/", (req, res) => {
             special: 1
         };
     }
+
+    if(process.env.DB_MODE != "socket")
+        delete res.locals.subprocesses.rc_panel;
 
     res.render("processes/platform");
 });
