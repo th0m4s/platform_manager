@@ -38,4 +38,11 @@ $config['imap_debug'] = true;
 $config['ldap_debug'] = true;
 $config['smtp_debug'] = true;
 
+$config['htmleditor'] = 4;
+//  0 - never,
+//  1 - always,
+//  2 - on reply to HTML message,
+//  3 - on forward or reply to HTML message
+//  4 - always, except when replying to plain text message
+
 $config['logout_redirect_url'] = 'http'.(__enableSSL ? "s" : "").'://admin.__ROOT_DOMAIN/panel/dashboard';
