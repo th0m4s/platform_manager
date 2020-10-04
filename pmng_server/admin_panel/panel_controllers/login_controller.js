@@ -31,6 +31,16 @@ router.post('/', (req, res, next) => {
     if(ssoredirect != undefined) {
         failureRedirect = "/panel/login/sso/" + ssotype;
         successRedirect = failureRedirect;
+
+        let query = req.body.query;
+        if(query != undefined && query != "") {
+            query = JSON.parse(Buffer.from(query, "base64").toString("ascii"));
+            for(let [key, value] of Object.entries(query)) {
+                if(successRedirect.includes("?")) successRedirect += "&";
+                else successRedirect += "?";
+                successRedirect += key + "=" + value;
+            }
+        }
     }
 
     passport.authenticate('local', { session: true, successRedirect, failureRedirect, failureFlash: true, successFlash: "Login successful." })(req, res, next);
@@ -39,6 +49,7 @@ router.get("/", async function(req, res) {
     if(await database_server.isInstalled()) {
         req.setPage(res, "Login");
         res.locals.sso = undefined;
+        res.locals.query = undefined;
         res.render("login/login");
     } else {
         res.redirect("/panel/login/install");
@@ -55,11 +66,17 @@ router.get("/sso/:sso_type", async (req, res) => {
             if(req.user != undefined) {
                 if(ssoredirect.includes("?")) ssoredirect += "&";
                 else ssoredirect += "?";
-                
-                res.redirect(ssoredirect + "key=" + req.user.key);
+                ssoredirect = ssoredirect + "key=" + req.user.key;
+
+                for(let [key, value] of Object.entries(req.query)) {
+                    ssoredirect += "&" + key + "=" + value;
+                }
+
+                res.redirect(ssoredirect);
             } else {
                 req.setPage(res, "Login");
                 res.locals.sso = ssotype;
+                res.locals.query = req.query;
                 res.render("login/login");
             }
         }

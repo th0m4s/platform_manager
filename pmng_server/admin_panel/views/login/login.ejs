@@ -31,6 +31,9 @@
 								<% if(sso != undefined) { %>
 									<input type="hidden" name="sso" value="<%- sso %>">
 								<% } %>
+								<% if(query != undefined) { %>
+									<input type="hidden" name="query" value="<%- Buffer.from(JSON.stringify(query)).toString('base64') %>">
+								<% } %>
 								<div class="form-group">
 									<button type="submit" class="btn btn-primary btn-block">Login</button>
 								</div>
