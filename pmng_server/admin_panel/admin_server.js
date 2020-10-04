@@ -16,7 +16,104 @@ function handleCustomPanel(route, panel) {
     };
 }
 
-let headerLinks = [], utilsPanels = {};
+// not declared in panel_router because custom panels can modify this
+let headerLinks = {
+    dashboard: {
+        name: "Dashboard",
+        type: "link",
+        link: "/panel/dashboard",
+        active: ["home"],
+        allHeader: false,
+        access: true
+    },
+    projects: {
+        name: "Projects",
+        type: "list",
+        active: ["projects"],
+        allHeader: true,
+        access: true,
+        list: {
+            list: {
+                name: "List projects",
+                link: "/panel/projects/list",
+                active: ["projects", "list"]
+            },
+            create: {
+                name: "Create a project",
+                link: "/panel/projects/create",
+                active: ["projects", "create"]
+            }
+        }
+    },
+    mails: {
+        name: "Mails",
+        type: "list",
+        active: ["mails"],
+        allHeader: true,
+        access: true,
+        list: {
+            users: {
+                name: "Users and aliases",
+                link: "/panel/mails/users",
+                active: ["mails", "users"]
+            },
+            domains: {
+                name: "Domains",
+                link: "/panel/mails/domains",
+                active: ["mails", "domains"]
+            }
+        }
+    },
+    docker: {
+        name: "Docker",
+        type: "list",
+        active: ["docker"],
+        allHeader: true,
+        access: "docker",
+        list: {
+            containers: {
+                name: "List containers",
+                link: "/panel/docker/containers/list",
+                active: ["docker", "containers"]
+            },
+            networks: {
+                name: "List networks",
+                link: "/panel/docker/networks/list",
+                active: ["docker", "networks"]
+            }
+        }
+    },
+    processes: {
+        name: "Processes",
+        type: "link",
+        link: "/panel/processes",
+        active: ["processes", "platform"],
+        allHeader: true,
+        access: "system"
+    },
+    users: {
+        name: "Users",
+        type: "list",
+        active: ["users"],
+        allHeader: true,
+        access: "admin",
+        list: {
+            list: {
+                name: "List users",
+                link: "/panel/users/all",
+                active: ["users", "all"]
+            },
+            create: {
+                name: "Create a user",
+                link: "/panel/users/create",
+                active: ["users", "create"]
+            }
+        }
+    }
+};
+
+
+let utilsPanels = {};
 const favicon = path.join(__dirname, "static", "images", "favicon.ico");
 
 function authNamespace(namespace) {
@@ -39,7 +136,10 @@ async function start() {
     
                     if(route != undefined) {
                         if(await panel.startPanel(panelRouter)) {
-                            headerLinks = headerLinks.concat(panel.getHeaderLinks() || []);
+                            let copyLinks = Object.assign({}, headerLinks);
+                            panel.setHeaderLinks(copyLinks);
+                            if(copyLinks != undefined) headerLinks = copyLinks;
+
                             if(panel.requiresUtils()) utilsPanels[route] = panel;
                             else admin.use("/" + route, handleCustomPanel(route, panel));
                         }

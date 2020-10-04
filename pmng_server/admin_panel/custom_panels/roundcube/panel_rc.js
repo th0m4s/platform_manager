@@ -77,8 +77,16 @@ function checkAndStart(shouldRestart) {
 const panel_version = "10";   // |
 const forceRestart = false;  // | like pma_panel
 class WebmailPanel extends CustomPanel {
-    static getHeaderLinks() {
-        // not using custom headers because webmail link is inside mails menu
+    static setHeaderLinks(headerLinks) {
+        if(process.env.DB_MODE == "socket") {
+            headerLinks.mails.list.webmail = {
+                name: "Webmail",
+                type: "link",
+                link: "/webmail/",
+                allHeader: true,
+                access: true
+            };
+        }
     }
 
     static async startPanel(mainPanelInstance) {

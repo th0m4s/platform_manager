@@ -111,8 +111,14 @@ function checkAndStart(shouldRestart) {
 const panel_version = "11"; // used to restart the panel container if changes are made
 const forceRestart = false; // for debug purposes, should not be true on git
 class DatabasePanel extends CustomPanel {
-    static getHeaderLinks() {
-        return [["Databases", "/databases/" + (process.env.DB_MODE == "socket" ? "index.php?server=2" : "")]];
+    static setHeaderLinks(headerLinks) {
+        headerLinks.databases = {
+            name: "Databases",
+            type: "link",
+            link: "/databases/" + (process.env.DB_MODE == "socket" ? "index.php?server=2" : ""),
+            allHeader: true,
+            access: true
+        }
     }
 
     static async startPanel(mainPanelInstance) {
