@@ -1,0 +1,3 @@
+driver = mysql
+connect = host=__DBMAIL_HOST dbname=__DBMAIL_NAME user=__DBMAIL_USER password=__DBMAIL_PASS
+user_query = SELECT "vmail" AS gid, "vmail" AS uid, "/var/mail/vhosts/%d/%n" AS home, concat('*:bytes=', quota) AS quota_rule FROM virtual_users WHERE email='%u';

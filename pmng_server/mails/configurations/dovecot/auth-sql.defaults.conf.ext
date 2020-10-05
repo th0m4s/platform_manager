@@ -21,6 +21,6 @@ passdb {
 #}
 
 userdb {
-  driver = static
-  args = uid=vmail gid=vmail home=/var/mail/vhosts/%d/%n
+  driver = sql
+  args = /etc/dovecot/dovecot-sql-users.conf.ext
 }

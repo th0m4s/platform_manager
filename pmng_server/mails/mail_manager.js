@@ -72,6 +72,7 @@ function installMailDatabase() {
                     users.string("password", 106).notNullable();
                     users.string("email", 100).notNullable().unique();
                     users.string("projectname", 32).nullable();
+                    users.string("quota", 16).defaultTo("100M").notNullable();
                     users.enum("system", ["true", "false"]).defaultTo("false");
                     users.enum("pwdset", ["true", "false"]).defaultTo("true"); // should manually set to false when auto-creating mail users
                     users.foreign("domain_id").references("id").inTable("virtual_domains").onDelete("CASCADE");
@@ -149,7 +150,7 @@ async function checkDomainIdUsers(domainId) {
     return Promise.all(proms.concat(mailDb().insert(inserts)));
 }
 
-const server_version = "17"; // |   like panel_pma to restart container when config is changed
+const server_version = "18"; // |   like panel_pma to restart container when config is changed
 const forceRestart = process.env.NODE_ENV == "development";
 function checkAndStart(maildirectory, shouldRestart) {
     return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=server", "pmng.server=mails"]}}).then(async (containers) => {
@@ -199,7 +200,7 @@ function checkAndStart(maildirectory, shouldRestart) {
 
             // DOVECOT
             let dovecotDefaultDir = path.resolve(__dirname, "configurations", "dovecot");
-            let dvFiles = ["dovecot.defaults.conf", "conf.d/10-mail.defaults.conf", "conf.d/10-auth.defaults.conf", "conf.d/10-master.defaults.conf", "conf.d/10-ssl.defaults.conf", "conf.d/auth-sql.defaults.conf.ext", "dovecot-sql.defaults.conf.ext", "dovecot-sql-sso.defaults.conf.ext"];
+            let dvFiles = ["dovecot.defaults.conf", "conf.d/10-mail.defaults.conf", "conf.d/10-auth.defaults.conf", "conf.d/10-master.defaults.conf", "conf.d/10-ssl.defaults.conf", "conf.d/auth-sql.defaults.conf.ext", "dovecot-sql.defaults.conf.ext", "dovecot-sql-sso.defaults.conf.ext", "dovecot-sql-users.defaults.conf.ext", "conf.d/20-imap.defaults.conf", "conf.d/90-quota.defaults.conf"];
             let dvConfig = Object.assign({}, pfMainArgs, sqlReplaceArgs);
             if(sqlHosts.startsWith("unix:")) dvConfig.__DBMAIL_HOST = "/var/spool/postfix/var/run/mysqld/mysqld.sock";
 
