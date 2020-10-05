@@ -158,7 +158,7 @@ async function checkDomainIdUsers(domainId) {
     return Promise.all(proms.concat(mailDb().insert(inserts)));
 }
 
-const server_version = "19"; // |   like panel_pma to restart container when config is changed
+const server_version = "20"; // |   like panel_pma to restart container when config is changed
 const forceRestart = process.env.NODE_ENV == "development";
 function checkAndStart(maildirectory, shouldRestart) {
     return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=server", "pmng.server=mails"]}}).then(async (containers) => {
@@ -208,7 +208,7 @@ function checkAndStart(maildirectory, shouldRestart) {
 
             // DOVECOT
             let dovecotDefaultDir = path.resolve(__dirname, "configurations", "dovecot");
-            let dvFiles = ["dovecot.defaults.conf", "conf.d/10-mail.defaults.conf", "conf.d/10-auth.defaults.conf", "conf.d/10-master.defaults.conf", "conf.d/10-ssl.defaults.conf", "conf.d/auth-sql.defaults.conf.ext", "dovecot-sql.defaults.conf.ext", "dovecot-sql-sso.defaults.conf.ext", "dovecot-sql-users.defaults.conf.ext", "conf.d/20-imap.defaults.conf", "conf.d/20-pop3.defaults.conf", "conf.d/15-lda.defaults.conf", "conf.d/90-quota.defaults.conf", "dovecot-sql-expire.defaults.conf.ext"];
+            let dvFiles = ["dovecot.defaults.conf", "conf.d/10-mail.defaults.conf", "conf.d/10-auth.defaults.conf", "conf.d/10-master.defaults.conf", "conf.d/10-ssl.defaults.conf", "conf.d/auth-sql.defaults.conf.ext", "dovecot-sql.defaults.conf.ext", "dovecot-sql-sso.defaults.conf.ext", "dovecot-sql-users.defaults.conf.ext", "conf.d/20-imap.defaults.conf", "conf.d/20-pop3.defaults.conf", "conf.d/15-lda.defaults.conf", "conf.d/90-quota.defaults.conf"/*, "dovecot-sql-expire.defaults.conf.ext"*/];
             let dvConfig = Object.assign({}, pfMainArgs, sqlReplaceArgs);
             if(sqlHosts.startsWith("unix:")) dvConfig.__DBMAIL_HOST = "/var/spool/postfix/var/run/mysqld/mysqld.sock";
 
