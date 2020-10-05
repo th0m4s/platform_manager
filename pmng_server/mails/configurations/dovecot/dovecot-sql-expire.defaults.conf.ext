@@ -1,0 +1,12 @@
+connect = host=__DBMAIL_HOST dbname=__DBMAIL_NAME user=__DBMAIL_USER password=__DBMAIL_PASS
+
+map {
+  pattern = shared/expire/$user/$mailbox
+  table = expires
+  value_field = expire_stamp
+
+  fields {
+    username = $user
+    mailbox = $mailbox
+  }
+}
