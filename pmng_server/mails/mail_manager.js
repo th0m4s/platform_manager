@@ -28,7 +28,7 @@ function _mailDbInstalled() {
     let mailKnex = getMailDatabase();
     if(mailKnex == undefined) return Promise.resolve(false);
     return Promise.all([
-        mailKnex.schema.hasTable("virtual_domains"), mailKnex.schema.hasTable("virtual_users"), mailKnex.schema.hasTable("virtual_aliases"), mailKnex.schema.hasTable("expires")]).then((results) => {
+    mailKnex.schema.hasTable("virtual_domains"), mailKnex.schema.hasTable("virtual_users"), mailKnex.schema.hasTable("virtual_aliases")/*, mailKnex.schema.hasTable("expires")*/]).then((results) => {
         return !results.includes(false) ? true : undefined;
     }).catch(() => { return false; });
 }
@@ -91,7 +91,7 @@ function installMailDatabase() {
                     aliases.foreign("projectname").references("name").inTable(database_server.DB_NAME + ".projects").onDelete("CASCADE").onUpdate("SET NULL");
                 }, mailKnex).then(() => {
                     return true;
-                }),
+                })/*,
                 database_server.createTableIfNotExists("expires", (expires) => {
                     expires.string("username", 100).notNullable();
                     expires.string("mailbox", 255).notNullable();
@@ -99,7 +99,7 @@ function installMailDatabase() {
                     expires.primary(["username", "mailbox"]);
                 }, mailKnex).then(() => {
                     return true;
-                })
+                })*/
             ]).then((results) => {
                 if(results.includes(false)) throw "Cannot install databases.";
             });
