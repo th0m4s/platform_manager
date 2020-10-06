@@ -1,5 +1,10 @@
 function init() {
-    setPanelView("users");
+    if(location.hash == "#aliases") {
+        // window.history.replaceState({}, null, location.href.split("#")[0]);
+        setPanelView("aliases");
+    } else {
+        setPanelView("users");
+    }
 
     let usersList = $("#users-list");
     for(let user of window.users) {
@@ -11,8 +16,8 @@ function init() {
             flags.push("<i>system</i>");
         }
 
-        usersList.append(`<li class="list-group-item row-user${systemClass}" data-sort="${user.id}"><b>Mail user #${user.id}:</b> ${user.email}<span class="mx-3">(${flags.join(", ")})</span>
-        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/login/sso/webmail?uid=${user.id}" class="btn btn-sm btn-info"><i class="fas fa-sign-in-alt"></i> Webmail</a><a href="/panel/mails/edit/user/${user.id}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a><button class="btn btn-sm btn-danger"${user.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
+        usersList.append(`<li class="list-group-item row-user${systemClass}" data-sort="${user.id}" id="row-user-${user.id}"><b>Mail user #${user.id}:</b> ${user.email}<span class="mx-3">` + (flags.length > 0 ? `(${flags.join(", ")})` : "") + `</span>
+        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/login/sso/webmail?uid=${user.id}" class="btn btn-sm btn-info"><i class="fas fa-sign-in-alt"></i> Webmail</a><a href="/panel/mails/users/edit/${user.id}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a><button onclick="mails_users.deleteUser(${user.id}, '${user.email}')" class="btn btn-sm btn-danger"${user.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
     } 
 
     let aliasesList = $("#aliases-list");
@@ -25,8 +30,8 @@ function init() {
             flags.push("<i>system</i>");
         }
 
-        aliasesList.append(`<li class="list-group-item row-alias${systemClass}" data-sort="${alias.id}"><b>Alias #${alias.id}:</b> ${alias.source} <i>to</i> ${alias.destination} <span class="mx-3">(${flags.join(", ")})</span>
-        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/mails/edit/alias/${alias.id}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a><button class="btn btn-sm btn-danger"${alias.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
+        aliasesList.append(`<li class="list-group-item row-alias${systemClass}" data-sort="${alias.id}" id="row-alias-${alias.id}"><b>Alias #${alias.id}:</b> ${alias.source} <i>to</i> ${alias.destination} <span class="mx-3">` + (flags.length > 0 ? `(${flags.join(", ")})` : "") + `</span>
+        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/mails/aliases/edit/${alias.id}" class="btn btn-sm btn-primary${alias.system ? " disabled" : ""}"><i class="fas fa-edit"></i> Edit</a><button onclick="mails_users.deleteAlias(${alias.id}, '${alias.source}')" class="btn btn-sm btn-danger"${alias.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
     } 
 
 
@@ -39,6 +44,10 @@ let currentPanel = undefined;
 const possible_panels = ["users", "aliases"];
 function setPanelView(panel) {
     if(panel != undefined && !possible_panels.includes(panel)) return;
+
+    if(panel == "aliases") {
+        window.history.replaceState({}, null, location.href.split("#")[0] + "#aliases");
+    } else window.history.replaceState({}, null, location.href.split("#")[0]);
 
     $(".chevron").removeClass("fa-chevron-down").addClass("fa-chevron-right").css("margin-left", "0px");
     for(let possiblePanel of possible_panels) $("." + possiblePanel + "-only").hide();
@@ -123,5 +132,48 @@ function toggleSystemAliases(checkbox) {
     hideSystemAliases($(checkbox).is(":checked"), false);
 }
 
+function deleteUser(id, email) {
+    $("#deleteModal-title").html("Remove an email user");
+    $("#deleteModal-content").html("Do you really want to remove the address <i>" + email + "</i>? This action is irreversible!<br/><br/>If aliases exist for this address, they'll be deleted.");
+    deleteType = "user";
+    deleteId = id;
+    $("#deleteModal").modal();
+}
 
-window.mails_users = {init, setPanelView, panelViewClicked, toggleSystemUsers, toggleSystemAliases};
+function deleteAlias(id, source) {
+    $("#deleteModal-title").html("Remove an email alias");
+    $("#deleteModal-content").html("Do you really want to remove the alias <i>" + source + "</i>?");
+    deleteType = "alias";
+    deleteId = id;
+    $("#deleteModal").modal();
+}
+
+let deleteType = undefined, deleteId = 0;
+function confirmDelete() {
+    if(!(["user", "alias"].includes(deleteType)) || deleteId <= 0) return;
+    let pluralType = deleteType == "user" ? "users" : "aliases";
+
+    $("#deleteModal").modal("hide");
+    utils.showInfiniteLoading("Removing " + deleteType + "...");
+    $.getJSON("/api/v1/mails/" + pluralType + "/delete/" + deleteId).fail((xhr, status, error) => {
+        $.notify({message: "Unable to remove this " + deleteType + ". See console for details."}, {type: "danger"});
+        console.warn("Unable to delete record (server error):", error);
+    }).done((response) => {
+        if(response.error) {
+            $.notify({message: "Unable to remove this " + deleteType + ". See console for details."}, {type: "danger"});
+            console.warn("Unable to delete record (application error):", error);
+        } else {
+            $.notify({message: deleteType[0].toUpperCase() + deleteType.substring(1)  + " successfully removed."}, {type: "success"});
+            $("#row-" + deleteType + "-" + deleteId).remove();
+            updateSystemCounters();
+            if(deleteType == "user") updateNoUsers();
+            else updateNoAliases();
+        }
+    }).always(() => {
+        utils.hideLoading();
+        deleteId = 0;
+        deleteType = undefined;
+    });
+}
+
+window.mails_users = {init, setPanelView, panelViewClicked, toggleSystemUsers, toggleSystemAliases, deleteUser, deleteAlias, confirmDelete};

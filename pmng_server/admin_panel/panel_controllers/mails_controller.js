@@ -46,6 +46,38 @@ router.get("/users", async (req, res) => {
     res.render("mails/users");
 });
 
+router.get("/aliases", (req, res) => {
+    res.redirect("/panel/mails/users#aliases");
+});
+
+function getDomainsList(req) {
+    return mail_manager.getMailDatabase("virtual_domains").where(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope)).select(["id", "name"]);
+}
+
+router.get("/users/create", async (req, res) => {
+    req.setPage(res, "Create a new mail user", "mails", "create_user");
+    res.locals.domains = await getDomainsList(req);
+    res.render("mails/manage_user");
+});
+
+router.get("/users/edit/:mailid", (req, res) => {
+    let mailid = parseInt(req.params.mailid);
+    if(isNaN(mailid)) {
+        res.redirect("/panel/mails/users");
+    } else {
+        mail_manager.getMailDatabase("virtual_users").where("id", mailid).andWhere(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope)).select(["id", "domain_id", "quota", "projectname", "email"]).then(async (mailResult) => {
+            if(mailResult.length == 0) {
+                req.flash("warning", "Invalid mail id.");
+                res.redirect("/panel/mails/users");
+            } else {
+                req.setPage(res, "Edit a mail user", "mails", "edit_user");
+                res.locals.domains = await getDomainsList(req);
+                res.locals.edit = mailResult[0];
+                res.render("mails/manage_user");
+            }
+        });
+    }
+});
 
 router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/mails/users");});
 module.exports = router;
