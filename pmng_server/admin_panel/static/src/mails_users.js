@@ -16,7 +16,7 @@ function init() {
             flags.push("<i>system</i>");
         }
 
-        usersList.append(`<li class="list-group-item row-user${systemClass}" data-sort="${user.id}" id="row-user-${user.id}"><b>Mail user #${user.id}:</b> ${user.email}<span class="mx-3">` + (flags.length > 0 ? `(${flags.join(", ")})` : "") + `</span>
+        usersList.append(`<li class="list-group-item row-user${systemClass}" data-sort="${user.id}" id="row-user-${user.id}"><b>Mail user #${user.id}:</b> <a href="mailto:${user.email}">${user.email}</a><span class="mx-3">` + (flags.length > 0 ? `(${flags.join(", ")})` : "") + `</span>
         <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/login/sso/webmail?uid=${user.id}" class="btn btn-sm btn-info"><i class="fas fa-sign-in-alt"></i> Webmail</a><a href="/panel/mails/users/edit/${user.id}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Edit</a><button onclick="mails_users.deleteUser(${user.id}, '${user.email}')" class="btn btn-sm btn-danger"${user.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
     } 
 
@@ -30,7 +30,7 @@ function init() {
             flags.push("<i>system</i>");
         }
 
-        aliasesList.append(`<li class="list-group-item row-alias${systemClass}" data-sort="${alias.id}" id="row-alias-${alias.id}"><b>Alias #${alias.id}:</b> ${alias.source} <i>to</i> ${alias.destination} <span class="mx-3">` + (flags.length > 0 ? `(${flags.join(", ")})` : "") + `</span>
+        aliasesList.append(`<li class="list-group-item row-alias${systemClass}" data-sort="${alias.id}" id="row-alias-${alias.id}"><b>Alias #${alias.id}:</b> <a href="mailto:${alias.source}">${alias.source} <i>to</i> <a href="mailto:${alias.destination}">${alias.destination}</a> <span class="mx-3">` + (flags.length > 0 ? `(${flags.join(", ")})` : "") + `</span>
         <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><a href="/panel/mails/aliases/edit/${alias.id}" class="btn btn-sm btn-primary${alias.system ? " disabled" : ""}"><i class="fas fa-edit"></i> Edit</a><button onclick="mails_users.deleteAlias(${alias.id}, '${alias.source}')" class="btn btn-sm btn-danger"${alias.system ? " disabled" : ""}><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
     } 
 
