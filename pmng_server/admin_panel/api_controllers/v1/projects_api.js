@@ -7,7 +7,7 @@ const plans_manager = require("../../../plans_manager");
 const api_auth = require("./api_auth");
 const intercom = require("../../../intercom/intercom_client").connect();
 
-const forbidden_names = ["www", "git", "admin", "ftp", "ns1", "ns2"];
+const forbidden_names = ["www", "git", "admin", "ftp", "ns1", "ns2", "mail"];
 // same values as in regex_utils
 
 router.get("/forbiddennames", (req, res) => {
