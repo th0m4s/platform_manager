@@ -140,6 +140,10 @@ function registerIntercomThread() {
 }
 
 let httpChallenges = {};
+/**
+ * Registers the intercom HTTP challenges handler to receive updates about Greenlock HTTP challenges.
+ * @param {boolean} bindGet If set to *true*, this handler will also respond to requests to get existing challenges.
+ */
 function registerHttpChallenges(bindGet = false) {
     intercom.subscribe(["httpChallenges"], (message, respond) => {
         let command = message.command, domain = message.domain, token = message.token;
@@ -215,10 +219,10 @@ let currentClosing = [], currentStarting = [];
 /**
  * Called by registerClusterMaster. Method responsible for spawning and killing processes.
  * Should not be called directly!
- * @param {*} maxConnPerSec The maximum number of connections per second for a single process.
- * @param {*} minFork The minimum number of spawned servers.
- * @param {*} maxFork The maximum number of available running servers.
- * @param {*} seconds The elasped time in seconds since the last call of this function.
+ * @param {number} maxConnPerSec The maximum number of connections per second for a single process.
+ * @param {number} minFork The minimum number of spawned servers.
+ * @param {number} maxFork The maximum number of available running servers.
+ * @param {number} seconds The elasped time in seconds since the last call of this function.
  * @param {string} clusterName The name of the cluster for logging purposes.
  * Used to calculate the number of connections per second for the cluster.
  */

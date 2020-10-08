@@ -211,6 +211,10 @@ function getConfig(pluginname, projectname) {
     });
 }
 
+/**
+ * Waits for all the platform processes to be started.
+ * @returns {Promise} A promise resolved when all the platform hooks are started.
+ */
 function waitForHooks() {
     let requiredHooks = {
         "dns": false

@@ -46,6 +46,12 @@ async function testCustom(domain) {
     } else return null;
 }
 
+/**
+ * Checks if the domain is either formatted as a project subdomain or a custom domain existing in the database.
+ * This function calls testProject, and if no result is found, then calls testCustom.
+ * @param {string} domain The domain to check.
+ * @returns {string} The name of the project for this subdomain or custom domain if one is found, *null* otherwise.
+ */
 async function testProjectOrCustom(domain) {
     /*let project = testProject(domain);
     if(project != null) return project;
@@ -77,6 +83,11 @@ function testStorageDisk(filename) {
 }
 
 // TODO: use testACMEChallenge that returns the token
+/**
+ * Checks if this URL is a request for an ACME challenge.
+ * @param {string} url The url to check for an ACME challenge.
+ * @returns {boolean} *true* if this is an ACME challenge, *false* otherwise.
+ */
 function isACMEChallenge(url) {
     return url.startsWith("/.well-known/acme-challenge/");
 }
