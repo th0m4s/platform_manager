@@ -147,6 +147,59 @@ router.get("/users/delete/:mailid", (req, res) => {
 });
 
 
+router.post("/aliases/create", (req, res) => {
+    api_auth(req, res, async function(user) {
+        try {
+            let sourceUser = (req.body.sourceUser || "").trim(), sourceDomainId = parseInt(req.body.sourceDomainId), destination = (req.body.destination || "").trim();
+            if(sourceUser.length == 0 || destination.length == 0 || isNaN(sourceDomainId)) {
+                res.status(400).json({error: true, code: 400, message: "Invalid parameters!"});
+            } else {
+                let domainResult = await mail_manager.getMailDatabase("virtual_domains").where("id", sourceDomainId).andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope)).select(["name", "projectname"]);
+                if(domainResult.length == 0) {
+                    throw "Invalid domain!";
+                } else {
+                    let domain = domainResult[0].name;
+                    let email = sourceUser + "@" + domain;
+                    let aliasResult = await mail_manager.getMailDatabase("virtual_aliases").where("destination", destination).count("id AS cnt");
+                    if(aliasResult[0].cnt > 0) {
+                        throw "Alias already exists!";
+                    } else {
+                        await mail_manager.getMailDatabase("virtual_aliases").insert({domain_id: sourceDomainId, source: email, destination, projectname: domainResult[0].projectname, system: "false"});
+                        res.status(200).json({error: false, code: 200, message: "Mail alias added."});
+                    }
+                }
+            }
+        } catch(error) {
+            res.status(500).json({error: true, code: 500, message: "Cannot added email alias: " + error});
+        }
+    });
+});
+
+router.post("/aliases/edit/:aliasid", (req, res) => {
+    api_auth(req, res, function(user) {
+        let id = parseInt(req.params.aliasid);
+        if(isNaN(id)) {
+            res.status(400).json({error: true, code: 400, message: "Invalid alias id, not an integer."});
+        } else {
+            let newDestination = (req.body.destination || "").trim();
+            if(newDestination.length > 0) {
+                mail_manager.getMailDatabase("virtual_aliases").where("id", id).andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope)).then(async (existingAlias) => {
+                    if(existingAlias.length == 0) {
+                        res.status(404).json({error: true, code: 404, message: "This alias doesn't exist or you don't have enough permission to edit it."});
+                    } else {
+                        mail_manager.getMailDatabase("virtual_aliases").where("id", id).update({destination: newDestination}).then(() => {
+                            res.status(200).json({error: false, code: 200, message: "Alias edited."});
+                        }).catch((error) => {
+                            res.status(500).json({error: true, code: 500, message: "Cannot update alias: " + error});
+                        })
+                    }
+                });
+            } else {
+                res.status(400).json({error: true, code: 400, message: "Missing destination."});
+            }
+        }
+    });
+});
 
 router.get("/aliases/delete/:aliasid", (req, res) => {
     api_auth(req, res, function(user) {

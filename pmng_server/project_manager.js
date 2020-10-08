@@ -118,6 +118,11 @@ function addProject(projectname, ownerid, env, plugins) {
     });
 }
 
+/**
+ * Gets the id of a project from its name from the cache or the database.
+ * @param {string} name The name of the project to find the id for.
+ * @returns {number} The id of the requested project or 0 if the project doesn't exist.
+ */
 function getIdFromName(name) {
     if(ids_cache.has(name)) return Promise.resolve(ids_cache.get(name));
     else return database_server.database("projects").where("name", name).select("id").then((results) => {
@@ -131,6 +136,11 @@ function getIdFromName(name) {
     });
 }
 
+/**
+ * Completely removes a project from the database, removing it's repository, container and plugins.
+ * @param {string} projectname The project name to remove.
+ * @returns {Promise} A promise resolved when the project is successfully removed.
+ */
 function deleteProject(projectname) {
     let project = undefined;
     return docker_manager.isProjectContainerRunning(projectname).then((isrunning) => {
@@ -367,6 +377,11 @@ function _getProjectStorage(project_name) {
     return path.join(process.env.PLUGINS_PATH, "storages", "mounts", project_name);
 }; const getProjectStorage = runtime_cache(_getProjectStorage);
 
+/**
+ * Gets a valid URL bound to a project.
+ * @param {string} projectname The project to find the URL for.
+ * @returns {string} The project subdomain or the first custom domain if at least one exists.
+ */
 function getProjectUrl(projectname) {
     let protocol = "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://";
     return database_server.database("domains").where("projectname", projectname).orderBy("id", "asc").limit(1).select("*").then((results) => {
@@ -378,11 +393,21 @@ function getProjectUrl(projectname) {
     });
 }
 
+/**
+ * Adds a new URL property to a Project structure.
+ * @param {Project} project The original project structure to find a URL for.
+ * @returns {Project} A project with a new URL property from getProjectUrl.
+ */
 async function addProjectUrl(project) {
     project.url = await getProjectUrl(project.name);
     return project;
 }
 
+/**
+ * Sanitizes a project structure by keeping only non-sensitive fields.
+ * @param {Project} project The project to sanitize.
+ * @returns {Project} A new Project structure with only essential fields.
+ */
 function sanitizeProject(project) {
     return {id: project.id, version: project.version, name: project.name, type: project.type};
 }

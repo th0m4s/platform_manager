@@ -79,5 +79,32 @@ router.get("/users/edit/:mailid", (req, res) => {
     }
 });
 
+
+
+router.get("/aliases/create", async (req, res) => {
+    req.setPage(res, "Create a new mail alias", "mails", "create_alias");
+    res.locals.domains = await getDomainsList(req);
+    res.render("mails/manage_alias");
+});
+
+router.get("/aliases/edit/:aliasid", (req, res) => {
+    let aliasid = parseInt(req.params.aliasid);
+    if(isNaN(aliasid)) {
+        res.redirect("/panel/mails/users#aliases");
+    } else {
+        mail_manager.getMailDatabase("virtual_aliases").where("id", aliasid).andWhere(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope)).select(["id", "domain_id", "source", "projectname", "destination"]).then(async (aliasResult) => {
+            if(aliasResult.length == 0) {
+                req.flash("warning", "Invalid alias id.");
+                res.redirect("/panel/mails/users#aliases");
+            } else {
+                req.setPage(res, "Edit a mail alias", "mails", "edit_alias");
+                res.locals.domains = await getDomainsList(req);
+                res.locals.edit = aliasResult[0];
+                res.render("mails/manage_alias");
+            }
+        });
+    }
+});
+
 router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/mails/users");});
 module.exports = router;
