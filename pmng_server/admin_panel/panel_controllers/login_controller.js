@@ -45,6 +45,7 @@ router.post('/', (req, res, next) => {
 
     passport.authenticate('local', { session: true, successRedirect, failureRedirect, failureFlash: true, successFlash: "Login successful." })(req, res, next);
 });
+
 router.get("/", async function(req, res) {
     if(await database_server.isInstalled()) {
         req.setPage(res, "Login");

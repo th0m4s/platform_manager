@@ -1,48 +1,15 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../database_server");
-const plugins_manager = require("../plugins_manager");
-const mail_manager = require("../mails/mail_manager");
-const unixcrypt = require("unixcrypt");
+const login_utils = require("./login_utils");
 
 const session = require("express-session");
 const KnexSessionStore = require("connect-session-knex")(session);
 const flash = require('express-flash-messages');
-const string_utils = require("../string_utils");
 
 const store = new KnexSessionStore({
     knex: database_server.database,
     tablename: "panel_sessions"
 });
-
-function checkDatabaseUser(dbKnex, userId, dbUsername, dbPassword) {
-    return dbKnex.raw("SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = '" + dbUsername + "') AS 'exists';").then((results) => {
-        let values = results[0]; // raw always give array of results and columns defs
-        let exists = values[0].exists != 0;
-
-        let returnPassword = false;
-        if(dbPassword == undefined) {
-            dbPassword = string_utils.generatePassword(16, 24);
-            returnPassword = true;
-        }
-
-        if(!exists) {
-            return dbKnex.raw("CREATE USER '" + dbUsername + "' IDENTIFIED BY '" + dbPassword + "';").then(async () => {
-                // grant to all required projects databases
-                let mdbPlugin = plugins_manager.getPlugin("mariadb");
-
-                let ownedProjects = await database_server.database("projects").where("ownerid", userId).select("name");
-                for(let projectLine of ownedProjects)
-                    mdbPlugin.updatePrivileges(projectLine.name, userId, "manage", dbKnex);
-
-                let collabProjects = await database_server.database("collabs").where("userid", userId).select("*");
-                for(let collabLine of collabProjects)
-                    mdbPlugin.updatePrivileges(collabLine.projectname, userId, collabLine.mode, dbKnex);                
-            }).then(() => {
-                if(returnPassword) return dbPassword;
-            });
-        }
-    })
-}
 
 const passport = require('passport'), PassportLocalStrategy = require('passport-local').Strategy;
 
@@ -82,48 +49,17 @@ function getRouter(headerLinks) {
         router.use(passport.initialize()); router.use(passport.session());
         passport.use(new PassportLocalStrategy({passReqToCallback: true}, async function(req, username, password, done) {
                 try {
-                    let user = await database_server.findUserByName(username);
-                    if(user == null) return done(null, false, {message: "Unable to find this user."});
+                    let {auth, user, tries, retryIn} = await login_utils.loginUser(username, password, "session");
 
-                    let check = await database_server.comparePassword(user.id, password);
-
-                    if(check) {
-                        let key = await database_server.generateKey(user.id, "session");
-                        user.key = key;
+                    if(auth === true) {
                         req.session.account = {};
-
-                        await database_server.getPluginKnex().then((pluginKnex) => {
-                            // TODO: grant privileges where needed
-                            return Promise.all([
-                                checkDatabaseUser(pluginKnex, user.id, username, password),
-                                checkDatabaseUser(pluginKnex, user.id, "dbau_" + username, undefined).then((newPassword) => {
-                                    if(newPassword != undefined) {
-                                        return database_server.database("users").where("name", username).update({dbautopass: newPassword});
-                                    }
-                                })
-                            ]);
-                        });
-
-                        // checks mail missing user passwords
-                        let mailMissingCount = await mail_manager.getUserMissingPasswords(user.id, user.scope, true);
-                        if(mailMissingCount > 0)
-                            req.session.account.mailsNeedPwd = true;
-                        
-                        // checks mail missing sso passwords
-                        let mailDb = mail_manager.getMailDatabase();
-                        let mailMissingSso = await mailDb("virtual_users").where("sso_decrypt", null).orWhere("sso_encrypt", null).select("id");
-                        let mmSsoProms = [];
-                        for(let missingSso of mailMissingSso) {
-                            let mailSsoPassword = string_utils.generatePassword(16, 24);
-                            let encrypted = unixcrypt.encrypt(mailSsoPassword);
-                            mmSsoProms.push(mailDb("virtual_users").where("id", missingSso.id).update({sso_decrypt: mailSsoPassword, sso_encrypt: encrypted}));
-                        }
-                        if(mmSsoProms.length > 0) await Promise.all(mmSsoProms);
-
                         return done(null, user);
-
+                    } else if(tries > 0) {
+                        return done(null, false, {message: "Invalid credentials." + (tries <= 3 ? " " + tries + " attempt" + (tries == 1 ? "" : "s") + " remaining." : "")}); // Incorrect password.
+                    } else {
+                        let retryText = retryIn > 60 ? Math.ceil(retryIn/60) + " minutes" : (retryIn == 1 ? "1 second" : retryIn + " seconds");
+                        return done(null, false, {message: "Too many invalid login attempts. Please try again in " + retryText + "."});
                     }
-                    else return done(null, false, {message: "Incorrect password."});
                 } catch(err) {
                     return done(err);
                 }

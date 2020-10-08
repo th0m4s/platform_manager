@@ -1,4 +1,5 @@
 const express = require('express'), router = express.Router();
+const login_utils = require("../../login_utils");
 const database_server = require("../../../database_server");
 const api_auth = require("./api_auth");
 
@@ -7,23 +8,22 @@ router.get("/version", (req, res) => {
 });
 
 router.post("/", async function(req, res) {
-    let user = req.body.user, password = req.body.password;
-    if(user == undefined || password == undefined) {
+    let username = req.body.user, password = req.body.password;
+    if(username == undefined || password == undefined) {
         res.status(400).json({error: true, code: 400, message: "Please provide user and password."});
     } else {
         try {
-            let userObj = await database_server.findUserByName(user);
-            if(userObj == null) {
-                res.status(403).json({error: true, code: 403, message: "Invalid credentials."});
+            let {auth, user, tries, retryIn} = await login_utils.loginUser(username, password, "api");
+            if(auth === true) {
+                res.status(200).json({error: false, code: 200, message: "Logged in.", key: user.key});
+            } else if(tries > 0) {
+                res.status(403).json({error: true, code: 403, message: "Invalid credentials." + (tries <= 3 ? " " + tries + " attempt" + (tries == 1 ? "" : "s") + " remaining." : "")});
             } else {
-                let check = await database_server.comparePassword(userObj.id, password);
-                if(check) {
-                    let key = await database_server.generateKey(userObj.id, "api");
-                    res.status(200).json({error: false, code: 200, message: "Logged in.", key: key});
-                } else res.status(403).json({error: true, code: 403, message: "Invalid credentials."});
+                let retryText = retryIn > 60 ? Math.ceil(retryIn/60) + " minutes" : (retryIn == 1 ? "1 second" : retryIn + " seconds");
+                res.status(429).json({error: true, code: 429, message: "Too many invalid login attempts. Please try again in " + retryText + ".", retryIn});
             }
-        } catch(e) {
-            res.status(500).json({error: true, code: 500, message: "Server error: Cannot generate the key.", error: e});
+        } catch(error) {
+            res.status(500).json({error: true, code: 500, message: "Server error while login.", error});
         }
     }
 });
