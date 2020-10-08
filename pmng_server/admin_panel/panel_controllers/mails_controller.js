@@ -31,14 +31,14 @@ router.get("/", (req, res) => {
 });
 
 router.get("/domains", async (req, res) => {
-    res.locals.domains = await mail_manager.getMailDatabase("virtual_domains").where(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope)).select("*");
+    res.locals.domains = await mail_manager.getMailDatabase("virtual_domains").where(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope, true)).select("*");
 
     req.setPage(res, "Mail domains", "mails", "domains");
     res.render("mails/domains");
 });
 
 router.get("/users", async (req, res) => {
-    let selector = mail_manager.knexProjectnameSelector(req.user.id, req.user.scope);
+    let selector = mail_manager.knexProjectnameSelector(req.user.id, req.user.scope, true);
     res.locals.users = (await mail_manager.getMailDatabase("virtual_users").where(selector).select(["id", "domain_id", "email", "projectname", "system"])).map((x) => {x.system = x.system == "true"; return x;});
     res.locals.aliases = (await mail_manager.getMailDatabase("virtual_aliases").where(selector).select(["id", "domain_id", "source", "destination", "projectname", "system"])).map((x) => {x.system = x.system == "true"; return x;});
 
@@ -51,7 +51,7 @@ router.get("/aliases", (req, res) => {
 });
 
 function getDomainsList(req) {
-    return mail_manager.getMailDatabase("virtual_domains").where(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope)).select(["id", "name"]);
+    return mail_manager.getMailDatabase("virtual_domains").where(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope, true)).select(["id", "name"]);
 }
 
 router.get("/users/create", async (req, res) => {
@@ -65,7 +65,7 @@ router.get("/users/edit/:mailid", (req, res) => {
     if(isNaN(mailid)) {
         res.redirect("/panel/mails/users");
     } else {
-        mail_manager.getMailDatabase("virtual_users").where("id", mailid).andWhere(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope)).select(["id", "domain_id", "quota", "projectname", "email"]).then(async (mailResult) => {
+        mail_manager.getMailDatabase("virtual_users").where("id", mailid).andWhere(mail_manager.knexProjectnameSelector(req.user.id, req.user.scope, true)).select(["id", "domain_id", "quota", "projectname", "email"]).then(async (mailResult) => {
             if(mailResult.length == 0) {
                 req.flash("warning", "Invalid mail id.");
                 res.redirect("/panel/mails/users");

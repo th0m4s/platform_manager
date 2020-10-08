@@ -43,7 +43,7 @@ router.post("/users/create", (req, res) => {
             if(username.length == 0 || password.length == 0 || isNaN(domainId)) {
                 res.status(400).json({error: true, code: 400, message: "Invalid parameters!"});
             } else {
-                let domainResult = await mail_manager.getMailDatabase("virtual_domains").where("id", domainId).andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope)).select(["name", "projectname"]);
+                let domainResult = await mail_manager.getMailDatabase("virtual_domains").where("id", domainId).andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope, true)).select(["name", "projectname"]);
                 if(domainResult.length == 0) {
                     throw "Invalid domain!";
                 } else {
@@ -71,7 +71,7 @@ router.post("/users/edit/:mailid", (req, res) => {
         if(isNaN(id)) {
             res.status(400).json({error: true, code: 400, message: "Invalid mail id, not an integer."});
         } else {
-            mail_manager.getMailDatabase("virtual_users").where("id", id).andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope)).then(async (existingMail) => {
+            mail_manager.getMailDatabase("virtual_users").where("id", id).andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope, true)).then(async (existingMail) => {
                 if(existingMail.length == 0) {
                     res.status(404).json({error: true, code: 404, message: "This address doesn't exist or you don't have enough permission to edit it."});
                 } else {
@@ -105,7 +105,7 @@ router.get("/users/resetssopassword/:mailid", (req, res) => {
         if(isNaN(id)) {
             res.status(400).json({error: true, code: 400, message: "Invalid mail id, not an integer."});
         } else {
-            mail_manager.getMailDatabase("virtual_users").where("id", id).andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope)).then(async (existingMail) => {
+            mail_manager.getMailDatabase("virtual_users").where("id", id).andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope, true)).then(async (existingMail) => {
                 if(existingMail.length == 0) {
                     res.status(404).json({error: true, code: 404, message: "This address doesn't exist or you don't have enough permission to reset its SSO password."});
                 } else {
@@ -129,7 +129,7 @@ router.get("/users/delete/:mailid", (req, res) => {
         if(isNaN(id)) {
             res.status(400).json({error: true, code: 400, message: "Invalid mail id, not an integer."});
         } else {
-            mail_manager.getMailDatabase("virtual_users").where("id", id).andWhere("system", "false").andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope)).then(async (existingMail) => {
+            mail_manager.getMailDatabase("virtual_users").where("id", id).andWhere("system", "false").andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope, true)).then(async (existingMail) => {
                 if(existingMail.length == 0) {
                     res.status(404).json({error: true, code: 404, message: "This address doesn't exist or you don't have enough permission to delete it."});
                 } else {
@@ -154,7 +154,7 @@ router.get("/aliases/delete/:aliasid", (req, res) => {
         if(isNaN(id)) {
             res.status(400).json({error: true, code: 400, message: "Invalid alias id, not an integer."});
         } else {
-            mail_manager.getMailDatabase("virtual_aliases").where("id", id).andWhere("system", "false").andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope)).then(async (existingAlias) => {
+            mail_manager.getMailDatabase("virtual_aliases").where("id", id).andWhere("system", "false").andWhere(mail_manager.knexProjectnameSelector(user.id, user.scope, true)).then(async (existingAlias) => {
                 if(existingAlias.length == 0) {
                     res.status(404).json({error: true, code: 404, message: "This alias doesn't exist or you don't have enough permission to delete it."});
                 } else {

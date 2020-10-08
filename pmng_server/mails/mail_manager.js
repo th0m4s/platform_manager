@@ -330,24 +330,26 @@ function checkAndStart(maildirectory, shouldRestart) {
     });
 }
 
-function knexProjectnameSelector(userId, adminOrScope) {
+function knexProjectnameSelector(userId, adminOrScope, manage = true) {
     if(typeof adminOrScope == "number") adminOrScope = database_server.checkScope(adminOrScope, "ADMIN");
 
     return function() {
-        this.whereIn("projectname", function () {
-            this.where("ownerid", userId).select("name").from(database_server.DB_NAME + ".projects");
-        });
-    
-        this.orWhereIn("projectname", function() {
-            this.where("userid", userId).andWhere("mode", "manage").select("projectname").from(database_server.DB_NAME + ".collabs");
-        });
-    
-        if(adminOrScope) this.orWhere("projectname", null);
+        if(adminOrScope == false) {
+            this.whereIn("projectname", function () {
+                this.where("ownerid", userId).select("name").from(database_server.DB_NAME + ".projects");
+            });
+        
+            this.orWhereIn("projectname", function() {
+                this.where("userid", userId);
+                if(manage == true) this.andWhere("mode", "manage");
+                this.select("projectname").from(database_server.DB_NAME + ".collabs");
+            });
+        }
     };
 }
 
 function getUserMissingPasswords(userId, userScope = 99, count = false) {
-    let queryBuilder = getMailDatabase("virtual_users").where(knexProjectnameSelector(userId, userScope)).andWhere("pwdset", "false");
+    let queryBuilder = getMailDatabase("virtual_users").where(knexProjectnameSelector(userId, userScope, true)).andWhere("pwdset", "false");
     return count ? queryBuilder.count("* as count").then((x) => x[0].count) : queryBuilder.select(["id", "email"]);
 }
 
