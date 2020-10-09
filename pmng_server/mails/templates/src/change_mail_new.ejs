@@ -1,0 +1,21 @@
+<div class="container">
+	<div class="card mt-4 pt-3">
+        <h3 class="card-title w-100 text-center">Confirm email change</h3>
+        <div class="card-body">
+            <br/><p>Hello <%= fullname %>,</p><br/>
+            <p>A request to change the email of the account <i><%= username %></i> to your email has been made.<br/><br/>
+            If you didn't create this request, you can safely ignore this email, but we recommand you to cancel the request by clicking on the grey button
+            (or by copy/pasting the link below that button into your browser), but if you want to confirm this change, please click on the blue button:</p>
+            <br/>
+            <a class="btn btn-primary mx-auto" style="font-size: 22px;" href="<%= confirmlink %>">Confirm email change</a>
+            <div style="padding-top: 10px;"><a href="<%= confirmlink %>" class="mx-auto"><%= confirmlink %></a></div>
+
+            <br/>
+            <a class="btn btn-secondary mx-auto" style="font-size: 19px;" href="<%= cancellink %>">Cancel email change</a>
+            <div style="padding-top: 10px;"><a href="<%= cancellink %>" class="mx-auto"><%= cancellink %></a></div>
+
+            <br/><br/>
+            <small class="mx-auto text-muted"><%- copyright %></small>
+        </div>
+    </div>
+</div>
