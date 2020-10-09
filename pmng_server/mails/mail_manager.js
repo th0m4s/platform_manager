@@ -7,6 +7,8 @@ const pfs = require("fs").promises;
 const mdb = require('knex-mariadb');
 const logger = require("../platform_logger").logger();
 const unixcrypt = require("unixcrypt");
+const ejs = require("ejs");
+const nodemailer = require("nodemailer");
 
 let _mailKnex = undefined;
 const MAIL_DBNAME = "mail_server";
@@ -132,6 +134,7 @@ async function checkDomainIdUsers(domainId) {
 
     let usersResults = await mailDb().where("domain_id", domainId).select("*"), selectKey = isSystem ? "email" : "source";
     let inserts = [], proms = [], requiredMails = ["abuse", "postmaster", "webmaster", "hostmaster"];
+    if(domain == process.env.ROOT_DOMAIN) requiredMails.push("pmng");
     for(let result of usersResults) {
         let name = result[selectKey].split("@")[0];
         if(requiredMails.includes(name)) {
@@ -151,7 +154,10 @@ async function checkDomainIdUsers(domainId) {
 
     for(let remainingName of requiredMails) {
         let mail = remainingName + "@" + (projectName == "" ? "" : projectName + ".") + process.env.ROOT_DOMAIN;
-        if(isSystem) inserts.push({system: "true", pwdset: "false", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId, projectName: projectName == "" ? undefined : projectName});
+        if(isSystem && remainingName == "pmng") {
+            let ssoPassword = string_utils.generatePassword(16, 24);
+            inserts.push({system: "true", pwdset: "true", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId, projectName: undefined, sso_decrypt: ssoPassword, sso_encrypt: cryptPassword(ssoPassword)});
+        } else if(isSystem) inserts.push({system: "true", pwdset: "false", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId, projectName: projectName == "" ? undefined : projectName});
         else inserts.push({system: "true", domain_id: domainId, source: remainingName + "@" + domain, destination: mail, projectName: projectName == "" ? undefined : projectName});
     }
     
@@ -370,6 +376,36 @@ async function initialize(maildirectory) {
     return checkAndStart(maildirectory, forceRestart);
 }
 
+function sendClientMail(to, subject, template, locals = {}) {
+    let enableSec = process.env.ENABLE_HTTPS.toLowerCase() == "true", sender = "pmng@" + process.env.ROOT_DOMAIN;
+    locals = Object.assign({copyright: "<a href='http" + (enableSec ? "s" : "") + "://admin." + process.env.ROOT_DOMAIN + "/'>© 2020 Platform Manager</a>"}, locals);
+    return pfs.readFile(path.resolve(__dirname, "templates", "dist", template + ".ejs"), "utf-8").then((templateContents) => {
+        return ejs.render(templateContents, locals, {async: true});
+    }).then((renderedTemplate) => {
+        return pfs.readFile(path.resolve(__dirname, "templates", "plain", template + ".txt"), "utf-8").then((plain) => {
+            return ejs.render(plain, locals, {async: true});
+        }).then((renderedPlain) => {
+            return {renderedPlain, renderedTemplate};
+        });
+    }).then(({renderedTemplate, renderedPlain}) => {
+        return getMailDatabase("virtual_users").where("email", sender).select("sso_decrypt").then((result) => {return {ssoDec: result[0].sso_decrypt, renderedTemplate, renderedPlain}});
+    }).then(({ssoDec, renderedTemplate, renderedPlain}) => {
+        let transport = nodemailer.createTransport({
+            host: "mail.tomanager.ml",
+            port: 465,
+            secure: true,
+            auth: {
+                user: sender,
+                pass: ssoDec
+            }
+         });
+
+         return transport.sendMail({from: '"Platform Manager" <' + sender + '>', to: locals.fullname != undefined ? ('"' + locals.fullname + '" <' + to + '>') : to, subject, text: renderedPlain, html: renderedTemplate});
+    }).catch((error) => {
+        throw "Cannot send mail: " + error;
+    });
+}
+
 
 module.exports.MAIL_DBNAME = MAIL_DBNAME;
 module.exports.isMailInstalled = isMailInstalled;
@@ -381,3 +417,4 @@ module.exports.cryptPassword = cryptPassword;
 module.exports.getUserMissingPasswords = getUserMissingPasswords;
 module.exports.knexProjectnameSelector = knexProjectnameSelector;
 module.exports.initialize = initialize;
+module.exports.sendClientMail = sendClientMail;
