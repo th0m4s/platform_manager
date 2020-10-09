@@ -25,27 +25,31 @@ router.get("/logout", async function(req, res) {
 });
 
 let SSO_TYPES = {"database": "/databases/login.sso.php", "webmail": "/webmail/"}
-router.post('/', (req, res, next) => {
-    let ssotype = req.body.sso;
-    let ssoredirect = ssotype == undefined ? undefined : SSO_TYPES[ssotype];
+router.post('/', async (req, res, next) => {
+    if(await database_server.isInstalled()) {
+        let ssotype = req.body.sso;
+        let ssoredirect = ssotype == undefined ? undefined : SSO_TYPES[ssotype];
 
-    let successRedirect = "/panel/dashboard", failureRedirect = "/panel/login";
-    if(ssoredirect != undefined) {
-        failureRedirect = "/panel/login/sso/" + ssotype;
-        successRedirect = failureRedirect;
+        let successRedirect = "/panel/dashboard", failureRedirect = "/panel/login";
+        if(ssoredirect != undefined) {
+            failureRedirect = "/panel/login/sso/" + ssotype;
+            successRedirect = failureRedirect;
 
-        let query = req.body.query;
-        if(query != undefined && query != "") {
-            query = JSON.parse(Buffer.from(query, "base64").toString("ascii"));
-            for(let [key, value] of Object.entries(query)) {
-                if(successRedirect.includes("?")) successRedirect += "&";
-                else successRedirect += "?";
-                successRedirect += key + "=" + value;
+            let query = req.body.query;
+            if(query != undefined && query != "") {
+                query = JSON.parse(Buffer.from(query, "base64").toString("ascii"));
+                for(let [key, value] of Object.entries(query)) {
+                    if(successRedirect.includes("?")) successRedirect += "&";
+                    else successRedirect += "?";
+                    successRedirect += key + "=" + value;
+                }
             }
         }
-    }
 
-    passport.authenticate('local', { session: true, successRedirect, failureRedirect, failureFlash: true, successFlash: "Login successful." })(req, res, next);
+        passport.authenticate('local', { session: true, successRedirect, failureRedirect, failureFlash: true, successFlash: "Login successful." })(req, res, next);
+    } else {
+        res.redirect("/panel/login/install");
+    }
 });
 
 router.get("/", async function(req, res) {
