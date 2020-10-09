@@ -1,5 +1,7 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../database_server");
+const string_utils = require("../../string_utils");
+const mail_manager = require("../../mails/mail_manager");
 const passport = require('passport');
 const logger = require("../../platform_logger").logger();
 
@@ -80,6 +82,78 @@ router.get("/sso/:sso_type", async (req, res) => {
                 res.locals.query = req.query;
                 res.render("login/login");
             }
+        }
+    } else {
+        res.redirect("/panel/login/install");
+    }
+});
+
+router.get("/passwordReset", async (req, res) => {
+    if(await database_server.isInstalled()) {
+        req.setPage(res, "Password lost");
+        res.render("login/preset_request");
+    } else {
+        res.redirect("/panel/login/install");
+    }
+});
+
+router.get("/passwordReset/:resetHash", async (req, res) => {
+    if(await database_server.isInstalled()) {
+        let resetHash = req.params.resetHash;
+        if(resetHash.length != 32) {
+            req.flash("warn", "Invalid link. Please try again.");
+            res.redirect("/panel/login/passwordReset");
+        } else {
+            database_server.database("password_resets").where("hash", resetHash).andWhere("used_at", null).select("id").then((results) => {
+                if(results.length == 0) {
+                    req.flash("warn", "Invalid link (maybe it has expired). Please try again.");
+                    res.redirect("/panel/login/passwordReset");
+                } else {
+                    req.setPage(res, "Password reset");
+                    res.locals.hash = resetHash;
+                    res.render("login/preset_change");
+                }
+            }).catch((error) => {
+                req.flash("danger", "Cannot check reset link: " + error);
+                res.redirect("/panel/login/passwordReset");
+            });
+        }
+    } else {
+        res.redirect("/panel/login/install");
+    }
+});
+
+router.post("/passwordReset", async (req, res) => {
+    if(await database_server.isInstalled()) {
+        let email = (req.body.email || "").trim();
+        if(email.length == 0) {
+            req.flash("warn", "Missing email.");
+            res.redirect("/panel/login/passwordReset");
+        } else {
+            database_server.database("users").where("email", email).select(["id", "name", "fullname", "email"]).then((results) => {
+                let prom = new Promise((resolve) => {
+                    setTimeout(resolve, Math.floor(Math.random()*800)+800);
+                });
+
+                if(results.length > 0) {
+                    let hash = string_utils.generatePassword(32, 32, "abcdef0123456789abcdef"), user = results[0];
+                    prom = database_server.database("password_resets").insert({hash, user_id: user.id}).then(() => {
+                        return mail_manager.sendClientMail(user.email, "Platform Manager - Password reset", "password_lost", 
+                            {fullname: user.fullname, username: user.name, resetlink: "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://admin." + process.env.ROOT_DOMAIN + "/panel/login/passwordReset/" + hash, email: user.email});
+                    });
+                }
+
+                prom.then(() => {
+                    req.flash("success", "If this mail corresponds to a user in our database, you will soon receive a mail with instructions to reset your password.");
+                    res.redirect("/panel/login");
+                }).catch((error) => {
+                    req.flash("danger", "Cannot reset password: " + error);
+                    res.redirect("/panel/login/passwordReset");
+                });
+            }).catch((error) => {
+                req.flash("danger", "Cannot check account in the database: " + error);
+                res.redirect("/panel/login/passwordReset");
+            });
         }
     } else {
         res.redirect("/panel/login/install");

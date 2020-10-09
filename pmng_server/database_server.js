@@ -166,6 +166,15 @@ function installDatabase() {
                 ]);
             }).then(() => {
                 return true;
+            }), createTableIfNotExists("password_resets", (pResets) => {
+                pResets.increments("id").primary();
+                pResets.string("hash", 32).unique().index().notNullable();
+                pResets.integer("user_id", 10).unsigned().notNullable();
+                pResets.datetime("created_at").notNullable().defaultTo(knex.fn.now());
+                pResets.datetime("used_at").defaultTo(null);
+                pResets.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
+            }).then(() => {
+                return true;
             })
         ]).then((results) => {
             return !results.includes(false);
@@ -187,10 +196,11 @@ function hasDefaultPlans() {
  */
 function hasDatabase() {
     return Promise.all([
-      knex.schema.hasTable("users"), knex.schema.hasTable("keys"), knex.schema.hasTable("projects"), knex.schema.hasTable("collabs"), knex.schema.hasTable("domains"), knex.schema.hasTable("plans").then((exists) => {
+      knex.schema.hasTable("users"), knex.schema.hasTable("keys"), knex.schema.hasTable("projects"), knex.schema.hasTable("collabs"), knex.schema.hasTable("domains"), 
+        knex.schema.hasTable("plans").then((exists) => {
           if(!exists) return false;
           else return hasDefaultPlans();
-      })
+      }), knex.schema.hasTable("password_resets")
     ]).then((results) => {
       return !results.includes(false);
     }).catch(() => { return false; });

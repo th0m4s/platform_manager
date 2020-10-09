@@ -38,5 +38,32 @@ router.delete("/", function(req, res) {
     });
 });
 
+router.post("/passwordReset", async (req, res) => {
+    let hash = (req.body.hash || "").trim(), password = (req.body.password || "").trim();
+    if(hash.length == 0 || password.length == 0) {
+        res.status(400).json({error: true, code: 400, message: "Invalid parameters."});
+    } else {
+        database_server.database("password_resets").where("hash", hash).andWhere("used_at", null).select("user_id").then((checkResults) => {
+            if(checkResults.length == 0) {
+                res.status(403).json({error: true, code: 403, message: "Invalid reset hash (maybe it has expired)."});
+            } else {
+                let userid = checkResults[0].user_id;
+                database_server.hashPassword(password).then((hashedPassword) => {
+                    return database_server.database("users").where("id", userid).update({password: hashedPassword});
+                }).then(() => {
+                    return Promise.all([database_server.database("password_resets").where("hash", hash).update({used_at: database_server.database.fn.now()}),
+                        database_server.database("password_resets").where("user_id", userid).andWhere("used_at", null).andWhereNot("hash", hash).update({used_at: 0})]); // clear other active links
+                }).then(() => {
+                    res.status(200).json({error: false, code: 200, message: "Password updated."});
+                }).catch((error) => {
+                    res.status(500).json({error: true, code: 500, message: "Cannot update user password: " + error});
+                });
+            }
+        }).catch((error) => {
+            res.status(500).json({error: true, code: 500, message: "Cannot check existing reset hash: " + error});
+        });
+    }
+});
+
 
 module.exports = router;

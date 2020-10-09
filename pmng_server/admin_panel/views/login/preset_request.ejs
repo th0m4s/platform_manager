@@ -1,0 +1,35 @@
+<html>
+	<head>
+		<%- include("../default/head.ejs") %>
+	</head>
+	<body>
+		<%- include("../default/flash.ejs") %>
+		<div class="container">
+			<div class="row justify-content-md-center h-100">
+				<div class="col-md-4 my-auto">
+					<div class="card">
+						<div class="card-body">
+							<h4 class="card-title text-center mb-4 mt-1">Password lost</h4>
+							<hr>
+							<form method="POST" action="/panel/login/passwordReset" class="mb-1">
+								<div class="form-group">
+									<div class="input-group">
+										<div class="input-group-prepend">
+											<span class="input-group-text"> <i class="fa fa-envelope"></i> </span>
+										</div>
+										<input required name="email" class="form-control" placeholder="Account email" type="email">
+									</div>
+								</div>
+								<div class="form-group">
+									<button type="submit" class="btn btn-primary btn-block">Request a new password</button>
+								</div>
+
+								<a href="/panel/login" class="btn btn-secondary text-white btn-sm btn-block">Back to login page</a>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
