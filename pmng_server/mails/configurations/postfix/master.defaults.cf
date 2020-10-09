@@ -24,7 +24,7 @@ tlsonly:  -o smtpd_sasl_path=private/auth
 tlsonly:  -o smtpd_reject_unlisted_recipient=no
 tlsonly:  -o smtpd_client_restrictions=permit_sasl_authenticated,reject
 tlsonly: -o milter_macro_daemon_name=ORIGINATING
-tlsonly:smtps     inet  n       -       -       -       -       smtpd -v
+tlsonly:smtps     inet  n       -       n       -       -       smtpd -v
 tlsonly:  -o syslog_name=postfix/smtps
 tlsonly:  -o smtpd_tls_wrappermode=yes
 tlsonly:  -o smtpd_sasl_auth_enable=yes
