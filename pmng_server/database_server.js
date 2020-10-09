@@ -144,16 +144,16 @@ function installDatabase() {
             }).then(() => {
                 return true;
             }), createTableIfNotExists("domains", (domains) => {
-                domains.increments("id");
-                domains.text("domain");
+                domains.increments("id").primary();
+                domains.text("domain").unique().index();
                 domains.string("projectname", 32).notNullable();
                 domains.enum("enablesub", ["true", "false"]).defaultTo("true");
                 domains.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
             }).then(() => {
                 return true;
             }), createTableIfNotExists("plans", (plans) => {
-                plans.increments("id");
-                plans.text("name");
+                plans.increments("id").primary();
+                plans.text("name").unique().index();
                 plans.text("usage").defaultTo("{}");
                 plans.decimal("price", 3, 2).defaultTo(0);
                 plans.enum("restricted", ["true", "false"]).defaultTo("false");
