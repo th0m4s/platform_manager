@@ -176,6 +176,20 @@ function installDatabase() {
                 pResets.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
             }).then(() => {
                 return true;
+            }), createTableIfNotExists("email_changes", (eChanges) => {
+                eChanges.increments("id").primary();
+                eChanges.string("allow_hash", 32).unique().index().notNullable();
+                eChanges.string("confirm_hash", 32).unique().index().notNullable();
+                eChanges.integer("user_id", 10).unsigned().notNullable();
+                eChanges.text("old_email").notNullable();
+                eChanges.text("new_email").notNullable();
+                eChanges.datetime("created_at").notNullable().defaultTo(knex.fn.now());
+                eChanges.datetime("allowed_at").defaultTo(null);
+                eChanges.datetime("confirmed_at").defaultTo(null);
+                eChanges.datetime("canceled_at").defaultTo(null);
+                eChanges.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
+            }).then(() => {
+                return true;
             })
         ]).then((results) => {
             return !results.includes(false);
@@ -201,7 +215,7 @@ function hasDatabase() {
         knex.schema.hasTable("plans").then((exists) => {
           if(!exists) return false;
           else return hasDefaultPlans();
-      }), knex.schema.hasTable("password_resets")
+      }), knex.schema.hasTable("password_resets"), knex.schema.hasTable("email_changes")
     ]).then((results) => {
       return !results.includes(false);
     }).catch(() => { return false; });
@@ -354,6 +368,13 @@ function domainAllowHttps(domain) {
     }).catch(() => false);
 }
 
+function userChangingMail(userId) {
+    return knex("email_changes").where("user_id", userId).andWhere("confirmed_at", null).andWhere("canceled_at", null).select("new_email").then((results) => {
+        if(results.length == 0) return undefined;
+        else return results[0].new_email;
+    });
+}
+
 const SCOPES = {ADMIN: 1, SYSTEM: 9, DOCKER: 20, USER: 99};
 /**
  * Checks if a integer user scope is valid against a scope level.
@@ -387,4 +408,5 @@ module.exports.generateKey = generateKey;
 module.exports.revokeKey = revokeKey;
 module.exports.projectAllowHttps = projectAllowHttps;
 module.exports.domainAllowHttps = domainAllowHttps;
+module.exports.userChangingMail = userChangingMail;
 module.exports.checkScope = checkScope;

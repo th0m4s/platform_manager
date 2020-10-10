@@ -1,0 +1,24 @@
+<html>
+	<head>
+		<%- include("../../default/head.ejs") %>
+	</head>
+	<body>
+		<%- include("../../default/flash.ejs") %>
+		<div class="container">
+			<div class="row justify-content-md-center h-100">
+				<div class="col-md-4 my-auto">
+					<div class="card">
+						<div class="card-body">
+							<h4 class="card-title text-center mb-4 mt-1">Email change canceled</h4>
+							<hr>
+                            <p>You canceled the update of the email of your Platform Manager account from <i><%= fromemail %></i> to <i><%= toemail %></i>.<br/><br/>
+                            No further action is required, the email of the account remains <i><%= fromemail %></i>.</p>
+                            
+                            <a href="/panel/users/me" class="btn btn-primary text-white btn-block">Back to My Account</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

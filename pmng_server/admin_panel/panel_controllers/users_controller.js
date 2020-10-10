@@ -16,9 +16,10 @@ router.get("/", (req, res) => {
     res.redirect("/panel/users/me");
 });
 
-router.get("/me", (req, res) => {
+router.get("/me", async (req, res) => {
     req.setPage(res, "Account", "account", "me"); // not using the correct users/me because it would highlight users for admin users
     res.locals.user = req.user;
+    res.locals.newEmail = await database_server.userChangingMail(req.user.id);
     res.render("users/me");
 });
 

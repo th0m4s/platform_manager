@@ -391,9 +391,9 @@ function sendClientMail(to, subject, template, locals = {}) {
         return getMailDatabase("virtual_users").where("email", sender).select("sso_decrypt").then((result) => {return {ssoDec: result[0].sso_decrypt, renderedTemplate, renderedPlain}});
     }).then(({ssoDec, renderedTemplate, renderedPlain}) => {
         let transport = nodemailer.createTransport({
-            host: "mail.tomanager.ml",
-            port: 465,
-            secure: true,
+            host: "mail." + process.env.ROOT_DOMAIN,
+            port: enableSec ? 465 : 25,
+            secure: enableSec,
             auth: {
                 user: sender,
                 pass: ssoDec

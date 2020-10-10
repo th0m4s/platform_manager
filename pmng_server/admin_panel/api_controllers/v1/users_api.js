@@ -1,5 +1,6 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../../database_server");
+const mail_manager = require("../../../mails/mail_manager");
 const project_manager = require("../../../project_manager");
 const string_utils = require("../../../string_utils");
 const api_auth = require("./api_auth");
@@ -132,18 +133,39 @@ router.post("/me", (req, res) => {
             if(changes.fullname != undefined && changes.fullname.trim().length > 0)
                 update.fullname = changes.fullname.trim();
             
-            if(changes.email != undefined && changes.email.trim().length > 0)
-                update.email = changes.email.trim();
+            let emailChangeError = false, changingEmail = false, currentNewEmail = undefined;
+            if(changes.email != undefined && changes.email.trim().length > 0) {
+                currentNewEmail = await database_server.userChangingMail(user.id);
+                if(currentNewEmail == undefined) {
+                    changingEmail = true;
+                    let changeAllowHash = string_utils.generatePassword(32, 32, "abcdef0123456789abcdef");
+                    let changeConfirmHash = string_utils.generatePassword(32, 32, "abcdef0123456789abcdef");
+                    let newemail = changes.email.trim();
+                    await database_server.database("email_changes").insert({user_id: user.id, old_email: user.email, new_email: newemail, allow_hash: changeAllowHash, confirm_hash: changeConfirmHash});
+                    
+                    let mailLinksStart = "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://admin." + process.env.ROOT_DOMAIN + "/panel/login/emailChange/";
+                    await mail_manager.sendClientMail(user.email, "Platform Manager - Allow email change", "change_mail_old", {
+                        fullname: changes.fullname || user.fullname,
+                        username: user.name,
+                        newemail,
+                        allowlink: mailLinksStart +  "allow/" + changeAllowHash,
+                        denylink: mailLinksStart +  "deny/" + changeAllowHash
+                    });
+                } else emailChangeError = true;
+            }
 
             if(changes.password != undefined && changes.password.trim().length > 0) {
                 update.password = await database_server.hashPassword(changes.password.trim());
                 await database_server.getPluginKnex().then((plk) => plk.raw("ALTER USER '" + user.name + "' IDENTIFIED BY '" + changes.password.trim() + "';"));
             }
 
-            if(Object.keys(update).length == 0) res.status(400).json({error: true, code: 400, message: "Invalid update: No changes."});
-            else {
+            if(Object.keys(update).length == 0) {
+                if(!changingEmail) res.status(400).json({error: true, code: 400, message: "Invalid update: No changes."});
+                else res.status(202).json({error: false, code: 202, message: "Email change request created."});
+            } else {
                 database_server.database("users").where("name", user.name).update(update).then(() => {
-                    res.status(200).json({error: false, code: 200, message: "User updated."});
+                    if(emailChangeError) res.status(206).json({error: false, code: 206, message: "User updated (but new email request failed).", newEmail: currentNewEmail});
+                    else res.status(200).json({error: false, code: 200, message: "User updated."});
                 }).catch((error) => {
                     res.status(500).json({error: true, code: 500, message: "Cannot update user database: " + error});
                 });
@@ -151,6 +173,21 @@ router.post("/me", (req, res) => {
         }).catch((error) => {
             res.status(403).json({error: true, code: 403, message: "Cannot update user: " + error});
         });
+    });
+});
+
+router.get("/me/cancelEmailChange", (req, res) => {
+    api_auth(req, res, async function(user) {
+        try {
+            let currentNewEmail = await database_server.userChangingMail(user.id);
+            if(currentNewEmail == undefined) res.status(404).json({error: true, code: 404, message: "This account doesn't have a current email change request."});
+            else {
+                await database_server.database("email_changes").where("user_id", user.id).andWhere("confirmed_at", null).andWhere("canceled_at", null).update({canceled_at: database_server.database.fn.now()});
+                res.status(200).json({error: false, code: 200, message: "Email change request canceled."});    
+            }
+        } catch(error) {
+            res.status(500).json({error: true, code: 500, message: "Cannot cancel request: " + error});
+        }
     });
 });
 

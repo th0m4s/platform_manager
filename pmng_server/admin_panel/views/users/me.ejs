@@ -7,6 +7,7 @@
         <%- include("../default/api.ejs") %>
         <script>
         let user = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(user)) %>"));
+        let newEmail = <%- newEmail == undefined ? "undefined" : '"' + newEmail + '"' %>;
         </script>
         <%- startPageScript("user_me") %>
         
@@ -39,6 +40,7 @@
                             <div class="form-group">
                                 <label for="input-email" class="mb-1">Email address:</label>
                                 <input type="email" required class="form-control" id="input-email" placeholder="jdoe@example.com">
+                                <small id="email-change" style="display: none;" class="form-text text-muted">Currently changing to <i id="email-change-email"></i>. <a href="#" disabled onclick="return user_me.cancelEmailChange();">Cancel</a></small>
                             </div>
                         </div>
                     </div>

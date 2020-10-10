@@ -1,0 +1,17 @@
+PLATFORM MANAGER - ALLOW EMAIL CHANGE
+
+Hello <%= fullname %> (<%= username %>),
+A request to change the email of your account has been made.
+New email: <%= newemail %>
+
+If you created this request, please open the link below in your
+browser to allow the request, else, you can open the second link in
+your browser to deny the request, but this is not required as the
+email will not be updated without your allowance.
+
+Allow change: <%= allowlink %>
+
+Deny change: <%= denylink %>
+
+
+<%- copyright %>

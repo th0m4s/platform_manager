@@ -7,7 +7,7 @@ const logger = require("../../platform_logger").logger();
 
 router.all("/", function(req, res, next) {
     if(req.user != null) {
-        req.flash("info", "Welcome back!");
+        // req.flash("info", "Welcome back!");
         res.redirect("/panel/dashboard");
     }
     else next();
@@ -86,6 +86,95 @@ router.get("/sso/:sso_type", async (req, res) => {
                 res.locals.query = req.query;
                 res.render("login/login");
             }
+        }
+    } else {
+        res.redirect("/panel/login/install");
+    }
+});
+
+router.get("/emailChange/:action/:hash", async (req, res) => {
+    if(await database_server.isInstalled()) {
+        let action = req.params.action.toLowerCase().trim(), hash = req.params.hash.toLowerCase().trim();
+        if(hash.length != 32) {
+            req.flash("warn", "Invalid link, please try again.");
+            res.redirect("/");
+        } else if(action == "allow" || action == "deny") {
+            database_server.database("email_changes").andWhere("confirmed_at", null).andWhere("canceled_at", null)
+            .andWhere("allow_hash", hash).select(["user_id", "new_email", "old_email", "allowed_at", "confirm_hash"]).then((results) => {
+                if(results.length == 0 || (action == "allow" && results[0].allowed_at != null)) {
+                    req.flash("warn", "Invalid hash, please try again.");
+                    res.redirect("/");
+                } else if(action == "allow") {
+                    database_server.database("users").where("id", results[0].user_id).select(["name", "fullname"]).then((userResults) => {
+                        if(userResults.length == 0) throw "Invalid data: please cancel this request and create another one.";
+                        else return userResults[0];
+                    }).then((user) => {
+                        return database_server.database("email_changes").where("allow_hash", hash).update({allowed_at: database_server.database.fn.now()}).then(() => {
+                            return user;
+                        });
+                    }).then((user) => {
+                        let mailLinksStart = "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://admin." + process.env.ROOT_DOMAIN + "/panel/login/emailChange/";
+                        return mail_manager.sendClientMail(results[0].new_email, "Platform Manager - Confirm email change", "change_mail_new", {
+                            fullname: user.fullname,
+                            username: user.name,
+                            confirmlink: mailLinksStart +  "confirm/" + results[0].confirm_hash,
+                            cancellink: mailLinksStart +  "cancel/" + results[0].confirm_hash
+                        });
+                    }).then(() => {
+                        req.setPage(res, "Email change allowed");
+                        res.locals.fromemail = results[0].old_email;
+                        res.locals.toemail = results[0].new_email;
+                        res.locals.hash = hash;
+                        res.render("login/email_change/allowed");
+                    }).catch((error) => {
+                        req.flash("danger", "Cannot allow email change, please try again: " + error);
+                        res.redirect("/");
+                    });
+                } else { // action == deny
+                    database_server.database("email_changes").where("allow_hash", hash).update({canceled_at: database_server.database.fn.now()}).then(() => {
+                        req.setPage(res, "Email change denied");
+                        res.locals.fromemail = results[0].old_email;
+                        res.locals.toemail = results[0].new_email;
+                        res.render("login/email_change/denied");
+                    }).catch((error) => {
+                        req.flash("danger", "Cannot deny email change, please try again: " + error);
+                        res.redirect("/");
+                    });
+                }
+            });
+        } else if(action == "confirm" || action == "cancel") {
+            database_server.database("email_changes").andWhere("confirmed_at", null).andWhere("canceled_at", null).andWhereNot("allowed_at", null)
+            .andWhere("confirm_hash", hash).select(["user_id", "new_email", "old_email"]).then((results) => {
+                if(results.length == 0) {
+                    req.flash("warn", "Invalid hash, please try again." + (action == "confirm" ? " Maybe the change is not allowed yet." : ""));
+                    res.redirect("/");
+                } else if(action == "confirm") {
+                    database_server.database("users").where("id", results[0].user_id).update({email: results[0].new_email}).then(() => {
+                        return database_server.database("email_changes").where("confirm_hash", hash).update({confirmed_at: database_server.database.fn.now()}).then(() => {
+                            req.setPage(res, "Email change confirmed");
+                            res.locals.fromemail = results[0].old_email;
+                            res.locals.toemail = results[0].new_email;
+                            res.render("login/email_change/confirmed");
+                        });
+                    }).catch((error) => {
+                        req.flash("danger", "Cannot confirm email change, please try again: " + error);
+                        res.redirect("/");
+                    });
+                } else { // action == cancel
+                    database_server.database("email_changes").where("allow_hash", hash).update({canceled_at: database_server.database.fn.now()}).then(() => {
+                        req.setPage(res, "Email change canceled");
+                        res.locals.fromemail = results[0].old_email;
+                        res.locals.toemail = results[0].new_email;
+                        res.render("login/email_change/canceled");
+                    }).catch((error) => {
+                        req.flash("danger", "Cannot cancel email change, please try again: " + error);
+                        res.redirect("/");
+                    });
+                }
+            }); 
+        } else {
+            req.flash("warn", "Invalid link action, please try again.");
+            res.redirect("/");
         }
     } else {
         res.redirect("/panel/login/install");

@@ -1,0 +1,18 @@
+PLATFORM MANAGER - CONFIRM EMAIL CHANGE
+
+Hello <%= fullname %>,
+A request to change the email of the Platform Manager account
+<%= username %> to this email has been made and was allowed by the
+current email address of this account.
+
+If you created this request, please open the link below in your
+browser to confirm the change, else, you can open the second link in
+your browser to cancel the request, but this is not required as the
+email will not be updated without your allowance.
+
+Confirm change: <%= confirmlink %>
+
+Cancel change: <%= cancellink %>
+
+
+<%- copyright %>
