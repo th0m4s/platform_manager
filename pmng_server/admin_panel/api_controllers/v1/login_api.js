@@ -43,7 +43,7 @@ router.post("/passwordReset", async (req, res) => {
     if(hash.length == 0 || password.length == 0) {
         res.status(400).json({error: true, code: 400, message: "Invalid parameters."});
     } else {
-        database_server.database("password_resets").where("hash", hash).andWhere("used_at", null).select("user_id").then((checkResults) => {
+        database_server.database("password_resets").where("hash", hash).andWhere("used_at", null).andWhere("canceled_at", null).select("user_id").then((checkResults) => {
             if(checkResults.length == 0) {
                 res.status(403).json({error: true, code: 403, message: "Invalid reset hash (maybe it has expired)."});
             } else {
@@ -51,8 +51,8 @@ router.post("/passwordReset", async (req, res) => {
                 database_server.hashPassword(password).then((hashedPassword) => {
                     return database_server.database("users").where("id", userid).update({password: hashedPassword});
                 }).then(() => {
-                    return Promise.all([database_server.database("password_resets").where("hash", hash).update({used_at: database_server.database.fn.now()}),
-                        database_server.database("password_resets").where("user_id", userid).andWhere("used_at", null).andWhereNot("hash", hash).update({used_at: 0})]); // clear other active links
+                    return Promise.all([database_server.database("password_resets").where("hash", hash).update({used_at: database_server.database.fn.now(), canceled_at: 0}),
+                        database_server.database("password_resets").where("user_id", userid).andWhere("used_at", null).andWhereNot("hash", hash).update({used_at: 0, canceled_at: database_server.database.fn.now()})]); // clear other active links
                 }).then(() => {
                     res.status(200).json({error: false, code: 200, message: "Password updated."});
                 }).catch((error) => {

@@ -108,7 +108,7 @@ router.get("/passwordReset/:resetHash", async (req, res) => {
             req.flash("warn", "Invalid link. Please try again.");
             res.redirect("/panel/login/passwordReset");
         } else {
-            database_server.database("password_resets").where("hash", resetHash).andWhere("used_at", null).select("id").then((results) => {
+            database_server.database("password_resets").where("hash", resetHash).andWhere("used_at", null).andWhere("canceled_at", null).select("id").then((results) => {
                 if(results.length == 0) {
                     req.flash("warn", "Invalid link (maybe it has expired). Please try again.");
                     res.redirect("/panel/login/passwordReset");

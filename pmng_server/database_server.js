@@ -172,6 +172,7 @@ function installDatabase() {
                 pResets.integer("user_id", 10).unsigned().notNullable();
                 pResets.datetime("created_at").notNullable().defaultTo(knex.fn.now());
                 pResets.datetime("used_at").defaultTo(null);
+                pResets.datetime("canceled_at").defaultTo(null);
                 pResets.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
             }).then(() => {
                 return true;
