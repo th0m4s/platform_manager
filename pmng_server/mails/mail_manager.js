@@ -338,6 +338,26 @@ function checkAndStart(maildirectory, shouldRestart) {
     });
 }
 
+function addProjectDomain(projectname) {
+    let mailsDb = getMailDatabase();
+    return mailsDb("virtual_domains").insert({name: projectname + "." + process.env.ROOT_DOMAIN, projectname, cdomainid: null, system: "true"}).then(() => {
+        return mailsDb("virtual_domains").where("projectname", projectname).select("id");
+    }).then((results) => {
+        if(results.length != 1) throw "Invalid new project domain id.";
+        return checkDomainIdUsers(results[0].id);
+    });
+}
+
+function addCustomDomain(projectname, custom_domain, cdomainid) {
+    let mailsDb = getMailDatabase();
+    return mailsDb("virtual_domains").insert({name: custom_domain, projectname, cdomainid, system: "false"}).then(() => {
+        return mailsDb("virtual_domains").where("name", custom_domain).select("id");
+    }).then((results) => {
+        if(results.length != 1) throw "Invalid custom mail domain id.";
+        return checkDomainIdUsers(results[0].id);
+    });
+}
+
 function knexProjectnameSelector(userId, adminOrScope, manage = true) {
     if(typeof adminOrScope == "number") adminOrScope = database_server.checkScope(adminOrScope, "ADMIN");
 
@@ -417,6 +437,8 @@ module.exports.installMailDatabase = installMailDatabase;
 module.exports.checkDomainIdUsers = checkDomainIdUsers;
 module.exports.cryptPassword = cryptPassword;
 module.exports.getUserMissingPasswords = getUserMissingPasswords;
+module.exports.addProjectDomain = addProjectDomain;
+module.exports.addCustomDomain = addCustomDomain;
 module.exports.knexProjectnameSelector = knexProjectnameSelector;
 module.exports.initialize = initialize;
 module.exports.sendClientMail = sendClientMail;

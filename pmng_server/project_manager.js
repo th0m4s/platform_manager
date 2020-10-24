@@ -110,6 +110,8 @@ function addProject(projectname, ownerid, env, plugins) {
 
         return Promise.all(postInstalls);
     }).then(() => {
+        return mail_manager.addProjectDomain(projectname);
+    }).then(() => {
         return getIdFromName(projectname);
     }).then((id) => {
         intercom.send("projectsevents", {event: "add", project: projectname, owner: ownerid, id});
@@ -235,7 +237,7 @@ function addCustomDomain(projectname, custom_domain, enablesub, full_dns) {
         return database_server.database("domains").where("domain", custom_domain).select("id");
     }).then((results) => {
         if(results.length == 0) throw "Cannot add custom domain into database (empty id result.)";
-        return mail_manager.getMailDatabase("virtual_domains").insert({name: custom_domain, projectname, cdomainid: results[0].id, system: "false"});
+        return mail_manager.addCustomDomain(projectname, custom_domain, results[0].id);
     });
 }
 
