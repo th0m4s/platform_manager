@@ -30,7 +30,7 @@ function connect() {
         },
         send: function(subject, message, responseCallback) {
             let id = Math.floor(Math.random()*((2**32)-1));
-            waitingResp[id] = responseCallback || (() => {});
+            if(responseCallback != undefined) waitingResp[id] = responseCallback;
             connection.write("send:" + JSON.stringify({subject: subject, message: message, id: id}) + "\n");
         },
         sendPromise: function(subject, message, options = defaultConfig) {
@@ -76,8 +76,10 @@ function processCommand(connection, command, value, subs, waitingResp) {
             if(waitingResp.hasOwnProperty(id)) {
                 connection.write("stat:" + JSON.stringify({error: false, message: "received response " + id}) + "\n");
 
-                waitingResp[id](value.message);
-                delete waitingResp[id];
+                if(waitingResp[id] != undefined) {
+                    waitingResp[id](value.message);
+                    delete waitingResp[id];
+                }
             } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown responseid " + id + " for client"}) + "\n");
             break;
     }
