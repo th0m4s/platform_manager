@@ -85,6 +85,25 @@ function logger() {
 
         _logger.tagWarn = (tag, ...arguments) => tagLogger(tag, "warn", arguments);
         _logger.tagError = (tag, ...arguments) => tagLogger(tag, "error", arguments);
+
+        // per process handlers (including intercom stats)
+        process.on("uncaughtExceptionMonitor", (exception) => {
+            _logger.fatal("PLATFORM MANAGER ENCOUNTERED A FATAL EXCEPTION!");
+            _logger.fatal(exception);
+        });
+    
+        process.on("unhandledRejection", (reason) => {
+            _logger.error("An unhandled rejection occured: " + reason);
+        });
+
+        let previousCpu = undefined;
+        let intercom = require("./intercom/intercom_client").connect();
+        let sendStats = () => {
+            previousCpu = process.cpuUsage(previousCpu);
+            intercom.send("stats", {pid: process.pid, cpu: {u: previousCpu.user, s: previousCpu.s}, mem: process.memoryUsage()});
+        }
+
+        let statsInterval = setInterval(sendStats, parseInt(process.env.STATS_INTERVAL));
     }
 
     return _logger;
