@@ -173,10 +173,16 @@ function start() {
                                         }
 
                                         connection.write(LINE + "Starting deployment container...");
-                                        let image = docker_manager.getImageFromType(type, typeVersion);
+
+                                        let imageDetails = await buildpack.imageDetails(projectData);
+                                        let image = imageDetails.image;
 
                                         if(image == undefined) {
                                             throw "Unknown project type (image not found for this type and version: " + type + ":" + typeVersion + ")";
+                                        } else if(!imageDetails.built) {
+                                            connection.write("\n" + SPACES + "  Building image...\n");
+                                            await imageDetails.build();
+                                            connection.write(SPACES + "  Image built.\n");
                                         }
 
                                         let container = null;
@@ -241,7 +247,10 @@ function start() {
                                         }
 
                                         let dockerUtils = {execCommand, readFile, exists, temporaryFile, writeFile, setNextProtected};
-                                        connection.write(" Started.\n");
+                                        if(!imageDetails.built) {
+                                            // if image was not built, a new line was already written
+                                            connection.write(SPACES + "Container started.\n");
+                                        } else connection.write(" Started.\n");
 
                                         let lastNewLine = true;
                                         let addonLogger = (message, newLine = true) => {

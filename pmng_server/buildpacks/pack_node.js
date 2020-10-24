@@ -1,16 +1,19 @@
+const docker_manager = require("../docker_manager");
+const bent = require("bent");
 const pfs = require("fs").promises;
 const path = require("path");
-const rmfr = require("rmfr");
-const child_process = require("child_process");
+const logger = require("../platform_logger").logger();
 const Buildpack = require("./lib_pack");
 
+const NODE_SERVER = "https://unofficial-builds.nodejs.org/download/release";
+const SUPPORTED_PREFIXES = ["v10", "v12", "v14", "v15"];
 class NodeBuildpack extends Buildpack {
     static async build(projectName, projectData, utils, logger, hasAddons) {
         let pkg = {};
 
-        // version in projectData is not the full number, use command instead (but could have been using dockermng getImageFromType)
+        // version in projectData is not the full number, use command instead
         let nodeVersion = (await utils.execCommand("node --version")).out.trim();
-        if(nodeVersion.startsWith("v13")) {
+        if(!SUPPORTED_PREFIXES.some((prefix) => { return nodeVersion.startsWith(prefix); })) {
             logger("WARNING: You are currently using Node " + nodeVersion + ", which is no longer officially supported!");
             logger("Please switch ASAP to the LTS version (v12), the maintained version (v10) or the latest one (v14).\n");
         } else logger("Building using Node " + nodeVersion + ".");
@@ -65,6 +68,87 @@ class NodeBuildpack extends Buildpack {
     static availableAddons(projectData) {
         return ["openjdk", "python", "buildtools"];
     }
+
+    static async imageDetails(projectData) {
+        let requestedVersion = (projectData.version || "latest").toLowerCase();
+        let nodeVersions = await getNodeVersions();
+
+        let foundVersion = undefined;
+        if(requestedVersion != "latest") {
+            if(!requestedVersion.endsWith(".")) {
+                if(requestedVersion.startsWith("v")) requestedVersion = requestedVersion.substring(1);
+                for(let version of nodeVersions) {
+                    if(version.startsWith(requestedVersion)) {
+                        foundVersion = version;
+                        break;
+                    }
+                }
+            }            
+        } else foundVersion = nodeVersions[0];
+
+        if(foundVersion == undefined) return super.imageDetails();
+        
+        // check if image already exists
+        let imageName = getNodeImageName(foundVersion);
+        if(await docker_manager.ensureImageExists(imageName)) {
+            return {
+                image: imageName,
+                built: true,
+                build: async () => {}
+            }
+        } else return {
+            image: imageName,
+            built: false,
+            build: () => { return buildNodeVersion(foundVersion); }
+        }
+    }
+}
+
+function getNodeImageName(version) {
+    return "pmng/node" + (":" + version || "");
+}
+
+async function buildNodeVersion(version) {
+    let nodeVersions = await getNodeVersions();
+    if(!nodeVersions.includes(version)) throw "Cannot build invalid Node version: " + version;
+
+    let buildSource = await pfs.readFile(path.resolve(__dirname, "..", "docker_images", "node", "Dockerfile"), "utf-8");
+    let tag = getNodeImageName(version);
+
+    await docker_manager.ensureImageExists(tag, buildSource.replace(/%nodeVersion%/g, version), {latest: nodeVersions[0] == version});
+}
+
+let lastNodeCheck = 0, _nodeVersions = [];
+async function getNodeVersions() {
+    let currentTime = new Date().getTime()/1000;
+    if(currentTime - lastNodeCheck > 3600) {
+        let bentVersionList = bent(NODE_SERVER);
+        let bentVersionResponse;
+        try {
+            bentVersionResponse = await bentVersionList("/");
+        } catch(error) {
+            throw "Cannot list NodeJS versions: " + error;
+        }
+
+        let versionsPage = await bentVersionResponse.text();
+        _nodeVersions = [...versionsPage.matchAll(/href="v(?<v>[\d.]+)\/"/g)].map((x) => x.groups.v).sort((a, b) => {
+            let partsA = a.split(".").map((x) => parseInt(x));
+            let partsB = b.split(".").map((x) => parseInt(x));
+
+            for(let i = 0; i < Math.min(partsA.length, partsB.length); i++) {
+                if(partsA[i] > partsB[i]) return -1;
+                else if(partsA[i] < partsB[i]) return 1;
+            }
+
+            if(partsA.length > partsB.length) return -1;
+            else if(partsA.length < partsB.length) return 1;
+            else return 0;
+        });
+        lastNodeCheck = currentTime;
+    }
+
+    return _nodeVersions;
 }
 
 module.exports = NodeBuildpack;
+module.exports.NODE_SERVER = NODE_SERVER;

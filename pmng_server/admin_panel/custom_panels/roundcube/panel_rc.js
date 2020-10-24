@@ -15,6 +15,7 @@ function checkAndStart(shouldRestart) {
     return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=roundcube"]}}).then(async (containers) => {
         if(containers.length == 0 || shouldRestart || containers[0].data.Labels["pmng.panelversion"] != panel_version) {
             if(containers.length > 0) await containers[0].stop();
+            await docker_manager.ensureImageExists("pmng/panel-rc", "file:" + path.resolve(__dirname, "../../..", "docker_images", "mails", "alpine-roundcube"), {latest: true, adminLogs: true});
 
             let rcSqlUser = "roundcube", rcSqlPassword = string_utils.generatePassword(16, 24);
             await database_server.database.raw("CREATE DATABASE IF NOT EXISTS `" + RC_DBNAME + "`;");
@@ -80,7 +81,7 @@ function checkAndStart(shouldRestart) {
             }).then((container) => {
                 return container.start();
             }).then(() => {
-                logger.info("Rouncube custom admin panel started.");
+                logger.info("Roundcube custom admin panel started.");
                 return true;
             }).catch((error) => {
                 logger.error("Cannot start RC panel: " + error);

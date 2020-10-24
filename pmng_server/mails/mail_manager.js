@@ -170,6 +170,8 @@ function checkAndStart(maildirectory, shouldRestart) {
     return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=server", "pmng.server=mails"]}}).then(async (containers) => {
         if(containers.length == 0 || shouldRestart || containers[0].data.Labels["pmng.serverversion"] != server_version) {
             if(containers.length > 0) await containers[0].stop();
+            await docker_manager.ensureImageExists("pmng/server-mail", "file:" + path.resolve(__dirname, "..", "docker_images", "mails", "alpine-mailer"), {latest: true, adminLogs: true});
+
             let Binds = [maildirectory + ":/var/mail/vhosts"];
 
             // SQL MAIL USER

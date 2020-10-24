@@ -5,6 +5,10 @@ class NginxPHPBuildpack extends BasePHPBuildpack {
         logger("Using NGINX/PHP7 server type.");
         return super.build(projectName, projectData, utils, logger, hasAddons);
     }
+    
+    static async imageDetails(projectData) {
+        return super._imageDetails("pmng/nginx-php7");
+    }
 }
 
 module.exports = NginxPHPBuildpack;

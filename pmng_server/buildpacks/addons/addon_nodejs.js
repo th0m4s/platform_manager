@@ -3,7 +3,7 @@ const bent = require("bent");
 const fs = require("fs");
 const path = require("path");
 const latestVersion = "v14.8.0";
-const NODE_SERVER = "https://unofficial-builds.nodejs.org/download/release";
+const NODE_SERVER = require("../pack_node").NODE_SERVER;
 
 class NodeJSAddon extends BuildAddon {
     static async addon(projectName, addonData, utils, logger) {

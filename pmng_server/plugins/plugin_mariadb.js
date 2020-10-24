@@ -59,6 +59,7 @@ class MariaDBPlugin extends Plugin {
 
         await docker_manager.docker.container.list({filters: {label: ["pmng.containertype=globalplugin", "pmng.pluginname=mariadb"]}}).then(async (containers) => {
             if(containers.length == 0) {
+                await docker_manager.ensureImageExists("pmng/plugin-mariadb", "file:" + path.resolve(__dirname, "..", "docker_images", "databases", "alpine-mariadb"), {latest: true, adminLogs: true});
                 await docker_manager.docker.network.list({filters: {name: [NETWORK_NAME]}}).then((networks) => {
                     if(networks.length > 0) {
                         for(let network of networks) {

@@ -46,6 +46,15 @@ class BasePHPBuildpack extends Buildpack {
     static availableAddons(projectData) {
         return ["nodejs", "python", "buildtools", "webapp"];
     }
+
+    // php images are required in docker_manager because panels are based on these images
+    static _imageDetails(image) {
+        return {
+            image,
+            built: true,
+            build: async () => {}
+        } 
+    }
 }
 
 

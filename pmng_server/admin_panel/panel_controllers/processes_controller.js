@@ -44,8 +44,8 @@ router.get("/", (req, res) => {
             special: 0
         },
         "rc_panel": {
-            name: "Rouncube panel",
-            usage: "The Rouncube panel (running in a Docker container) running a webmail.",
+            name: "Roundcube panel",
+            usage: "The Roundcube panel (running in a Docker container) running a webmail.",
             special: 0
         },
         "git_web_server": {

@@ -4,6 +4,7 @@ const intercom = require("./intercom/intercom_client").connect();
 const fs = require("fs"), pfs = fs.promises;
 const rmfr = require("rmfr");
 const tar = require("tar");
+const tar_stream = require("tar-stream"),  tar_fs = require('tar-fs');;
 const path = require("path");
 const logger = require("./platform_logger").logger();
 const database_server = require("./database_server");
@@ -126,8 +127,20 @@ async function maininstance() {
         }
     }
 
-    logger.info("Docker is running.");
+    logger.tag("DOCKER", "Docker is running.");
+    
+    // required images like panels/servers/... are ensured just before container creation, with the exception of php images required by panels
+    const required_images = [
+        {name: "pmng/base", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "base", "Dockerfile")},
+        {name: "pmng/apache2-php7", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "php", "apache-php")},
+        {name: "pmng/nginx-php7", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "php", "nginx-php")}
+    ];
 
+    logger.tag("DOCKER", "Checking default required images...");
+    for(let requiredImage of required_images)
+        await ensureImageExists(requiredImage.name, requiredImage.dockerfile, {latest: true, adminLogs: true});
+
+    logger.tag("DOCKER", "Starting global plugins...");
     // loading plugins (starting global plugins containers)
     // paths relative to platform.js:
     //    - plugins is normally the data directory
@@ -284,6 +297,8 @@ async function maininstance() {
             });
         });
     }, 60*1000); // check containers every minute
+
+    logger.tag("DOCKER", "Docker Manager initialized!");
 }
 
 /**
@@ -467,10 +482,21 @@ function startProject(projectname) {
             let fullSettings = JSON.parse(await pfs.readFile(path.resolve(startingFolder, "settings.json")));
             let projectSettings = fullSettings.project, buildSettings = fullSettings.build || {};
             let buildVersion = buildSettings.version || (fullSettings.buildVersion || 1), buildMode = buildSettings.mode || "archive";
-            let type = projectSettings.type, typeVersion = projectSettings.version || "latest";
-            let entrypoint = projectSettings.entrypoint;
+            let type = projectSettings.type, entrypoint = projectSettings.entrypoint;
             
-            let imageName = buildMode == "archive" ? getImageFromType(type, typeVersion) : buildSettings.image;
+            let imageName = undefined;
+            try {
+                let buildpack = require("./buildpacks/pack_" + type);
+                let imageDetails = buildMode == "archive" ? (await buildpack.imageDetails(projectSettings)) : {image: buildSettings.image, built: true, build: async () => {}};
+            
+                imageName = imageDetails.image;
+                if(!imageDetails.built)
+                    await imageDetails.build();
+            } catch(e) {
+                if(e.code == "MODULE_NOT_FOUND") throw "Project type '" + type + "' is incorrect.";
+                else throw e;
+            }
+                   
             if(imageName == undefined) throw "Unknown image for project.";
 
             let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "CUSTOM_PORT"];
@@ -724,34 +750,60 @@ function removePort(projectname) {
 
 let portMappings = {}, firstPort = 49152, lastPort = 49999;
 
-const types = {
-    "node": {
-        "latest": "pmng/node:latest",
-        "14.8.0": "pmng/node:14.8.0",
-        "14": "pmng/node:14.8.0",
-        "13.4.0": "pmng/node:13.14.0",
-        "13": "pmng/node:13.14.0",
-        "12.18.3": "pmng/node:12.18.3",
-        "12": "pmng/node:12.18.3",
-        "10.22.0": "pmng/node:10.22.0",
-        "10": "pmng/node:10.22.0"
-    }, 
-    "apache-php": {
-        "latest": "pmng/apache2-php7:latest"
-    },
-    "nginx-php": {
-        "latest": "pmng/nginx-php7:latest"
-    }
-};
+async function ensureImageExists(name, dockerfile, {latest = false, adminLogs = true, buildLogs = false} = {}) {
+    let nameParts = name.split(":");
+    if(nameParts.length == 1) nameParts.push("latest");
 
-/**
- * Gets the Docker image name from a project type.
- * @param {string} type The project type.
- * @param {string} version A specific version for this type.
- * @returns {string} The associated Docker image name.
- */
-function getImageFromType(type, version = "latest") {
-    return (types[type] || {})[version];
+    let existingImages = await docker.image.list({filters: {reference: [name]}});
+    if(dockerfile == undefined || dockerfile.trim().length == 0) return existingImages.length > 0;
+    if(existingImages.length > 0) return;
+
+    let pullImage = dockerfile == "pull";
+    let tarPack = undefined;
+    
+    if(!pullImage) {
+        if(dockerfile.startsWith("file:")) {
+            tarPack = tar_fs.pack(dockerfile.substring(5), {
+                map: (header) => {
+                    if(header.type == "file" && header.name == ".") {
+                        // only adding the Dockerfile, so rename entry
+                        header.name = "Dockerfile";
+                    }
+    
+                    return header;
+                }
+            });
+        } else {
+            tarPack = tar_stream.pack();
+            tarPack.entry({name: "Dockerfile"}, dockerfile, () => tarPack.finalize());
+        }
+    
+        if(tarPack == undefined) throw "Invalid Dockerfile contents.";
+    }
+
+    if(adminLogs) logger.tag("DOCKER", (pullImage ? "Pulling" : "Building") + " image " + name + "...");
+    let buildStream = await (pullImage ? docker.image.create({}, {fromImage: nameParts[0], tag: nameParts[1]}) : docker.image.build(tarPack, {t: name}));
+    await new Promise((resolve, reject) => {
+        buildStream.on("data", (d) => {
+            let lines = d.toString().trim().split("\n");
+            for(let line of lines) {
+                let data = JSON.parse(line.trim());
+                if(data.stream && buildLogs) console.log(data.stream.trim());
+                if(data.errorDetail)
+                    reject(data.errorDetail.message);
+            }
+        });
+        buildStream.on("error", reject);
+        buildStream.on("end", resolve);
+    });
+    
+    if(adminLogs) logger.tag("DOCKER", "Image " + name + " " + (pullImage ? "pulled" : "built") + "!");
+
+    if(!pullImage && latest && name.includes(":")) { // if there is no version tag, it's already the latest one
+        docker.image.get(name).tag({repo: name.split(":")[0], tag: "latest"}).catch((error) => {
+            logger.tagWarn("DOCKER", "Cannot tag latest image " + tag + ": " + error);
+        });
+    }
 }
 
 /**
@@ -935,7 +987,7 @@ module.exports.getRunningContainers = getRunningContainers;
 module.exports.getContainerDetails = getContainerDetails;
 module.exports.listNetworks = listNetworks;
 module.exports.getNetworkDetails = getNetworkDetails;
-module.exports.getImageFromType = getImageFromType;
+module.exports.ensureImageExists = ensureImageExists;
 module.exports.getProjectDeployingContainer = getProjectDeployingContainer;
 module.exports.registerEvents = registerEvents;
 module.exports.sortContainer = sortContainer;

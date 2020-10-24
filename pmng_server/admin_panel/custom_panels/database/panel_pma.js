@@ -35,6 +35,7 @@ function checkAndStart(shouldRestart) {
     return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=panel", "pmng.panel=phpmyadmin"]}}).then(async (containers) => {
         if(containers.length == 0 || shouldRestart || containers[0].data.Labels["pmng.panelversion"] != panel_version) {
             if(containers.length > 0) await containers[0].stop();
+            await docker_manager.ensureImageExists("pmng/panel-pma", "file:" + path.resolve(__dirname, "../../..", "docker_images", "databases", "alpine-phpmyadmin"), {latest: true, adminLogs: true});
 
             let configFile = path.resolve(__dirname, "config.inc.php");
             let defaultsConfigFile = path.resolve(__dirname, "config.defaults.php");
