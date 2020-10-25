@@ -104,3 +104,4 @@ function logger() {
 
 module.exports.logger = logger;
 module.exports.prepare = prepare;
+module.exports.LOG_FILE = LOG_FILE;
