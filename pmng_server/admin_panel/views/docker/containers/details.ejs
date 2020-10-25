@@ -5,7 +5,7 @@
     <body>
         <%- include("../../default/flash.ejs") %>
         <%- include("../../default/api.ejs") %>
-        <%- startPageScript("docker_cdetails", ["/socket.io/socket.io.js"]) %>
+        <%- startPageScript("docker_cdetails", ["/static/js/moment.dist.js", "/socket.io/socket.io.js"]) %>
         <script>
         window.reference = "<%- value %>";
         </script>

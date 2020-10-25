@@ -1,5 +1,4 @@
 window.$ = require("jquery");
-window.moment = require("moment");
 
 require("bootstrap");
 require("bootstrap-notify");

@@ -96,14 +96,7 @@ function logger() {
             _logger.error("An unhandled rejection occured: " + reason);
         });
 
-        let previousCpu = undefined;
-        let intercom = require("./intercom/intercom_client").connect();
-        let sendStats = () => {
-            previousCpu = process.cpuUsage(previousCpu);
-            intercom.send("stats", {pid: process.pid, cpu: {u: previousCpu.user, s: previousCpu.s}, mem: process.memoryUsage()});
-        }
-
-        let statsInterval = setInterval(sendStats, parseInt(process.env.STATS_INTERVAL));
+        require("./process_stats").stats();
     }
 
     return _logger;

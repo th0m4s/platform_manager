@@ -81,3 +81,8 @@
 .passwords-row.only-row button {
     display: none;
 }
+
+
+.subprocess-tooltip .tooltip-inner {
+    max-width: 23vw !important;
+}

@@ -44,12 +44,20 @@ function fakeFork(id, isRunning, restart) {
  */
 function fork(file, id, onForking, onExited, onRestart) {
     let subp, shouldRestart = true, restarting = false;
+
+    let sendPid = () => {
+        intercom.send("pid", {pid: subp.pid, id});
+    }
+
+    intercom.subscribe(["req_pid"], sendPid);
+
     let startProcess = (restart, code, signal) => {
         if(restart && !restarting) onExited(code, signal);
         restarting = false;
 
         onForking();
         subp = child_process.fork(file);
+        sendPid();
 
         subp.addListener("exit", (code, signal) => {
             if(shouldRestart) startProcess(true, code, signal);

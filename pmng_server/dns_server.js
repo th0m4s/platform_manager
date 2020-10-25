@@ -131,6 +131,9 @@ dns_server.on("request", async function(request, response) {
  * Starts the DNS server and subscribes to the intercom DNS challenges.
  */
 function start() {
+    // it should normally be done using subprocess_util, but dns_server is not launched using the special fork
+    require("./process_stats").pidId("dns_server", true);
+
     dns_server.serve(parseInt(process.env.DNS_PORT), "0.0.0.0", () => {
         logger.info("DNS server started.");
         privileges.drop();
