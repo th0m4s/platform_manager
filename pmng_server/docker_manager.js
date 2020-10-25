@@ -965,7 +965,7 @@ function getNetworkDetails(reference) {
 let eventsCallbacks = [];
 function registerEvents(callback) {
     if(eventsCallbacks.length == 0) {
-        docker.events({since: new Date().getTime()/1000}).then((stream) => {
+        docker.events({since: Date.now()/1000}).then((stream) => {
             stream.on("data", (data) => {
                 let eventData = JSON.parse(data.toString());
                 for(let eventCb of eventsCallbacks) {

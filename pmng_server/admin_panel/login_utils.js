@@ -35,7 +35,7 @@ function checkDatabaseUser(dbKnex, userId, dbUsername, dbPassword) {
 }
 
 function currentTimestamp() {
-    return Math.floor(new Date().getTime()/1000);
+    return Math.floor(Date.now()/1000);
 }
 
 let usernameTries = {};

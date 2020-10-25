@@ -120,7 +120,7 @@ async function buildNodeVersion(version) {
 
 let lastNodeCheck = 0, _nodeVersions = [];
 async function getNodeVersions() {
-    let currentTime = new Date().getTime()/1000;
+    let currentTime = Math.floor(Date.now()/1000);
     if(currentTime - lastNodeCheck > 3600) {
         let bentVersionList = bent(NODE_SERVER);
         let bentVersionResponse;

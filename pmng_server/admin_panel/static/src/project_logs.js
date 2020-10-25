@@ -101,7 +101,7 @@ function downloadAllLogs() {
         $.notify({message: "Cannot download logs, please use the PMNG CLI: " + error}, {type: "danger"});
         console.error(status, error);
     }).done((response) => {
-        download(response, window.projectname + "_" + (new Date().getTime()) + ".log", "text/plain");
+        download(response, window.projectname + "_" + Math.floor(Date.now()/1000) + ".log", "text/plain");
         $.notify({message: "File log successfully downloaded."}, {type: "success"});
     }).always(() => {
         setDownloadButtonState(false);
