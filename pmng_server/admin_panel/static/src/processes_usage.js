@@ -1,15 +1,21 @@
 let color = Chart.helpers.color;
 let chartColors = ["#3B6A9C", "#007BFF", "#86C0FF"];
 
-let socket = undefined;
+let socket = undefined, authenticated = false;
 function init() {
     socket = io("/v1/processes");
+    window.socket = socket;
 
-    socket.on("connect", function(){
-        console.log("Socket connected.")
+    socket.on("connect", function() {
+        authenticated = false;
+
+        console.log("Socket connected.");
         socket.emit("authentication", {key: API_KEY});
 
         socket.on("authenticated", function() {
+            if(authenticated) return;
+            authenticated = true;
+
             console.log("Socket authenticated.");
             socket.emit("setup", {proc: "all"});
         });
@@ -23,7 +29,9 @@ function init() {
             if(message.error) {
                 $.notify({message: "Unable to setup the socket. Please reload the page."}, {type: "danger"});
                 console.error("Socket setup error", message.message);
-            } else showCharts();
+            } else {
+                showCharts();
+            }
         })
 
         socket.on("usage", (message) => {
@@ -49,15 +57,17 @@ function init() {
     });
 }
 
-let charts = {};
+let charts = {}, chartsShown = false;
 function showCharts() {
     let grid = $("#subprocesses-row");
+    if(chartsShown) return;
+    chartsShown = true;
 
     for(let [id, subprocess] of Object.entries(window.subprocesses)) {
         if(!window.not_applicable.includes(id)) {
             if(subprocess.check < 2) {
                 let canRestart = subprocess.check >= 0;
-                grid.append(`<div class="col-xl-3 col-lg-4 col-md-6 mb-3"><h5 class="subprocess-title" style="display: inline-block;" data-toggle="tooltip" title="${subprocess.text}">${subprocess.name}<span style="display: none;" id="pid-${id}"></span>:</h5>`
+                grid.append(`<div class="col-xl-3 col-lg-4 col-md-6 mb-3 chart-panel"><h5 class="subprocess-title" style="display: inline-block;" data-toggle="tooltip" title="${subprocess.text}">${subprocess.name}<span style="display: none;" id="pid-${id}"></span>:</h5>`
                     + `<div class="btn-group btn-group-sm" style="position: absolute; right: 15; top: -4; height: 31px" role="group">` + (canRestart ? `<button class="btn btn-info" data-action="restart" onclick="processes_usage.buttonClicked('${id}')" id="button-${id}"><i class="fas fa-undo-alt"></i></button>` : "")
                     + `<button class="btn btn-secondary"><i class="fas fa-expand-alt"></i></button></div>`
                     + `<div style="width: 100%; height: 200px;"><canvas height="200px" width="100%" id="chart-${id}"></canvas></div></div>`);
@@ -128,14 +138,14 @@ function restartSubprocess(id) {
 function buttonClicked(id) {
     let action = $("#button-" + id).attr("data-action");
     if(action == "restart") restartSubprocess(id);
-    else if(action == "check") checkSubprocess(id, false);
+    else if(action == "check") checkSubprocess(id, 0);
     else if(action == "start") {
         lastSubprocessId = id;
         confirmRestart(false);
     }
 }
 
-function checkSubprocess(id, delay = true) {
+function checkSubprocess(id, delay = 0) {
     let button = $("#button-" + id);
     button.attr("disabled", "disabled").removeClass("btn-info").removeClass("btn-warning").addClass("btn-secondary").html("<i class='fas fa-sync fa-spin'></i>");
 
@@ -153,7 +163,7 @@ function checkSubprocess(id, delay = true) {
                 }
             }
         });
-    }, delay ? 1500 : 0);
+    }, delay);
 }
 
 function setButtonAction(id, restart) {
@@ -187,7 +197,7 @@ function confirmRestart(restart = true) {
         }
     }).always(() => {
         utils.hideLoading();
-        checkSubprocess(lastSubprocessId, true);
+        checkSubprocess(lastSubprocessId, needCheck ? 1500 : 7000);
     });
 }
 
