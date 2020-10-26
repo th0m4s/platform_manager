@@ -36,15 +36,13 @@ function stats() {
     let statsInterval = setInterval(sendStats, parseInt(process.env.STATS_INTERVAL));
 }
 
-function pidId(id, callStats = false) {
+function pidId(id) {
     let sendPid = () => {
         intercom.send("pid", {pid: process.pid, id});
     }
 
     sendPid();
     intercom.subscribe(["req_pid"], sendPid);
-
-    if(callStats) stats();
 }
 
 

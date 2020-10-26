@@ -36,7 +36,7 @@ if(process.getuid() > 0) {
     await require("./pmng_server/intercom/intercom_server").start();
 
     // start process stats
-    require("./pmng_server/process_stats").pidId("main_process", true);
+    require("./pmng_server/process_stats").pidId("main_process");
 
     // starting subprocessed responder to centralize commands/timeouts
     subprocess_util.responder();
