@@ -8,20 +8,40 @@ const historyDir = path.resolve(path.dirname(require("../../../platform_logger")
 let minuteHistory = {};
 let hourHistory = {};
 
-let memSave = ["rss", "heapTotal", "heapUsed"];
+// should be placed in some sort of utils file
+function median(values){
+    if(values.length == 0) return 0;
+  
+    values.sort((a, b) => {
+        return a-b;
+    });
+  
+    let half = Math.floor(values.length / 2);
+    if (values.length % 2 == 0)
+        return values[half];
+  
+    return (values[half-1] + values[half]) / 2;
+}
+
+let memSave = ["rss", "heapTotal", "heapUsed"], cpuSave = ["total", "user", "sys"]; // total is not user+system, it's all host cpu usage
 function saveMinute() {
     let minute = new Date().getMinutes()-1;
     if(minute < 0) minute = 59;
     for(let id in minuteHistory) {
         let values = minuteHistory[id];
-        let minMax = [[], []]; // 0 mem   1 cpu
+        let minMedMax = [[], []]; // 0 mem   1 cpu
 
         for(let type of memSave) {
             let typeVal = values.map((x) => x.mem[type]);
-            minMax[0].push([Math.min(...typeVal), Math.max(...typeVal)]);
+            minMedMax[0].push([Math.min(...typeVal), median(typeVal), Math.max(...typeVal)]);
         }
 
-        hourHistory[id][minute] = minMax;
+        for(let type of cpuSave) {
+            let typeVal = values.map((x) => x.cpu[type]);
+            minMedMax[1].push([Math.min(...typeVal), median(typeVal), Math.max(...typeVal)]);
+        }
+
+        hourHistory[id][minute] = minMedMax;
         minuteHistory[id].length = 0;
     }
 }

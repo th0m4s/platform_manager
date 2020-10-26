@@ -23,7 +23,7 @@ function getCpu(previous) {
     let newPrevious = process.cpuUsage();
     newPrevious.total = total;
 
-    return {current: {total: total - (previous == undefined ? 0 : previous.total), user: Math.floor(processCpu.user/1000), sys: Math.floor(processCpu.sys/1000)}, previous: newPrevious};
+    return {current: {total: total - (previous == undefined ? 0 : previous.total), user: Math.floor(processCpu.user/1000), sys: Math.floor(processCpu.system/1000)}, previous: newPrevious};
 }
 
 function stats() {
