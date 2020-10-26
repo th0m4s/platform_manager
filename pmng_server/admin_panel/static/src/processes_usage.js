@@ -50,8 +50,8 @@ function init() {
             let cpuChart = charts.cpu[message.id];
             if(cpuChart != undefined) {
                 let cpu = message.cpu; // total is not process total, it's all host usage
-                let userPerc = Math.round(cpu.user / cpu.total * 10)/10;
-                let sysPerc = Math.round(cpu.sys / cpu.total * 10)/10;
+                let userPerc = Math.round(cpu.user / cpu.total * 1000)/10;
+                let sysPerc = Math.round(cpu.sys / cpu.total * 1000)/10;
 
                 cpuChart.data.datasets[0].data.push({x, y: userPerc + sysPerc});
                 cpuChart.data.datasets[1].data.push({x, y: userPerc});
