@@ -82,10 +82,10 @@ function showCharts() {
         if(!window.not_applicable.includes(id)) {
             if(subprocess.check < 2) {
                 let canRestart = subprocess.check >= 0;
-                grid.append(`<div class="col-xl-6 mb-3 chart-panel"><h5 class="subprocess-title" style="display: inline-block;" data-toggle="tooltip" title="${subprocess.text}">${subprocess.name}<span style="display: none;" id="pid-${id}"></span>:</h5>`
+                grid.append(`<div class="col-xl-4 col-lg-6 col-12 mb-3 chart-panel"><h5 class="subprocess-title" style="display: inline-block;" data-toggle="tooltip" title="${subprocess.text}">${subprocess.name}<span style="display: none;" id="pid-${id}"></span>:</h5>`
                     + `<div class="btn-group btn-group-sm" style="position: absolute; right: 15; top: -4; height: 31px" role="group">` + (canRestart ? `<button class="btn btn-info" data-action="restart" onclick="processes_usage.buttonClicked('${id}')" id="button-${id}"><i class="fas fa-undo-alt"></i></button>` : "")
                     + `<button class="btn btn-secondary"><i class="fas fa-expand-alt"></i></button></div>`
-                    + `<div style="width: 100%; height: 200px;" class="row"><div class="col-6"><canvas height="200px" width="100%" id="mem-${id}"></canvas></div><div class="col-6"><canvas height="200px" width="100%" id="cpu-${id}"></canvas></div></div></div>`);
+                    + `<div style="width: 100%; height: 200px;" class="row"><div class="col-12 chart-parent chart-mem"><canvas height="200px" width="100%" id="mem-${id}"></canvas></div><div class="col-12 chart-parent chart-cpu" style="display: none;"><canvas height="200px" width="100%" id="cpu-${id}"></canvas></div></div></div>`);
                 
                 charts.mem[id] = new Chart($("#mem-" + id), {
                     type: "line",
@@ -155,7 +155,7 @@ function showCharts() {
                                 ticks: {
                                     beginAtZero: true,
                                     suggestedMin: 0,
-                                    suggestedMax: 8,
+                                    suggestedMax: 2,
                                     callback: (value) => {
                                         return value + "%";
                                     }
@@ -178,6 +178,37 @@ function showCharts() {
         placement: "bottom",
         template: "<div class='tooltip subprocess-tooltip' role='tooltip'><div class='arrow'></div><div class='tooltip-inner'></div></div>"
     });
+}
+
+let visible = {mem: true, cpu: false};
+function toggleVisible(type) {
+    let button = $("#toggle-visible-" + type);
+    visible[type] = !visible[type];
+
+    $(".toggle-visible").blur();
+
+    if(visible[type]) button.addClass("active");
+    else button.removeClass("active");
+
+    let visibleCount = (visible.mem ? 1 : 0) + (visible.cpu ? 1 : 0);
+    if(visibleCount == 0) {
+        visible[type == "mem" ? "cpu" : "mem"] = true;
+        $("#toggle-visible-" + (type == "mem" ? "cpu" : "mem")).addClass("active");
+    }
+
+    if(visible.mem) $(".chart-mem").show();
+    else $(".chart-mem").hide();
+
+    if(visible.cpu) $(".chart-cpu").show();
+    else $(".chart-cpu").hide();
+
+    if(visibleCount <= 1) { // can be 0, but in reality will be 1
+        $(".chart-parent").removeClass("col-lg-6").addClass("col-12");
+        $(".chart-panel").addClass("col-xl-4 col-lg-6 col-12").removeClass("col-xl-6");
+    } else {
+        $(".chart-parent").removeClass("col-12").addClass("col-lg-6");
+        $(".chart-panel").removeClass("col-xl-4 col-lg-6 col-12").addClass("col-xl-6");
+    }
 }
 
 let lastSubprocessId = undefined;
@@ -256,4 +287,4 @@ function confirmRestart(restart = true) {
 }
 
 
-window.processes_usage = {init, buttonClicked, confirmRestart};
+window.processes_usage = {init, buttonClicked, confirmRestart, toggleVisible};
