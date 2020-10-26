@@ -155,6 +155,7 @@ function showCharts() {
                                 ticks: {
                                     beginAtZero: true,
                                     suggestedMin: 0,
+                                    suggestedMax: 8,
                                     callback: (value) => {
                                         return value + "%";
                                     }
