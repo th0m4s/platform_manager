@@ -20,9 +20,10 @@ function getCpu(previous) {
     }
     
     let total = user + nice + sys + idle + irq;
-    processCpu.total = total;
+    let newPrevious = process.cpuUsage();
+    newPrevious.total = total;
 
-    return {current: {total: total - (previous == undefined ? 0 : previous.total), user: Math.floor(processCpu.user/1000), sys: Math.floor(processCpu.sys/1000)}, previous: processCpu};
+    return {current: {total: total - (previous == undefined ? 0 : previous.total), user: Math.floor(processCpu.user/1000), sys: Math.floor(processCpu.sys/1000)}, previous: newPrevious};
 }
 
 function stats() {
