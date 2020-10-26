@@ -1,7 +1,7 @@
 let color = Chart.helpers.color;
 let chartColors = ["#3B6A9C", "#007BFF", "#86C0FF"];
 
-let socket = undefined, authenticated = false;
+let socket = undefined, authenticated = false, lastSystemCpu;
 function init() {
     socket = io("/v1/processes");
     window.socket = socket;
@@ -36,13 +36,28 @@ function init() {
 
         socket.on("usage", (message) => {
             let x = Date.now();
-            let chart = charts[message.id];
-            if(chart != undefined) {
-                chart.data.datasets[0].data.push({x, y: message.mem.rss});
-                chart.data.datasets[1].data.push({x, y: message.mem.heapTotal});
-                chart.data.datasets[2].data.push({x, y: message.mem.heapUsed});
 
-                chart.update({preservation: true});
+            let memChart = charts.mem[message.id];
+            if(memChart != undefined) {
+                let mem = message.mem;
+                memChart.data.datasets[0].data.push({x, y: mem.rss});
+                memChart.data.datasets[1].data.push({x, y: mem.heapTotal});
+                memChart.data.datasets[2].data.push({x, y: mem.heapUsed});
+
+                memChart.update({preservation: true});
+            }
+
+            let cpuChart = charts.cpu[message.id];
+            if(cpuChart != undefined) {
+                let cpu = message.cpu; // total is not process total, it's all host usage
+                let userPerc = Math.round(cpu.user / cpu.total * 1000)/10;
+                let sysPerc = Math.round(cpu.sys / cpu.total * 1000)/10;
+
+                cpuChart.data.datasets[0].data.push({x, y: userPerc + sysPerc});
+                cpuChart.data.datasets[1].data.push({x, y: userPerc});
+                cpuChart.data.datasets[2].data.push({x, y: sysPerc});
+
+                cpuChart.update({preservation: true});
             }
         });
 
@@ -57,7 +72,7 @@ function init() {
     });
 }
 
-let charts = {}, chartsShown = false;
+let charts = {mem: {}, cpu: {}}, chartsShown = false;
 function showCharts() {
     let grid = $("#subprocesses-row");
     if(chartsShown) return;
@@ -67,12 +82,12 @@ function showCharts() {
         if(!window.not_applicable.includes(id)) {
             if(subprocess.check < 2) {
                 let canRestart = subprocess.check >= 0;
-                grid.append(`<div class="col-xl-3 col-lg-4 col-md-6 mb-3 chart-panel"><h5 class="subprocess-title" style="display: inline-block;" data-toggle="tooltip" title="${subprocess.text}">${subprocess.name}<span style="display: none;" id="pid-${id}"></span>:</h5>`
+                grid.append(`<div class="col-xl-6 mb-3 chart-panel"><h5 class="subprocess-title" style="display: inline-block;" data-toggle="tooltip" title="${subprocess.text}">${subprocess.name}<span style="display: none;" id="pid-${id}"></span>:</h5>`
                     + `<div class="btn-group btn-group-sm" style="position: absolute; right: 15; top: -4; height: 31px" role="group">` + (canRestart ? `<button class="btn btn-info" data-action="restart" onclick="processes_usage.buttonClicked('${id}')" id="button-${id}"><i class="fas fa-undo-alt"></i></button>` : "")
                     + `<button class="btn btn-secondary"><i class="fas fa-expand-alt"></i></button></div>`
-                    + `<div style="width: 100%; height: 200px;"><canvas height="200px" width="100%" id="chart-${id}"></canvas></div></div>`);
+                    + `<div style="width: 100%; height: 200px;" class="row"><div class="col-6"><canvas height="200px" width="100%" id="mem-${id}"></canvas></div><div class="col-6"><canvas height="200px" width="100%" id="cpu-${id}"></canvas></div></div></div>`);
                 
-                    charts[id] = new Chart($("#chart-" + id), {
+                charts.mem[id] = new Chart($("#mem-" + id), {
                     type: "line",
                     data: {
                         datasets: [
@@ -104,6 +119,45 @@ function showCharts() {
                                     callback: (value) => {
                                         if(value < 1) return value;
                                         return window.utils.string.formatBytes(value, 0, true);
+                                    }
+                                }
+                            }]
+                        },
+                        maintainAspectRatio: false
+                    }
+                });
+
+                charts.cpu[id] = new Chart($("#cpu-" + id), {
+                    type: "line",
+                    data: {
+                        datasets: [
+                            {label: "Process total %", data: [], borderColor: chartColors[0], fill: false},
+                            {label: "User %", data: [], borderColor: chartColors[1], fill: false},
+                            {label: "System %", data: [], borderColor: chartColors[2], fill: false}
+                        ]
+                    },
+                    options: {
+                        scales: {
+                            xAxes: [{
+                                type: "realtime",
+                                realtime: {
+                                    duration: 60000,
+                                    delay: 2000,
+                                    pause: false,
+                                    ttl: undefined,
+                                },
+                                ticks: {
+                                    display: false
+                                }
+                            }],
+                            yAxes: [{
+                                type: "linear",
+                                ticks: {
+                                    beginAtZero: true,
+                                    suggestedMin: 0,
+                                    suggestedMax: 100,
+                                    callback: (value) => {
+                                        return value + "%";
                                     }
                                 }
                             }]

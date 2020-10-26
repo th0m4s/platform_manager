@@ -85,6 +85,7 @@ function initializeNamespace(namespace) {
             if(socket.hasAccess("SYSTEM")) {
                 setup = true;
                 socket.join("usage_" + message.proc);
+                socket.join("cpu");
                 socket.emit("setup", {error: false, message: "Socket setup."});
 
                 for(let entry of Object.entries(currentPIDs))
