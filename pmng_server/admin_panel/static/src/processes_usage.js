@@ -31,6 +31,7 @@ function init() {
                 console.error("Socket setup error", message.message);
             } else {
                 showCharts();
+                $("#toggle-visible-group").show();
             }
         })
 
