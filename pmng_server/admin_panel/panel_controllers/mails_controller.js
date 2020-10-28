@@ -17,10 +17,12 @@ router.get("/setPasswords", async (req, res) => {
         res.locals.emails = await mail_manager.getUserMissingPasswords(req.user.id, req.user.scope, false);
         if(res.locals.emails.length == 0) {
             delete req.session.account.mailsNeedPwd;
-            res.redirect("/panel/dashboard");
+            res.redirect(req.session.account.mailPwdBack || "/panel/dashboard");
+            delete req.session.account.mailPwdBack;
         } else {
             req.setAllHeader(false);
             req.setPage(res, "Missing mail passwords", "mails", "passwords");
+            res.locals.noDashboardRedirect = req.session.account.mailPwdBack != undefined;
             res.render("mails/passwords");
         }
     } else res.redirect("/panel/mails");

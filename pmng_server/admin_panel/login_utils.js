@@ -79,12 +79,14 @@ async function loginUser(username, password, keyType) {
         ]);
     });
 
+    let sessionAccount = {};
+
     // checks mail missing user passwords
     let mailMissingCount = await mail_manager.getUserMissingPasswords(user.id, user.scope, true);
     if(mailMissingCount > 0)
-        req.session.account.mailsNeedPwd = true;
+        sessionAccount.mailsNeedPwd = true;
     
-    // checks mail missing sso passwords
+    // checks mail missing sso passwords (normally done when adding users in mail_manager or mails_api)
     let mailDb = mail_manager.getMailDatabase();
     let mailMissingSso = await mailDb("virtual_users").where("sso_decrypt", null).orWhere("sso_encrypt", null).select("id");
     let mmSsoProms = [];
@@ -95,7 +97,7 @@ async function loginUser(username, password, keyType) {
     }
     if(mmSsoProms.length > 0) await Promise.all(mmSsoProms);
 
-    return {auth: true, user};
+    return {auth: true, user, sessionAccount};
 }
 
 

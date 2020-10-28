@@ -49,10 +49,10 @@ function getRouter(headerLinks) {
         router.use(passport.initialize()); router.use(passport.session());
         passport.use(new PassportLocalStrategy({passReqToCallback: true}, async function(req, username, password, done) {
                 try {
-                    let {auth, user, tries, retryIn} = await login_utils.loginUser(username, password, "session");
+                    let {auth, user, tries, retryIn, sessionAccount} = await login_utils.loginUser(username, password, "session");
 
                     if(auth === true) {
-                        req.session.account = {};
+                        req.session.account = sessionAccount;
                         return done(null, user);
                     } else if(tries > 0) {
                         return done(null, false, {message: "Invalid credentials." + (tries <= 3 ? " " + tries + " attempt" + (tries == 1 ? "" : "s") + " remaining." : "")}); // Incorrect password.

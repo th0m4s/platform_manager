@@ -1,8 +1,7 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../database_server");
-const passport = require('passport');
 const project_manager = require("../../project_manager");
-const logger = require("../../platform_logger").logger();
+const mail_manager = require("../../mails/mail_manager");
 const plugins_manager = require("../../plugins_manager");
 const plans_manager = require("../../plans_manager");
 
@@ -17,10 +16,28 @@ router.all("*", async function(req, res, next) {
 });
 
 router.get("/list", function(req, res) {
-    plans_manager.canUserCreateProject(req.user).then((canCreate) => {
-        req.setPage(res, "Projects list", "projects", "list");
-        res.locals.canCreateProject = canCreate;
-        res.render("projects/list");
+    Promise.allSettled([
+        plans_manager.canUserCreateProject(req.user).then((canCreate) => ["canCreate", canCreate]),
+        mail_manager.getUserMissingPasswords(req.user.id, req.user.scope, true).then((count) => ["mailMissing", count])
+    ]).then((results) => {
+        let data = {};
+        for(let result of results) {
+            if(result.status == "fulfilled") data[result.value[0]] = result.value[1];
+            else throw result.reason;
+        }
+
+        if(data.mailMissing > 0) {
+            req.session.account.mailPwdBack = "/panel/projects/list";
+            req.session.account.mailsNeedPwd = true;
+            res.redirect("/panel/mails/setPasswords");
+        } else {
+            req.setPage(res, "Projects list", "projects", "list");
+            res.locals.canCreateProject = data.canCreate;
+            res.render("projects/list");
+        }
+    }).catch((error) => {
+        req.flash("danger", "Cannot list projects: " + error);
+        res.redirect("/panel/dashboard");
     });
 });
 

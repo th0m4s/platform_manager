@@ -18,6 +18,11 @@ function init() {
     $(window).resize(function() {
         updateSizes();
     });
+
+    if(window.noDashboardRedirect) {
+        $(".to-dashboard").hide();
+        $(".to-other").show();
+    }
 }
 
 function updateSizes() {
