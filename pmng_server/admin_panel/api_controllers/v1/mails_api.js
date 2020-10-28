@@ -160,7 +160,7 @@ router.post("/aliases/create", (req, res) => {
                 } else {
                     let domain = domainResult[0].name;
                     let email = sourceUser + "@" + domain;
-                    let aliasResult = await mail_manager.getMailDatabase("virtual_aliases").where("destination", destination).count("id AS cnt");
+                    let aliasResult = await mail_manager.getMailDatabase("virtual_aliases").where("destination", destination).andWhere("source", email).count("id AS cnt");
                     if(aliasResult[0].cnt > 0) {
                         throw "Alias already exists!";
                     } else {
