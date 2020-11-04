@@ -1,10 +1,11 @@
 const express = require('express'), router = express.Router();
 const api_auth = require("./api_auth");
+const bodyParser = require("../../body_parser");
 const mail_manager = require("../../../mails/mail_manager");
 const string_utils = require("../../../string_utils");
 const unixcrypt = require("unixcrypt");
 
-router.post("/setPasswords", (req, res) => {
+router.post("/setPasswords", bodyParser(), (req, res) => {
     api_auth(req, res, async function(user) {
         let encrypted = req.body.encrypted === true, p = (_p) => (encrypted ? _p : unixcrypt.encrypt(_p));
         let passwords = req.body.passwords;
@@ -36,7 +37,7 @@ router.post("/setPasswords", (req, res) => {
     });
 });
 
-router.post("/users/create", (req, res) => {
+router.post("/users/create", bodyParser(), (req, res) => {
     api_auth(req, res, async function(user) {
         try {
             let username = (req.body.username || "").trim(), domainId = parseInt(req.body.domain), quota = (req.body.quota || "100M").trim(), password = (req.body.password || "").trim(), encPassword = (req.body.encrypted == true ? password : unixcrypt.encrypt(password));
@@ -65,7 +66,7 @@ router.post("/users/create", (req, res) => {
     });
 });
 
-router.post("/users/edit/:mailid", (req, res) => {
+router.post("/users/edit/:mailid", bodyParser(), (req, res) => {
     api_auth(req, res, function(user) {
         let id = parseInt(req.params.mailid);
         if(isNaN(id)) {
@@ -147,7 +148,7 @@ router.get("/users/delete/:mailid", (req, res) => {
 });
 
 
-router.post("/aliases/create", (req, res) => {
+router.post("/aliases/create", bodyParser(), (req, res) => {
     api_auth(req, res, async function(user) {
         try {
             let sourceUser = (req.body.sourceUser || "").trim(), sourceDomainId = parseInt(req.body.sourceDomainId), destination = (req.body.destination || "").trim();
@@ -175,7 +176,7 @@ router.post("/aliases/create", (req, res) => {
     });
 });
 
-router.post("/aliases/edit/:aliasid", (req, res) => {
+router.post("/aliases/edit/:aliasid", bodyParser(), (req, res) => {
     api_auth(req, res, function(user) {
         let id = parseInt(req.params.aliasid);
         if(isNaN(id)) {

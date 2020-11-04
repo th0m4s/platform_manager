@@ -5,6 +5,7 @@ const plugins_manager = require("../../../plugins_manager");
 const docker_manager = require("../../../docker_manager");
 const plans_manager = require("../../../plans_manager");
 const api_auth = require("./api_auth");
+const bodyParser = require("../../body_parser");
 const intercom = require("../../../intercom/intercom_client").connect();
 
 const forbidden_names = ["www", "git", "admin", "ftp", "ns1", "ns2", "mail"];
@@ -138,7 +139,7 @@ router.get("/create", (req, res) => {
     });
 });
 
-router.post("/create", function(req, res) {
+router.post("/create", bodyParser(), function(req, res) {
     api_auth(req, res, function(user) {
         let projectname = req.body.projectname;
         if(projectname == undefined) {
@@ -179,7 +180,7 @@ router.post("/create", function(req, res) {
     });
 });
 
-router.post("/edit/:projectname", function(req, res) {
+router.post("/edit/:projectname", bodyParser(), function(req, res) {
     api_auth(req, res, function(user) {
         let projectname = req.params.projectname;
         projects_manager.canAccessProject(projectname, user.id, true).then(() => {

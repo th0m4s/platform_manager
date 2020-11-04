@@ -141,10 +141,6 @@ class DatabasePanel extends CustomPanel {
         return "databases";
     }
 
-    static requiresUtils() {
-        return false;
-    }
-
     static handleRequest(req, res) {
         httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port: 33307}})
     }

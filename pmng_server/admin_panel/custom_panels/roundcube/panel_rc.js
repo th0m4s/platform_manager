@@ -136,10 +136,6 @@ class WebmailPanel extends CustomPanel {
         return "webmail";
     }
 
-    static requiresUtils() {
-        return false;
-    }
-
     static handleRequest(req, res) {
         httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port: 8025}});
     }

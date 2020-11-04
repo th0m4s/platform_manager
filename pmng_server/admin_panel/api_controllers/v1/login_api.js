@@ -1,5 +1,6 @@
 const express = require('express'), router = express.Router();
 const login_utils = require("../../login_utils");
+const bodyParser = require("../../body_parser");
 const database_server = require("../../../database_server");
 const api_auth = require("./api_auth");
 
@@ -7,7 +8,7 @@ router.get("/version", (req, res) => {
     res.json({error: false, cli_version: process.env.CLI_VERSION});
 });
 
-router.post("/", async function(req, res) {
+router.post("/", bodyParser(), async function(req, res) {
     let username = req.body.user, password = req.body.password;
     if(username == undefined || password == undefined) {
         res.status(400).json({error: true, code: 400, message: "Please provide user and password."});
@@ -38,7 +39,7 @@ router.delete("/", function(req, res) {
     });
 });
 
-router.post("/passwordReset", async (req, res) => {
+router.post("/passwordReset", bodyParser(), async (req, res) => {
     let hash = (req.body.hash || "").trim(), password = (req.body.password || "").trim();
     if(hash.length == 0 || password.length == 0) {
         res.status(400).json({error: true, code: 400, message: "Invalid parameters."});

@@ -5,6 +5,7 @@ const project_manager = require("./project_manager");
 const database_server = require("./database_server");
 const pfs = require("fs").promises;
 const path = require("path");
+const bodyParser = require("./admin_panel/body_parser");
 const intercom = require("./intercom/intercom_client").connect();
 const api_auth = require("./admin_panel/api_controllers/v1/api_auth");
 const LibPlugin = require("./plugins/lib_plugin");
@@ -113,7 +114,7 @@ function getRouter() {
             let pluginname = filename.split(".")[0].substring(7);
 
             let pluginrouter = express.Router();
-            pluginrouter.post("/", (req, res) => {
+            pluginrouter.post("/", bodyParser(), (req, res) => {
                 api_auth(req, res, (user) => {
                     let changes = req.body.changes;
                     if(changes.length == 0) {

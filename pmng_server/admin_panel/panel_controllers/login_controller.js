@@ -4,6 +4,7 @@ const string_utils = require("../../string_utils");
 const mail_manager = require("../../mails/mail_manager");
 const passport = require('passport');
 const logger = require("../../platform_logger").logger();
+const bodyParser = require("../body_parser");
 
 router.all("/", function(req, res, next) {
     if(req.user != null) {
@@ -25,7 +26,7 @@ router.get("/logout", async function(req, res) {
 });
 
 let SSO_TYPES = {"database": "/databases/login.sso.php", "webmail": "/webmail/"}
-router.post('/', async (req, res, next) => {
+router.post('/', bodyParser(), async (req, res, next) => {
     if(await database_server.isInstalled()) {
         let ssotype = req.body.sso;
         let ssoredirect = ssotype == undefined ? undefined : SSO_TYPES[ssotype];
@@ -216,7 +217,7 @@ router.get("/passwordReset/:resetHash", async (req, res) => {
     }
 });
 
-router.post("/passwordReset", async (req, res) => {
+router.post("/passwordReset", bodyParser(), async (req, res) => {
     if(await database_server.isInstalled()) {
         let email = (req.body.email || "").trim();
         if(email.length == 0) {
@@ -289,7 +290,7 @@ router.get("/install/user", async function(req, res) {
     }
 });
 
-router.post("/install/user", async function(req, res) {
+router.post("/install/user", bodyParser(), async function(req, res) {
     if(!(await database_server.hasDatabase())) {
         req.flash("warn", "Cannot create admin user: database not installed.");
         res.redirect("/panel/login/install/database");

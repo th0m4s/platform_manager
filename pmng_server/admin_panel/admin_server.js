@@ -1,5 +1,5 @@
 const logger = require("../platform_logger").logger();
-const express = require("express"), admin = express(), bodyParser = require("body-parser");
+const express = require("express"), admin = express();
 const passport = require('passport');
 const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
@@ -113,7 +113,6 @@ let headerLinks = {
 };
 
 
-let utilsPanels = {};
 const favicon = path.join(__dirname, "static", "images", "favicon.ico");
 
 function authNamespace(namespace) {
@@ -140,8 +139,7 @@ async function start() {
                             panel.setHeaderLinks(copyLinks);
                             if(copyLinks != undefined) headerLinks = copyLinks;
 
-                            if(panel.requiresUtils()) utilsPanels[route] = panel;
-                            else admin.use("/" + route, handleCustomPanel(route, panel));
+                            admin.use("/" + route, handleCustomPanel(route, panel));
                         }
                         
                         break;
@@ -154,13 +152,6 @@ async function start() {
     admin.set('view engine', 'ejs');
     admin.set('views', path.join(__dirname, '/views'));
     admin.set('etag', false);
-    
-    admin.use(bodyParser.json());
-    admin.use(bodyParser.urlencoded({ extended: true }));
-    
-    for(let [route, panel] of Object.entries(utilsPanels)) {
-        admin.use("/" + route, handleCustomPanel(route, panel));
-    }
     
     // admin.use(passport.initialize());
     // need to initialize and session in the same file

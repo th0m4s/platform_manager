@@ -3,6 +3,7 @@ const database_server = require("../../../database_server");
 const mail_manager = require("../../../mails/mail_manager");
 const project_manager = require("../../../project_manager");
 const string_utils = require("../../../string_utils");
+const bodyParser = require("../../body_parser");
 const api_auth = require("./api_auth");
 
 router.get("/exists/:username", (req, res) => {
@@ -29,7 +30,7 @@ router.get("/list", (req, res) => {
     });
 });
 
-router.post("/create", (req, res) => {
+router.post("/create", bodyParser(), (req, res) => {
     api_auth(req, res, function(user) {
         if(database_server.checkScope(user.scope, "admin")) {
             let {name, fullname, email, password, scope} = req.body;
@@ -55,7 +56,7 @@ router.post("/create", (req, res) => {
     });
 });
 
-router.post("/edit/:username", (req, res) => {
+router.post("/edit/:username", bodyParser(), (req, res) => {
     api_auth(req, res, function(user) {
         if(database_server.checkScope(user.scope, "admin")) {
             let name = req.params.username;
@@ -121,7 +122,7 @@ router.get("/edit/:username/resetdbautopass", (req, res) => {
 });
 
 // edition of current account
-router.post("/me", (req, res) => {
+router.post("/me", bodyParser(), (req, res) => {
     api_auth(req, res, function(user) {
         let currentPassword = req.body.currentPassword || "";
         database_server.comparePassword(user.id, currentPassword).then(async (result) => {
