@@ -11,7 +11,9 @@ router.post("/webhooks/github/push/:project_name", bodyParser.raw(), (req, res) 
     let signature = req.headers["x-hub-signature-256"].toLowerCase();
 
     let isCorrect = requiredSignature === signature;
-    console.log("Received push webhook for project " + req.params.project_name + " with signature " + signature + " and status " + isCorrect + "(" + requiredSignature + ")")
+    console.log("Received push webhook for project " + req.params.project_name + " with signature " + signature + " and status " + isCorrect + "(" + requiredSignature + ")");
+
+    res.json({received: true, correct: isCorrect});
 });
 
 module.exports = router;
