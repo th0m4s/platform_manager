@@ -38,6 +38,7 @@ router.use("/v1", (function() {
     v1.use("/processes", require("./api_controllers/v1/processes_api"));
     v1.use("/logs", require("./api_controllers/v1/logs_api"));
     v1.use("/mails", require("./api_controllers/v1/mails_api"));
+    v1.use("/git", require("./api_controllers/v1/git_api"));
 
     v1.use("/plugins", plugins_manager.getRouter());
 
