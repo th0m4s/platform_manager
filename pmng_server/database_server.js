@@ -196,7 +196,7 @@ function installDatabase() {
                 rgitinte.string("projectname", 32).notNullable();
                 rgitinte.string("secret", 32).defaultTo(null);
                 rgitinte.string("repo", 64).notNullable();
-                rgitinte.string("repo_id", 64).nullable();
+                rgitinte.string("repo_id", 64).notNullable();
                 rgitinte.string("branch", 32).notNullable();
                 rgitinte.foreign("git_userid").references("id").inTable("remote_git_users");
                 rgitinte.foreign("projectname").references("name").inTable("projects");

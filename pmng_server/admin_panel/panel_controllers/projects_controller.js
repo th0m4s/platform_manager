@@ -57,11 +57,14 @@ router.get("/create", function(req, res) {
 router.get("/edit/:projectname", function(req, res) {
     project_manager.canAccessProject(req.params.projectname, req.user.id, true).then(() => {
         project_manager.getProject(req.params.projectname, true).then((project) => {
+            res.locals.edit = project;
+
             return Promise.all([database_server.database("domains").where("projectname", req.params.projectname).select("*"), database_server.database("collabs").where("projectname", req.params.projectname).select("*")]).then(([domains, collabs]) => {
                 let domainsRes = [];
                 domains.forEach((domain) => {
                     domainsRes.push({domain: domain.domain, enablesub: domain.enablesub == "true", full_dns: domain.full_dns == "true"});
                 });
+                res.locals.edit.domains = domainsRes;
     
                 let collabsProm = [];
                 collabs.forEach((collab) => {
@@ -74,10 +77,7 @@ router.get("/edit/:projectname", function(req, res) {
             let collabsRes = [];
             results.forEach((result) => {
                 if(result.length == 1) collabsRes.push(result[0].name);
-            })
-
-            res.locals.edit = project;
-            res.locals.edit.domains = domainsRes;
+            });
             res.locals.edit.collabs = collabsRes;
 
             req.setPage(res, "Edit a project", "projects", "edit");

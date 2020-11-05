@@ -4,6 +4,7 @@ const GithubStrategy = require("passport-github").Strategy;
 const database_server = require("../../database_server");
 const passport = require("passport");
 const Octokit = require("@octokit/rest").Octokit;
+const string_utils = require("../../string_utils");
 
 let passportAuthDone = false;
 class RemoteGithub extends RemoteGit {
@@ -56,20 +57,27 @@ class RemoteGithub extends RemoteGit {
         })(req, res, next);
     }
 
-    static async listRepositories(userId) {
+    static async _getOctokit(userId, returnGitUser = false) {
         let gitUser = await database_server.database("remote_git_users").where("remote", "github").andWhere("userid", userId).select("*");
         if(gitUser.length == 0) throw "Account not linked!";
 
         gitUser = gitUser[0];
         let token = await rgit_manager.ensureTokenValid(gitUser);
 
-        let octokit = new Octokit({
+        let octokit =  new Octokit({
             userAgent: rgit_manager.GIT_USER_AGENT,
             auth: token
         });
 
-        let response = await octokit.request("GET /user/repos");
-        if(response.status == 200) {
+        if(!returnGitUser) return octokit;
+        else return {octokit, gitUser};
+    }
+
+    static async listRepositories(userId) {
+        let octokit = userId instanceof Octokit ? userId : await this._getOctokit(userId);
+
+        let response = await octokit.request("GET /user/repos?per_page=100");
+        if(this._validResp(response)) {
             return response.data.map((x) => {
                 return {
                     repo_id: x.id.toString(), private: x.private, default_branch: x.default_branch, full_name: x.full_name
@@ -79,25 +87,85 @@ class RemoteGithub extends RemoteGit {
     }
 
     static async listBranches(userId, repository) {
-        let gitUser = await database_server.database("remote_git_users").where("remote", "github").andWhere("userid", userId).select("*");
-        if(gitUser.length == 0) throw "Account not linked!";
-
-        gitUser = gitUser[0];
-        let token = await rgit_manager.ensureTokenValid(gitUser);
-
-        let octokit = new Octokit({
-            userAgent: rgit_manager.GIT_USER_AGENT,
-            auth: token
-        });
+        let octokit = userId instanceof Octokit ? userId : await this._getOctokit(userId);
 
         let response = await octokit.request("GET /repos/" + repository + "/branches");
-        if(response.status == 200) {
+        if(this._validResp(response)) {
             return response.data.map((x) => x.name);
         } else throw response;
     }
 
-    static async push(req, res, next) {
+    static _getUrl(projectname) {
+        return "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://admin." + process.env.ROOT_DOMAIN + "/api/v1/git/github/webhooks/push/" + projectname;
+    }
+
+    static _validResp(resp) {
+        return resp.status >= 200 && resp.status < 300;
+    }
+
+    static async prepareIntegration(projectname, userId, repo_id, branch) {
+        let {octokit, gitUser} = await this._getOctokit(userId, true);
+
+        let repo = "";
+        for(let _repo of await this.listRepositories(octokit)) {
+            if(_repo.repo_id.toString() == repo_id.toString()) {
+                repo = _repo.full_name;
+                break;
+            }
+        }
+
+        if(repo.length == 0) throw "Invalid repository id!";
+        let repoParts = repo.split("/");
+        if(repoParts.length != 2) throw "Invalid repository!";
+
+        let secret = string_utils.generatePassword(32);
+        await database_server.database("remote_git_integrations").insert({projectname, git_userid: gitUser.id, secret, repo, repo_id, branch});
+
+        let response = await octokit.repos.createWebhook({
+            owner: repoParts[0], repo: repoParts[1],
+            config: {
+                url: this._getUrl(projectname),
+                content_type: "json",
+                secret
+            }
+        });
+
+        if(!this._validResp(response)) throw response;
+    }
+
+    static async removeIntegration(projectname, userId) {
+        let {octokit, gitUser} = await this._getOctokit(userId, true);
+
+        let integration = await database_server.database("remote_git_integrations").where("git_userid", gitUser.id).andWhere("projectname", projectname).select("*");
+        if(integration.length == 0) throw "Integration doesn't exist!";
+        else integration = integration[0];
+
+        let repoParts = integration.repo.split("/");
+        if(repoParts.length != 2) throw "Invalid repository!";
+
+        let webhooks = await octokit.repos.listWebhooks({
+            owner: repoParts[0], repo: repoParts[1], per_page: 50
+        });
+
+        if(!this._validResp(webhooks)) throw webhooks;
         
+        let toRemove = [], requiredUrl = this._getUrl(projectname);
+        for(let webhook of webhooks.data) {
+            let url = webhook.config.url;
+            if(url == requiredUrl) toRemove.push(webhook.id);
+        }
+
+        await Promise.all(toRemove.map((x) => 
+            octokit.repos.deleteWebhook({
+                owner: repoParts[0], repo: repoParts[1], hook_id: x
+            }).then((resp) => { if(!this._validResp(resp)) throw resp; })
+        ));
+
+        await database_server.database("remote_git_integrations").where("id", integration.id).delete();
+    }
+
+    static async push(req, res, next) {
+
     }
 }
 

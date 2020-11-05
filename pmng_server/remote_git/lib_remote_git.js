@@ -6,7 +6,12 @@ class RemoteGit {
 
     static async listRepositories(userId) { return []; }
     static async listBranches(userId, repository) { return []; }
-    static async createRepository(repositoryName, privateRepo) { throw "Remote not implemented."; }
+    static async createRepository(repository, privateRepo) { throw "Not implemented!"; }
+
+    static async prepareIntegration(projectname, userId, repo_id, branch) { throw "Not implemented!"; }
+    static async removeIntegration(projectname) { throw "Not implemented!"; }
+
+    static async unlinkAccount(userId) { throw "Not implemented!"; }
 
     static async push(req, res, next) { res.status(404).json({error: true, code: 404, message: "Invalid git remote.", details: "Remote not implemented."}); }
 }

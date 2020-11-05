@@ -6,13 +6,6 @@ function init() {
     } else owned = true;
 
     $("#rgitinte-status").html("No git integrations on this project.");
-    if(Object.keys(window.project.rgitIntegrations).length > 0) {
-        let rGitInteList = $("#rgitinte-list");
-        for(let [remote, inte] of Object.entries(window.project.rgitIntegrations)) {
-            rGitInteList.append(getGitInteLineHtml(remote, inte.repo, inte.branch, !owned));
-        }
-    }
-
     updateGitInte();
 
     if(window.project.collabs.length > 0) {
@@ -53,6 +46,13 @@ function init() {
 }
 
 function updateGitInte() {
+    if(Object.keys(window.project.rgitIntegrations).length > 0) {
+        let rGitInteList = $("#rgitinte-list").html("");
+        for(let [remote, inte] of Object.entries(window.project.rgitIntegrations)) {
+            rGitInteList.append(getGitInteLineHtml(remote, inte.repo, inte.branch, !owned));
+        }
+    }
+
     let inteCount = Object.keys(window.project.rgitIntegrations).length, hasInte = inteCount > 0;
     $("#rgitinte-status")[hasInte ? "hide": "show"]();
     $("#rgitinte-card")[hasInte ? "show": "hide"]();
@@ -73,7 +73,7 @@ function getGitInteLineHtml(remote, repo, branch, disabled) {
 
     return `<li class="list-group-item" id="line-rgitinte-${remote}">`
     + `<b>${(details.icon != false ? `<i class="${details.icon}"></i> ` : "") + details.name}: </b>${repo} <span class="text-secondary d-block d-md-inline"><samp class="ml-4">${branch}</samp></span>`
-    + (!disabled ? `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-danger" onclick="project_details.removeGitInte('${remote}')"><i class="fas fa-trash-alt"></i> Remove</button>`
+    + (!disabled ? `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-danger" onclick="project_details.removeGitInte('${remote}', this)"><i class="fas fa-trash-alt"></i> Remove</button>`
     + `</div></span>` : "") + '</li>';
 }
 
@@ -240,6 +240,21 @@ function confirmDelete() {
                 }
             });
             break;
+        case "rgitinte":
+            $.getJSON("/api/v1/git/" + lastRemoveId + "/removeIntegration/" + window.project.name).fail((xhr, status, error) => {
+                $.notify({message: "Cannot remove this integration. Open the console for details."}, {type: "danger"});
+                console.error("Cannot remove integration (server " + status + "): " + error);
+            }).done((response) => {
+                if(response.error) {
+                    $.notify({message: "Cannot remove this integration. Open the console for details."}, {type: "danger"});
+                    console.error("Cannot remove integration (application): " + error);
+                } else {
+                    $.notify({message: "Integration successfully removed."}, {type: "success"});
+                    delete window.project.rgitIntegrations[lastRemoveId];
+                    updateGitInte();
+                }
+            }); 
+            break;
         default:
             $.notify({message: `Cannot delete an object of type ${lastRemoveMode}.`}, {type: "warning"});
             break;
@@ -332,8 +347,9 @@ function toggleForcePush() {
 
 function addGitInte() {
     let providerSelect = $("#gitinte-provider").html("<option selected value='' id='gitinte-provider-empty'></option>");
+    let existingIntegrations = Object.keys(window.project.rgitIntegrations);
     for(let remote in remoteGits)
-        providerSelect.append(`<option value="${remote}">${remoteGits[remote].name}</option>`);
+        if(!existingIntegrations.includes(remote)) providerSelect.append(`<option value="${remote}">${remoteGits[remote].name}</option>`);
 
     gitInteHideRepo();
     $("#gitinte-viewaccount").hide();
@@ -364,10 +380,10 @@ function gitInteProviderChosen() {
             $("#gitinte-viewaccount").hide();
             gitInteHideBranch();
 
-            $.getJSON("/api/v1/git/github/listRepositories").fail((xhr, error, status) => {
+            $.getJSON("/api/v1/git/github/listRepositories").fail((xhr, status, error) => {
                 $("#addGitInte-modal").modal("hide");
-                $.notify({type: "warning"}, {message: "Cannot list repositories. Open the console for details."});
-                console.error("Cannot list repos (server): " + error);
+                $.notify({message: "Cannot list repositories. Open the console for details."}, {type: "warning"});
+                console.error("Cannot list repos (server " + status + "): " + error);
             }).done((response) => {
                 if(response.error) {
                     $("#addGitInte-modal").modal("hide");
@@ -399,10 +415,10 @@ function gitInteRepoChosen() {
         $("#gitinte-provider, #gitinte-repo, #gitinte-branch").attr("disabled", "disabled");
             $("#gitinte-branch").parent().parent().show();
 
-            $.getJSON("/api/v1/git/github/listBranches/" + lastFetchedRepos[repoId].full_name).fail((xhr, error, status) => {
+            $.getJSON("/api/v1/git/github/listBranches/" + lastFetchedRepos[repoId].full_name).fail((xhr, status, error) => {
                 $("#addGitInte-modal").modal("hide");
-                $.notify({type: "warning"}, {message: "Cannot list branches. Open the console for details."});
-                console.error("Cannot list branches (server): " + error);
+                $.notify({message: "Cannot list branches. Open the console for details."}, {type: "warning"});
+                console.error("Cannot list branches (server " + status + "): " + error);
             }).done((response) => {
                 if(response.error) {
                     $("#addGitInte-modal").modal("hide");
@@ -423,5 +439,47 @@ function gitInteBranchChosen() {
     $("#gitinte-confirm").removeAttr("disabled");
 }
 
+function confirmAddGitInte() {
+    $("#addGitInte-modal").modal("hide");
 
-window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete, editPlugin, pluginDetails, toggleHiddenDetails, toggleForcePush, addGitInte, gitInteProviderChosen, gitInteRepoChosen, gitInteBranchChosen};
+    let provider = $("#gitinte-provider").val() || "";
+    let repo_id = $("#gitinte-repo").val() || "";
+    let branch = $("#gitinte-branch").val() || "";
+
+    if(provider.length > 0 && repo_id.length > 0 && branch.length > 0) {
+        utils.showInfiniteLoading("Adding " + remoteGits[provider].name + " integration...");
+        $.post("/api/v1/git/" + provider + "/addIntegration", {
+            repo_id, branch, projectname: window.project.name
+        }).fail((xhr, status, error) => {
+            $.notify({message: "Cannot add this integration. Open the console for details."}, {type: "danger"});
+            console.error("Cannot add integration (server " + status + "): " + error);
+        }).done((response) => {
+            if(response.error) {
+                $.notify({message: "Cannot add this integration. Open the console for details."}, {type: "danger"});
+                console.error("Cannot add integration (application): " + error);
+            } else {
+                $.notify({message: "Integration added with success."}, {type: "success"});
+                window.project.rgitIntegrations[provider] = {branch, repo: lastFetchedRepos[repo_id].full_name, remote: provider};
+                updateGitInte();
+            }
+        }).always(() => {
+            utils.hideLoading();
+        });
+    } else $.notify({message: "Invalid git integration properties."}, {type: "warning"});
+}
+
+function removeGitInte(provider, btn) {
+    if(window.project.rgitIntegrations[provider] != undefined) {
+        lastRemoveBtn = btn;
+        lastRemoveId = provider;
+        lastRemoveMode = "rgitinte";
+        $("#deleteModal-content").html(`Do you want to remove the ${remoteGits[provider].name} integration from this project?`);
+        $("#deleteModal-title").html("Remove a git integration");
+        $("#deleteModal-confirm").html("Remove this integration");
+        $("#deleteModal").modal();
+    } else $.notify({message: "Invalid git provider."}, {type: "warning"});
+}
+
+
+window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete, editPlugin, pluginDetails, toggleHiddenDetails, toggleForcePush,
+    addGitInte, gitInteProviderChosen, gitInteRepoChosen, gitInteBranchChosen, confirmAddGitInte, removeGitInte};
