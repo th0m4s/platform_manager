@@ -57,11 +57,15 @@ class RemoteGithub extends RemoteGit {
         })(req, res, next);
     }
 
-    static async _getOctokit(userId, returnGitUser = false) {
+    static async _getGitUser(userId) {
         let gitUser = await database_server.database("remote_git_users").where("remote", "github").andWhere("userid", userId).select("*");
         if(gitUser.length == 0) throw "Account not linked!";
 
-        gitUser = gitUser[0];
+        return gitUser[0];
+    }
+
+    static async _getOctokit(userId, returnGitUser = false) {
+        let gitUser = await this._getGitUser(userId);
         let token = await rgit_manager.ensureTokenValid(gitUser);
 
         let octokit =  new Octokit({
@@ -162,6 +166,13 @@ class RemoteGithub extends RemoteGit {
         ));
 
         await database_server.database("remote_git_integrations").where("id", integration.id).delete();
+    }
+
+    static async unlinkAccount(userId) {
+        let gitUser = this._getGitUser(userId);
+        let integrations = await database_server.database("remote_git_integrations").where("git_userid", gitUser.id);
+
+        return Promise.all(integrations.map((x) => this.removeIntegration(x.projectname, userId)));
     }
 
     static async push(req, res, next) {
