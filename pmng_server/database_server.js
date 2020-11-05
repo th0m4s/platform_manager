@@ -110,19 +110,31 @@ function installDatabase() {
         users.integer("scope");
         users.integer("plan").defaultTo(1);
     }).then(() => {
-        return createTableIfNotExists("projects", (projects) => {
-            projects.increments("id").primary();
-            projects.string("name", 32).unique().index();
-            projects.integer("ownerid", 10).unsigned();
-            projects.text("userenv");
-            projects.text("type");
-            projects.integer("version").defaultTo(0);
-            projects.text("plugins").defaultTo("{}");
-            projects.enum("autostart", ["true", "false"]).defaultTo("false");
-            projects.enum("forcepush", ["true", "false"]).defaultTo("false");
-            projects.enum("allow_https", ["true", "false"]).defaultTo("true");
-            projects.foreign("ownerid").references("id").inTable("users");
-        })
+        return Promise.all([
+            createTableIfNotExists("projects", (projects) => {
+                projects.increments("id").primary();
+                projects.string("name", 32).unique().index();
+                projects.integer("ownerid", 10).unsigned();
+                projects.text("userenv");
+                projects.text("type");
+                projects.integer("version").defaultTo(0);
+                projects.text("plugins").defaultTo("{}");
+                projects.enum("autostart", ["true", "false"]).defaultTo("false");
+                projects.enum("forcepush", ["true", "false"]).defaultTo("false");
+                projects.enum("allow_https", ["true", "false"]).defaultTo("true");
+                projects.foreign("ownerid").references("id").inTable("users");
+            }), createTableIfNotExists("remote_git_users", (rgitusers) => {
+                rgitusers.increments("id").primary();
+                rgitusers.integer("userid", 10).unsigned();
+                rgitusers.string("remote", 16).notNullable();
+                rgitusers.string("remote_user", 48).nullable().defaultTo(null);
+                rgitusers.string("access_token", 128).notNullable();
+                rgitusers.datetime("expire_time");
+                rgitusers.string("refresh_token", 128);
+                rgitusers.datetime("refresh_expire");
+                rgitusers.foreign("userid").references("id").inTable("users");
+            })
+        ])
     }).then(() => {
         return Promise.all([
             createTableIfNotExists("keys", (keys) => {
@@ -132,8 +144,6 @@ function installDatabase() {
                 keys.enum("expired", ["true", "false"]).defaultTo("false");
                 keys.enum("mode", ["session", "api"]);
                 keys.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
-            }).then(() => {
-                return true;
             }), createTableIfNotExists("collabs", (collabs) => {
                 collabs.increments("id").primary();
                 collabs.string("projectname", 32).index();
@@ -141,16 +151,12 @@ function installDatabase() {
                 collabs.enum("mode", ["view", "manage"]).defaultTo("view");
                 collabs.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
                 collabs.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
-            }).then(() => {
-                return true;
             }), createTableIfNotExists("domains", (domains) => {
                 domains.increments("id").primary();
                 domains.text("domain").unique().index();
                 domains.string("projectname", 32).notNullable();
                 domains.enum("enablesub", ["true", "false"]).defaultTo("true");
                 domains.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
-            }).then(() => {
-                return true;
             }), createTableIfNotExists("plans", (plans) => {
                 plans.increments("id").primary();
                 plans.text("name").unique().index();
@@ -164,8 +170,6 @@ function installDatabase() {
                     {name: "default", usage: JSON.stringify({projects: {max: 10}, docker: {memory: 512}, storages: {max: 10737418240}})},
                     {name: "admin", usage: JSON.stringify({projects: {max: 0}, docker: {memory: 0}, storages: {max: 0}}), restricted: "true"}
                 ]);
-            }).then(() => {
-                return true;
             }), createTableIfNotExists("password_resets", (pResets) => {
                 pResets.increments("id").primary();
                 pResets.string("hash", 32).unique().index().notNullable();
@@ -174,25 +178,31 @@ function installDatabase() {
                 pResets.datetime("used_at").defaultTo(null);
                 pResets.datetime("canceled_at").defaultTo(null);
                 pResets.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
-            }).then(() => {
-                return true;
             }), createTableIfNotExists("email_changes", (eChanges) => {
                 eChanges.increments("id").primary();
                 eChanges.string("allow_hash", 32).unique().index().notNullable();
                 eChanges.string("confirm_hash", 32).unique().index().notNullable();
                 eChanges.integer("user_id", 10).unsigned().notNullable();
-                eChanges.text("old_email").notNullable();
-                eChanges.text("new_email").notNullable();
+                eChanges.string("old_email", 128).notNullable();
+                eChanges.string("new_email", 128).notNullable();
                 eChanges.datetime("created_at").notNullable().defaultTo(knex.fn.now());
                 eChanges.datetime("allowed_at").defaultTo(null);
                 eChanges.datetime("confirmed_at").defaultTo(null);
                 eChanges.datetime("canceled_at").defaultTo(null);
                 eChanges.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
-            }).then(() => {
-                return true;
+            }), createTableIfNotExists("remote_git_integrations", (rgitinte) => {
+                rgitinte.increments("id").primary();
+                rgitinte.integer("git_userid", 10).unsigned().notNullable();
+                rgitinte.string("projectname", 32).notNullable();
+                rgitinte.string("secret", 32).defaultTo(null);
+                rgitinte.string("repo", 64).notNullable();
+                rgitinte.string("repo_id", 64).nullable();
+                rgitinte.string("branch", 32).notNullable();
+                rgitinte.foreign("git_userid").references("id").inTable("remote_git_users");
+                rgitinte.foreign("projectname").references("name").inTable("projects");
             })
-        ]).then((results) => {
-            return !results.includes(false);
+        ]).then(() => {
+            return true;
         }).catch((e) => { logger.error(e); return false; }); 
     })
 }
@@ -215,7 +225,7 @@ function hasDatabase() {
         knex.schema.hasTable("plans").then((exists) => {
           if(!exists) return false;
           else return hasDefaultPlans();
-      }), knex.schema.hasTable("password_resets"), knex.schema.hasTable("email_changes")
+      }), knex.schema.hasTable("password_resets"), knex.schema.hasTable("email_changes"), knex.schema.hasTable("remote_git_users"), knex.schema.hasTable("remote_git_integrations")
     ]).then((results) => {
       return !results.includes(false);
     }).catch(() => { return false; });

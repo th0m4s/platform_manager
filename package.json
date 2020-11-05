@@ -19,6 +19,7 @@
     "debug": "sudo node platform_manager.js"
   },
   "dependencies": {
+    "@octokit/rest": "^18.0.9",
     "async-exit-hook": "^2.0.1",
     "basic-auth": "^2.0.1",
     "bcrypt": "^5.0.0",
@@ -50,6 +51,7 @@
     "node-docker-api": "^1.1.22",
     "nodemailer": "^6.4.13",
     "passport": "^0.4.1",
+    "passport-github": "^1.1.0",
     "passport-headerapikey": "^1.2.2",
     "passport-local": "^1.0.0",
     "rmfr": "^2.0.0",

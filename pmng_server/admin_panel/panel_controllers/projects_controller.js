@@ -4,6 +4,7 @@ const project_manager = require("../../project_manager");
 const mail_manager = require("../../mails/mail_manager");
 const plugins_manager = require("../../plugins_manager");
 const plans_manager = require("../../plans_manager");
+const rgit_manager = require("../../remote_git/remote_git_manager");
 
 router.all("*", async function(req, res, next) {
     if(!(await database_server.isInstalled())) {
@@ -56,7 +57,7 @@ router.get("/create", function(req, res) {
 router.get("/edit/:projectname", function(req, res) {
     project_manager.canAccessProject(req.params.projectname, req.user.id, true).then(() => {
         project_manager.getProject(req.params.projectname, true).then((project) => {
-            Promise.all([database_server.database("domains").where("projectname", req.params.projectname).select("*"), database_server.database("collabs").where("projectname", req.params.projectname).select("*")]).then(([domains, collabs]) => {
+            return Promise.all([database_server.database("domains").where("projectname", req.params.projectname).select("*"), database_server.database("collabs").where("projectname", req.params.projectname).select("*")]).then(([domains, collabs]) => {
                 let domainsRes = [];
                 domains.forEach((domain) => {
                     domainsRes.push({domain: domain.domain, enablesub: domain.enablesub == "true", full_dns: domain.full_dns == "true"});
@@ -67,20 +68,20 @@ router.get("/edit/:projectname", function(req, res) {
                     collabsProm.push(database_server.database("users").where("id", collab.userid).select("name"));
                 });
     
-                Promise.all(collabsProm).then((results) => {
-                    let collabsRes = [];
-                    results.forEach((result) => {
-                        if(result.length == 1) collabsRes.push(result[0].name);
-                    })
-    
-                    res.locals.edit = project;
-                    res.locals.edit.domains = domainsRes;
-                    res.locals.edit.collabs = collabsRes;
-        
-                    req.setPage(res, "Edit a project", "projects", "edit");
-                    res.render("projects/manage");
-                });
+                return Promise.all(collabsProm);
             });
+        }).then((results) => {
+            let collabsRes = [];
+            results.forEach((result) => {
+                if(result.length == 1) collabsRes.push(result[0].name);
+            })
+
+            res.locals.edit = project;
+            res.locals.edit.domains = domainsRes;
+            res.locals.edit.collabs = collabsRes;
+
+            req.setPage(res, "Edit a project", "projects", "edit");
+            res.render("projects/manage");
         }).catch(() => {
             req.flash("warn", "Unable to fetch this project.");
             res.redirect("/panel/projects/list");
@@ -129,7 +130,15 @@ router.get("/details/:projectname", function(req, res) {
                         res.locals.project.plugins = newPlugins;
 
                         res.locals.owner = possibleOwner;
-            
+
+                        return rgit_manager.listIntegrations(req.params.projectname);
+                    }).then((rgitIntegrations) => {
+                        res.locals.project.rgitIntegrations = rgitIntegrations;
+
+                        return rgit_manager.listRemotes(req.user.id);
+                    }).then((remoteGits) => {
+                        res.locals.remoteGits = Object.fromEntries(Object.entries(remoteGits).map((x) => [x[0], Object.assign({available: x[1]}, rgit_manager.getRemote(x[0], true).getDetails())]));
+
                         req.setPage(res, "Project details", "projects", "details");
                         res.render("projects/details");
                     });

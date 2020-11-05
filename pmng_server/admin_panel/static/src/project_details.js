@@ -1,10 +1,19 @@
+let owned = false;
 function init() {
     // owner is empty if you are the owned
-    let owned = true;
     if(window.owner.length > 0) {
-        owned = false;
         $("#owner-info").html(" (project owned by " + window.owner + ")");
+    } else owned = true;
+
+    $("#rgitinte-status").html("No git integrations on this project.");
+    if(Object.keys(window.project.rgitIntegrations).length > 0) {
+        let rGitInteList = $("#rgitinte-list");
+        for(let [remote, inte] of Object.entries(window.project.rgitIntegrations)) {
+            rGitInteList.append(getGitInteLineHtml(remote, inte.repo, inte.branch, !owned));
+        }
     }
+
+    updateGitInte();
 
     if(window.project.collabs.length > 0) {
         let collabsList = $("#collabs-list");
@@ -43,12 +52,29 @@ function init() {
     updateForcepushText(window.project.forcepush).parent().removeAttr("disabled");
 }
 
+function updateGitInte() {
+    let inteCount = Object.keys(window.project.rgitIntegrations).length, hasInte = inteCount > 0;
+    $("#rgitinte-status")[hasInte ? "hide": "show"]();
+    $("#rgitinte-card")[hasInte ? "show": "hide"]();
+
+    $("#rgitinte-add")[inteCount < Object.keys(window.remoteGits).length && owned ? "show" : "hide"]();
+}
+
 function getCollabModeText(mode) {
     if(mode == "view") {
         return "View-only mode";
     } else { // manage
         return "Full-access mode";
     }
+}
+
+function getGitInteLineHtml(remote, repo, branch, disabled) {
+    let details = window.remoteGits[remote];
+
+    return `<li class="list-group-item" id="line-rgitinte-${remote}">`
+    + `<b>${(details.icon != false ? `<i class="${details.icon}"></i> ` : "") + details.name}: </b>${repo} <span class="text-secondary d-block d-md-inline"><samp class="ml-4">${branch}</samp></span>`
+    + (!disabled ? `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-danger" onclick="project_details.removeGitInte('${remote}')"><i class="fas fa-trash-alt"></i> Remove</button>`
+    + `</div></span>` : "") + '</li>';
 }
 
 function getCollabLineHtml(collabid, userid, username, mode, disabled) {
@@ -58,20 +84,20 @@ function getCollabLineHtml(collabid, userid, username, mode, disabled) {
     });
 
     return `<li class="list-group-item" id="line-collab-${collabid}">`
-    + `<b>Collaboration #${collabid} : </b>${username} (user #${userid})<span class="text-secondary d-block d-md-inline"><samp class="ml-4" id="collab-explaination-${collabid}">${getCollabModeText(mode)}</samp></span>`
+    + `<b>Collaboration #${collabid}: </b>${username} (user #${userid})<span class="text-secondary d-block d-md-inline"><samp class="ml-4" id="collab-explaination-${collabid}">${getCollabModeText(mode)}</samp></span>`
     + (!disabled ? `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-danger" onclick="project_details.removeCollab('${username}', ${collabid}, this)"><i class="fas fa-trash-alt"></i> Remove</button>`
     + `<button class="btn btn-sm btn-info" data-mode="unknown" id="button-collab-invert-${collabid}" onclick="project_details.invertCollabMode(${collabid})"><i class="fas fa-sync fa-spin"></i> Loading...</button></div></span>` : "") + '</li>';
 }
 
 function getDomainLineHtml(domainid, domain, subs, disabled) {
     return `<li class="list-group-item" id="line-domain-${domainid}">`
-    + `<b>Custom domain #${domainid} : </b>${domain} (subs ${subs ? "enabled" : "disabled"})`
+    + `<b>Custom domain #${domainid}: </b>${domain} (subs ${subs ? "enabled" : "disabled"})`
     + (!disabled ? `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-danger" onclick="project_details.removeDomain('${domain}', ${domainid}, this)"><i class="fas fa-trash-alt"></i> Remove</button></div></span>` : "") + '</li>';
 }
 
 function getPluginLineHtml(plugin, details, disabled) {
     return `<li class="list-group-item" id="line-plugin-${plugin}">`
-    + `<b>Plugin ${plugin} : </b> <span id="plugin-usage-${plugin}">Loading usage...</span>`
+    + `<b>Plugin ${plugin}: </b> <span id="plugin-usage-${plugin}">Loading usage...</span>`
     + '<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;">' + (details.detailed ? `<button class="btn btn-sm btn-info" onclick="project_details.pluginDetails('${plugin}')"><i class="fas fa-info-circle"></i> View plugin details</button>` : "")
     + ((details.configurable && !disabled) ? `<button class="btn btn-sm btn-primary" onclick="project_details.editPlugin('${plugin}')"><i class="fas fa-edit"></i> Edit plugin configuration</button>` : "") + `</div></span></li>`;
 }
@@ -304,4 +330,98 @@ function toggleForcePush() {
     });
 }
 
-window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete, editPlugin, pluginDetails, toggleHiddenDetails, toggleForcePush};
+function addGitInte() {
+    let providerSelect = $("#gitinte-provider").html("<option selected value='' id='gitinte-provider-empty'></option>");
+    for(let remote in remoteGits)
+        providerSelect.append(`<option value="${remote}">${remoteGits[remote].name}</option>`);
+
+    gitInteHideRepo();
+    $("#gitinte-viewaccount").hide();
+
+    $("#addGitInte-modal select").removeAttr("disabled");
+    $("#addGitInte-modal").modal();
+}
+
+function gitInteHideRepo() {
+    $("#gitinte-repo").html("").parent().parent().hide();
+    gitInteHideBranch();
+}
+
+function gitInteHideBranch() {
+    $("#gitinte-branch").html("").parent().parent().hide();
+    $("#gitinte-confirm").attr("disabled", "disabled");
+}
+
+let lastFetchedRepos = {};
+function gitInteProviderChosen() {
+    $("#gitinte-provider-empty").remove();
+
+    let provider = $("#gitinte-provider").val();
+    if(provider.length > 0) {
+        if(remoteGits[provider].available) {
+            $("#gitinte-provider, #gitinte-repo").attr("disabled", "disabled");
+            $("#gitinte-repo").parent().parent().show();
+            $("#gitinte-viewaccount").hide();
+            gitInteHideBranch();
+
+            $.getJSON("/api/v1/git/github/listRepositories").fail((xhr, error, status) => {
+                $("#addGitInte-modal").modal("hide");
+                $.notify({type: "warning"}, {message: "Cannot list repositories. Open the console for details."});
+                console.error("Cannot list repos (server): " + error);
+            }).done((response) => {
+                if(response.error) {
+                    $("#addGitInte-modal").modal("hide");
+                    $.notify({message: "Cannot list repositories. Open the console for details."}, {type: "warning"});
+                    console.error("Cannot list repos (application): " + response.message, message.details);
+                } else {
+                    $("#gitinte-provider, #gitinte-repo").removeAttr("disabled");
+                    let reposList = $("#gitinte-repo").html("<option selected value='' id='gitinte-repo-empty'></option>");
+                    lastFetchedRepos = {};
+                    lastFetchedBranches = [];
+                    for(let repo of response.repositories) {
+                        lastFetchedRepos[repo.repo_id] = repo;
+                        reposList.append(`<option value="${repo.repo_id}">${repo.full_name}</option>`);
+                    }
+                }
+            });
+        } else {
+            gitInteHideRepo();
+            $("#gitinte-viewaccount").show();
+        }
+    } else gitInteHideRepo();
+}
+
+function gitInteRepoChosen() {
+    $("#gitinte-provider-empty").remove();
+
+    let repoId = $("#gitinte-repo").val().toString();
+    if(repoId.length > 0) {
+        $("#gitinte-provider, #gitinte-repo, #gitinte-branch").attr("disabled", "disabled");
+            $("#gitinte-branch").parent().parent().show();
+
+            $.getJSON("/api/v1/git/github/listBranches/" + lastFetchedRepos[repoId].full_name).fail((xhr, error, status) => {
+                $("#addGitInte-modal").modal("hide");
+                $.notify({type: "warning"}, {message: "Cannot list branches. Open the console for details."});
+                console.error("Cannot list branches (server): " + error);
+            }).done((response) => {
+                if(response.error) {
+                    $("#addGitInte-modal").modal("hide");
+                    $.notify({message: "Cannot list branches. Open the console for details."}, {type: "warning"});
+                    console.error("Cannot list branches (application): " + response.message, response.details);
+                } else {
+                    $("#gitinte-provider, #gitinte-repo, #gitinte-branch").removeAttr("disabled");
+                    let branchesList = $("#gitinte-branch").html("<option selected value='' id='gitinte-branch-empty'></option>");
+                    for(let branch of response.branches)
+                        branchesList.append(`<option value="${branch}">${branch}</option>`);
+                }
+            });
+    } else gitInteHideBranch();
+}
+
+function gitInteBranchChosen() {
+    $("#gitinte-branch-empty").remove();
+    $("#gitinte-confirm").removeAttr("disabled");
+}
+
+
+window.project_details = {init, invertCollabMode, removeCollab, removeDomain, confirmDelete, editPlugin, pluginDetails, toggleHiddenDetails, toggleForcePush, addGitInte, gitInteProviderChosen, gitInteRepoChosen, gitInteBranchChosen};

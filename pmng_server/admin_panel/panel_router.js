@@ -164,6 +164,7 @@ function getRouter(headerLinks) {
         router.use("/processes", require("./panel_controllers/processes_controller"));
         router.use("/users", require("./panel_controllers/users_controller"));
         router.use("/mails", require("./panel_controllers/mails_controller"));
+        router.use("/git", require("./panel_controllers/git_controller"));
 
         routerReady = true;
     }
