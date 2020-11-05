@@ -6,3 +6,4 @@ greenlock.d
 /GIT TOKEN
 *.inc.*
 /saves
+remote_testprovider.js
