@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const logger = require("./platform_logger").logger();
 const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const plugin_mdb = require("./plugins/plugin_mariadb");
+const rgit_manager = require("./remote_git/remote_git_manager");
 const string_utils = require("./string_utils");
 const intercom = require("./intercom/intercom_client").connect();
 
@@ -293,10 +294,14 @@ function addUser(name, fullname, password, email, scope, plan) {
     });
 }
 
-function removeUser(username) {
-    return Promise.all([knex("users").where("name", username).delete(), getPluginKnex().then((plk) => Promise.all([plk.raw("DROP USER '" + username + "';"), plk.raw("DROP USER 'dbau_" + username + "';")]))]).then(() => {
-        intercom.send("usersevents", {event: "remove", user: username});
-    });
+async function removeUser(username) {
+    // because of git integrations, we first unlink all the git providers accounts, it will remove the integrations, then projects will be deleted be ownerid cascade as no restricting integration will abort the delete
+    let userId = await findUserId(username);
+    let gitUsers = await knex("remote_git_users").where("userid", userId).select(["remote", "id", "userid"]);
+    await Promise.all(gitUsers.map((x) => rgit_manager.getRemote(x.remote).then((remote) => remote.unlinkAccount(x))));
+
+    await Promise.all([knex("users").where("name", username).delete(), getPluginKnex().then((plk) => Promise.all([plk.raw("DROP USER '" + username + "';"), plk.raw("DROP USER 'dbau_" + username + "';")]))]).then(() => {
+        intercom.send("usersevents", {event: "remove", user: username}) });
 }
 
 /**

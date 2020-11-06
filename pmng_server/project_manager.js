@@ -3,6 +3,7 @@ const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").ca
 const database_server = require("./database_server");
 const path = require("path");
 const plugins_manager = require("./plugins_manager");
+const rgit_manager = require("./remote_git/remote_git_manager");
 const simpleGit = require("simple-git/promise");
 const intercom = require("./intercom/intercom_client").connect();
 const docker_manager = require("./docker_manager");
@@ -167,6 +168,12 @@ function deleteProject(projectname) {
         for(let result of domains_results) {
             intercom.send("greenlock", {command: "removeCustom", domain: result.domain});
         }
+
+        // now list git integrations
+        return rgit_manager.listIntegrations(projectname);
+    }).then((gitIntegrations) => {
+        // remove git integrations
+        return Promise.all(Object.keys(gitIntegrations).map((x) => rgit_manager.getRemote(x).then((remote) => remote.removeIntegration(projectname, project.ownerid))));
     }).then(() => {
         return Promise.all([
             database_server.database("projects").where("name", projectname).delete(),
