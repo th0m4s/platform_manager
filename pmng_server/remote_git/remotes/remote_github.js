@@ -228,7 +228,7 @@ class RemoteGithub extends RemoteGit {
                 await gitRepo.addRemote(INTEGRATION_REMOTE_NAME, "https://" + gitUser.access_token + "@github.com/" + repo + ".git");
 
                 await gitRepo.fetch(INTEGRATION_REMOTE_NAME, branch);
-                await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME, branch]);
+                await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME + "/" + branch]);
                 res.status(200).json({error: false, code: 200, message: "Received hook and pulled repository"});
             }
         } else throw {status: 401, message: "Invalid project name."};
