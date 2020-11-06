@@ -236,6 +236,7 @@ class RemoteGithub extends RemoteGit {
                 await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME + "/" + branch]);*/
 
                 await gitRepo.fetch(LOCAL_REMOTE_NAME, "master");
+                await gitRepo.reset([LOCAL_REMOTE_NAME + "/master"]);
                 await gitRepo.commit("cleared repo before pulling remote integration");
                 await gitRepo.pull(INTEGRATION_REMOTE_NAME, branch, ["--allow-unrelated-histories"]);
                 await gitRepo.push(LOCAL_REMOTE_NAME, "master");
