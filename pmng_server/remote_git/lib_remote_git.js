@@ -13,7 +13,7 @@ class RemoteGit {
 
     static async unlinkAccount(userId) { throw "Not implemented!"; }
 
-    static async push(req, res, next) { res.status(404).json({error: true, code: 404, message: "Invalid git remote.", details: "Remote not implemented."}); }
+    static async push(req, res) { res.status(404).json({error: true, code: 404, message: "Invalid git remote.", details: "Remote not implemented."}); }
 }
 
 module.exports = RemoteGit;

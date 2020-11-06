@@ -1,10 +1,17 @@
 const RemoteGit = require("../lib_remote_git");
 const rgit_manager = require("../remote_git_manager");
+const originalBodyParser = require("body-parser");
 const GithubStrategy = require("passport-github").Strategy;
 const database_server = require("../../database_server");
+const project_manager = require("../../project_manager");
 const passport = require("passport");
+const crypto = require("crypto");
+const simpleGit = require("simple-git/promise");
 const Octokit = require("@octokit/rest").Octokit;
 const string_utils = require("../../string_utils");
+
+// name of the git cli remote name
+const INTEGRATION_REMOTE_NAME = "github_integration";
 
 let passportAuthDone = false;
 class RemoteGithub extends RemoteGit {
@@ -67,7 +74,7 @@ class RemoteGithub extends RemoteGit {
     static async _getOctokit(userId, returnGitUser = false) {
         let gitUser = isNaN(userId) ? userId : await this._getGitUser(userId);
         userId = gitUser.userid;
-        
+
         let token = await rgit_manager.ensureTokenValid(gitUser);
 
         let octokit =  new Octokit({
@@ -180,8 +187,51 @@ class RemoteGithub extends RemoteGit {
             database_server.database("remote_git_users").where("id", gitUser.id).delete());
     }
 
-    static async push(req, res, next) {
+    static async push(req, res) {
+        let projectname = req.params.projectname || "", projectlength = projectname.length;
+        if(projectlength >= 4 && projectlength <= 32) {
+            // TODO: maybe also store remote on remote_git_integrations
+            let project = await project_manager.getProject(projectname);
+            let gitUser = await this._getGitUser(project.ownerid);
+            gitUser.access_token = await rgit_manager.ensureTokenValid(gitUser);
 
+            let gitInte = await database_server.database("remote_git_integrations").where("git_userid", gitUser.id).andWhere("projectname", projectname);
+            if(gitInte.length != 1) throw {status: 404, message: "GitHub integration doesn't exist for this project."};
+            gitInte = gitInte[0];
+
+            await new Promise((resolve) => originalBodyParser.text({type: "application/json"})(req, res, resolve));
+            let {secret, repo_id, branch} = gitInte;
+            let bodyText = req.body, body = JSON.parse(bodyText);
+
+            let hash = crypto.createHash("sha256");
+            hash.update(bodyText);
+            let requiredSignature = hash.digest("hex");
+
+            let givenSignature = req.headers["x-hub-signature-256"] ?? "";
+            if(!givenSignature.startsWith("sha256=")) givenSignature = givenSignature.substring(7);
+            // if(givenSignature !== requiredSignature) throw {status: 403, message: "Invalid signature."};
+
+            let repo = body.repository.full_name;
+            let givenRepo_id = body.repository.id;
+
+            if(givenRepo_id != repo_id) throw {status: 404, message: "Invalid repository id."};
+            let refParts = body.ref.split("/");
+
+            if(refParts.length < 3) throw {status: 401, message: "Malformed git ref."};
+            let givenBranch = refParts.slice(2).join("/");
+            if(givenBranch != branch) res.status(202).json({error: false, code: 202, message: "Push accepted but branch doesn't match."});
+            else {
+                let gitRepo = simpleGit(project_manager.getProjectRepository(projectname));
+                let actualRemotes = (await gitRepo.getRemotes()).map((x) => x.name);
+
+                if(actualRemotes.includes(INTEGRATION_REMOTE_NAME)) await gitRepo.removeRemote(INTEGRATION_REMOTE_NAME);
+                await gitRepo.addRemote(INTEGRATION_REMOTE_NAME, "https://" + gitUser.access_token + "@github.com/" + repo + ".git");
+
+                await gitRepo.fetch(INTEGRATION_REMOTE_NAME, branch);
+                await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME, branch]);
+                res.status(200).json({error: false, code: 200, message: "Received hook and pulled repository"});
+            }
+        } else throw {status: 401, message: "Invalid project name."};
     }
 }
 

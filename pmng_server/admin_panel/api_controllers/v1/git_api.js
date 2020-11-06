@@ -1,12 +1,18 @@
 const express = require('express'), router = express.Router();
-const originalBodyParser = require("body-parser");
 const bodyParser = require("../../body_parser");
 const rgit_manager = require("../../../remote_git/remote_git_manager");
 const project_manager = require("../../../project_manager");
 const api_auth = require("./api_auth");
 
-router.post("/:remote/webhooks/push/:project_name", originalBodyParser.text({type: "application/json"}), (req, res) => {
-    res.send("hi!");
+router.post("/:remote/webhooks/push/:projectname", async (req, res) => {
+    try {
+        let remote = await rgit_manager.getRemote(req.params.remote.toLowerCase());
+        if(remote == undefined) throw {status: 404, message: "The remote doesn't exist."};
+
+        await remote.push(req, res);
+    } catch(error) {
+        res.status(error.status ?? 500).json({error: true, message: "Cannot process push.", details: error.message, code: error.status ?? 500});
+    }
 });
 
 router.get("/:remote/listRepositories", (req, res) => {
