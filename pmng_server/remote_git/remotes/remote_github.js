@@ -201,7 +201,7 @@ class RemoteGithub extends RemoteGit {
             let gitUser = await this._getGitUser(project.ownerid);
             gitUser.access_token = await rgit_manager.ensureTokenValid(gitUser);
 
-            let gitInte = await database_server.database("remote_git_integrations").where("git_userid", gitUser.id).andWhere("projectname", projectname);
+            let gitInte = await database_server.database("remote_git_integrations").where("git_userid", gitUser.id).andWhere("projectname", projectname).select("*");
             if(gitInte.length != 1) throw {status: 404, message: "GitHub integration doesn't exist for this project."};
             gitInte = gitInte[0];
 
@@ -209,12 +209,12 @@ class RemoteGithub extends RemoteGit {
             let {secret, repo_id, branch} = gitInte;
             let bodyText = req.body, body = JSON.parse(bodyText);
 
-            let hash = crypto.createHash("sha256");
+            let hash = crypto.createHmac("sha256", secret);
             hash.update(bodyText);
             let requiredSignature = hash.digest("hex");
 
             let givenSignature = req.headers["x-hub-signature-256"] ?? "";
-            if(!givenSignature.startsWith("sha256=")) givenSignature = givenSignature.substring(7);
+            if(givenSignature.startsWith("sha256=")) givenSignature = givenSignature.substring(7);
             if(givenSignature !== requiredSignature) throw {status: 403, message: "Invalid signature."};
 
             let repo = body.repository.full_name;
