@@ -12,7 +12,7 @@ async function _checkInitialized() {
     }
 }
 
-function getRemote(remoteName, forceSync = false) {
+function getRemote(remoteName = ".", forceSync = false) {
     if(remoteName.includes(".")) return undefined;
 
     let _getRemote = () => {
