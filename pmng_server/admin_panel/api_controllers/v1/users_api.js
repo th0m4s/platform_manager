@@ -3,6 +3,7 @@ const database_server = require("../../../database_server");
 const mail_manager = require("../../../mails/mail_manager");
 const project_manager = require("../../../project_manager");
 const string_utils = require("../../../string_utils");
+const rgit_manager = require("../../../remote_git/remote_git_manager");
 const bodyParser = require("../../body_parser");
 const api_auth = require("./api_auth");
 
@@ -206,11 +207,11 @@ router.get("/me/resetdbautopass", (req, res) => {
 
 router.get("/delete/:username", (req, res) => {
     api_auth(req, res, function(user) {
+        // TODO: move a lot of this code to database_server.removeUser
         if(database_server.checkScope(user.scope, "admin")) {
             let name = req.params.username;
             database_server.findUserByName(name).then((existingUser) => {
                 if(existingUser != null) {
-                    
                     // first get projects
                     // project manager will do everything to remove the projects
                     // not using list(Owned/Collab)Projects because want only the names (and without limit)
@@ -233,6 +234,12 @@ router.get("/delete/:username", (req, res) => {
                         }
 
                         //return Promise.all(promises);
+
+                        // now lists git integrations
+                        return database_server.database("remote_git_users").where("userid", existingUser.id).select(["remote", "id", "userid"]);
+                    }).then((gitUsers) => {
+                        // and delete them
+                        return Promise.all(gitUsers.map((x) => rgit_manager.getRemote(x.remote).then((remote) => remote.unlinkAccount(x))));
                     }).then(() => {
                         // remove user
                         return database_server.removeUser(name);
