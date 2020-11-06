@@ -17,6 +17,7 @@ const string_utils = require("../../string_utils");
 // name of the git cli remote name
 const INTEGRATION_REMOTE_NAME = "github_integration";
 const LOCAL_REMOTE_NAME = "local_pmng";
+const INTEGRATION_BRANCH = "integration";
 
 let passportAuthDone = false;
 class RemoteGithub extends RemoteGit {
@@ -235,10 +236,11 @@ class RemoteGithub extends RemoteGit {
                 /*await gitRepo.fetch(INTEGRATION_REMOTE_NAME, branch);
                 await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME + "/" + branch]);*/
 
-                await gitRepo.fetch(LOCAL_REMOTE_NAME, "master");
-                await gitRepo.reset([LOCAL_REMOTE_NAME + "/master"]);
-                await gitRepo.commit("cleared repo before pulling remote integration", ["-a"]);
-                await gitRepo.pull(INTEGRATION_REMOTE_NAME, branch, {"--allow-unrelated-histories": undefined});
+                await gitRepo.pull(LOCAL_REMOTE_NAME, "master");
+                await gitRepo.checkout(["-b", INTEGRATION_BRANCH]);
+                await gitRepo.pull(INTEGRATION_REMOTE_NAME, "master");
+                await gitRepo.checkout("master");
+                await gitRepo.merge([INTEGRATION_BRANCH]);
                 await gitRepo.push(LOCAL_REMOTE_NAME, "master");
 
                 await rmfr(repoDir);
