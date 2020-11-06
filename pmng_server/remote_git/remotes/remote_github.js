@@ -228,6 +228,7 @@ class RemoteGithub extends RemoteGit {
             else {
                 let repoDir = await pfs.mkdtemp(path.resolve(os.tmpdir(), "pmng_git_github_"));
                 let gitRepo = simpleGit(repoDir);
+                await gitRepo.init();
                 await gitRepo.addRemote(INTEGRATION_REMOTE_NAME, "https://" + gitUser.access_token + "@github.com/" + repo + ".git");
                 await gitRepo.addRemote(LOCAL_REMOTE_NAME, project_manager.getProjectRepository(projectname));
 
