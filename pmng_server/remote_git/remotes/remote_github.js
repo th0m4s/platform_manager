@@ -215,7 +215,7 @@ class RemoteGithub extends RemoteGit {
 
             let givenSignature = req.headers["x-hub-signature-256"] ?? "";
             if(!givenSignature.startsWith("sha256=")) givenSignature = givenSignature.substring(7);
-            // if(givenSignature !== requiredSignature) throw {status: 403, message: "Invalid signature."};
+            if(givenSignature !== requiredSignature) throw {status: 403, message: "Invalid signature."};
 
             let repo = body.repository.full_name;
             let givenRepo_id = body.repository.id;
