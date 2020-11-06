@@ -1,6 +1,6 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../database_server");
-const logger = require("../../platform_logger").logger();
+const rgit_manager = require("../../remote_git/remote_git_manager");
 
 router.all("*", async function(req, res, next) {
     if(!(await database_server.isInstalled())) {
@@ -20,6 +20,7 @@ router.get("/me", async (req, res) => {
     req.setPage(res, "Account", "account", "me"); // not using the correct users/me because it would highlight users for admin users
     res.locals.user = req.user;
     res.locals.newEmail = await database_server.userChangingMail(req.user.id);
+    res.locals.remoteGits = await rgit_manager.listRemotesDetails(req.user.id);
     res.render("users/me");
 });
 

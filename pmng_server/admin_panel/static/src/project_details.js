@@ -46,14 +46,14 @@ function init() {
 }
 
 function updateGitInte() {
-    if(Object.keys(window.project.rgitIntegrations).length > 0) {
+    let inteCount = Object.keys(window.project.rgitIntegrations).length, hasInte = inteCount > 0;
+    if(inteCount > 0) {
         let rGitInteList = $("#rgitinte-list").html("");
         for(let [remote, inte] of Object.entries(window.project.rgitIntegrations)) {
             rGitInteList.append(getGitInteLineHtml(remote, inte.repo, inte.branch, !owned));
         }
     }
 
-    let inteCount = Object.keys(window.project.rgitIntegrations).length, hasInte = inteCount > 0;
     $("#rgitinte-status")[hasInte ? "hide": "show"]();
     $("#rgitinte-card")[hasInte ? "show": "hide"]();
 

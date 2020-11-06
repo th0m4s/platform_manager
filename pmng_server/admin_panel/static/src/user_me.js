@@ -12,6 +12,18 @@ function init() {
             // some browser don't display this message
         }
     }
+
+    if(Object.keys(remoteGits).length > 0) {
+        $("#gitusers-status").hide();
+        let gitProvidersList = $("#gitusers-list").html("");
+        for(let [remote, details] of Object.entries(remoteGits)) {
+            let l = details.available;
+            gitProvidersList.append(`<li class="list-group-item" id="line-gituser-${remote}"><b>${(details.icon != false ? `<i class="${details.icon}"></i> ` : "") + details.name} </b> <span class="text-secondary d-block d-md-inline"><samp class="ml-4" id="status-gituser-${remote}">${l ? "Account linked" : "Account not linked"}</samp></span>`
+                + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-${l ? "secondary" : "primary"}" onclick="user_me.invertGitProvider('${remote}', this)"><i class="fas fa-${l ? "unlink" : "link"}"></i> ${l ? "Unlink" : "Link"} account</button></div></span></li>`);
+        }
+
+        gitProvidersList.parent().show();
+    } else $("#gitusers-status").html("No git provider found.").show();    
 }
 
 let canChangeEmail = true;
@@ -168,5 +180,32 @@ function cancelEmailChange() {
     return false;
 }
 
+function invertGitProvider(remote, button) {
+    let remoteDetails = remoteGits[remote];
+    if(remoteDetails != undefined) {
+        button = $(button).attr("disabled", "disabled");
 
-window.user_me = {init, save, resetSSOPassword, cancelEmailChange};
+        if(!remoteDetails.available) location.href = "/panel/git/" + remote + "/auth";
+        else {
+            $.getJSON("/api/v1/git/" + remote + "/unlinkAccount").fail((xhr, status, error) => {
+                $.notify({message: "Unable to unlink your " + remoteDetails.name + " account."}, {type: "danger"});
+                console.error("Cannot unlink " + remote + " account (server error)", status, error);
+            }).done((response) => {
+                if(response.error) {
+                    $.notify({message: "Unable to unlink your " + remoteDetails.name + " account."}, {type: "danger"});
+                    console.error("Cannot unlink " + remote + " account (application error)", error);
+                } else {
+                    remoteDetails.available = false;
+                    $(button).addClass("btn-primary").removeClass("btn-secondary").html("<i class='fas fa-link'></i> Link account");
+                    $("#status-gituser-" + remote).html("Account not linked");
+                    $.notify({message: remoteDetails.name + " account unlinked successfully."}, {type: "success"});
+                }
+            }).always(() => {
+                button.removeAttr("disabled");
+            });
+        }
+    }
+}
+
+
+window.user_me = {init, save, resetSSOPassword, cancelEmailChange, invertGitProvider};

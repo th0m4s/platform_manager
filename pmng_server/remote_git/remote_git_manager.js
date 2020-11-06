@@ -41,6 +41,12 @@ async function listRemotes(userid) {
     }
 }
 
+async function listRemotesDetails(userid) {
+    return Object.fromEntries(userid == undefined
+        ? (await listRemotes()).map((x) => [x, getRemote(x, true)])
+        : Object.entries(await listRemotes(userid)).map((x) => [x[0], Object.assign({available: x[1]}, getRemote(x[0], true).getDetails())]));
+}
+
 async function listIntegrations(projectName) {
     await _checkInitialized();
 
@@ -57,6 +63,7 @@ async function ensureTokenValid(gitUserLine) {
 
 module.exports.getRemote = getRemote;
 module.exports.listRemotes = listRemotes;
+module.exports.listRemotesDetails = listRemotesDetails;
 module.exports.listIntegrations = listIntegrations;
 module.exports.ensureTokenValid = ensureTokenValid;
 module.exports.GIT_USER_AGENT = GIT_USER_AGENT;

@@ -135,9 +135,9 @@ router.get("/details/:projectname", function(req, res) {
                     }).then((rgitIntegrations) => {
                         res.locals.project.rgitIntegrations = rgitIntegrations;
 
-                        return rgit_manager.listRemotes(req.user.id);
-                    }).then((remoteGits) => {
-                        res.locals.remoteGits = Object.fromEntries(Object.entries(remoteGits).map((x) => [x[0], Object.assign({available: x[1]}, rgit_manager.getRemote(x[0], true).getDetails())]));
+                        return rgit_manager.listRemotesDetails(req.user.id);
+                    }).then((remoteGitsDetails) => {
+                        res.locals.remoteGits = remoteGitsDetails;
 
                         req.setPage(res, "Project details", "projects", "details");
                         res.render("projects/details");

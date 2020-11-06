@@ -8,6 +8,7 @@
         <script>
         let user = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(user)) %>"));
         let newEmail = <%- newEmail == undefined ? "undefined" : '"' + newEmail + '"' %>;
+        let remoteGits = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(remoteGits)) %>"));
         </script>
         <%- startPageScript("user_me") %>
         
@@ -65,8 +66,19 @@
                             </div>
                         </div>
                     </div>
-                    <button type="submit" id="confirm-button" class="btn btn-primary btn-lg btn-block mt-5">Save changes</button>
+                    <button type="submit" id="confirm-button" class="btn btn-primary btn-lg btn-block mt-3">Save changes</button>
                 </form>
+            </div>
+            <div class="row mt-4 mx-3" id="gitusers-row">
+                <div class="w-100">
+                    <h3 class="d-inline">Git providers connection:</h3>
+                    <p class="w-100" id="gitusers-status">Loading...</p>
+                    <div class="card w-100 mt-1" style="display: none;" id="gitusers-card">
+                        <ul class="list-group list-group-flush" id="gitusers-list">
+                            
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </body>
