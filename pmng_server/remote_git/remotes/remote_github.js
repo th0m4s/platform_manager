@@ -7,11 +7,16 @@ const project_manager = require("../../project_manager");
 const passport = require("passport");
 const crypto = require("crypto");
 const simpleGit = require("simple-git/promise");
+const os = require("os");
+const pfs = require("fs").promises;
+const path = require("path");
+const rmfr = require("rmfr");
 const Octokit = require("@octokit/rest").Octokit;
 const string_utils = require("../../string_utils");
 
 // name of the git cli remote name
 const INTEGRATION_REMOTE_NAME = "github_integration";
+const LOCAL_REMOTE_NAME = "local_pmng";
 
 let passportAuthDone = false;
 class RemoteGithub extends RemoteGit {
@@ -221,14 +226,20 @@ class RemoteGithub extends RemoteGit {
             let givenBranch = refParts.slice(2).join("/");
             if(givenBranch != branch) res.status(202).json({error: false, code: 202, message: "Push accepted but branch doesn't match."});
             else {
-                let gitRepo = simpleGit(project_manager.getProjectRepository(projectname));
-                let actualRemotes = (await gitRepo.getRemotes()).map((x) => x.name);
-
-                if(actualRemotes.includes(INTEGRATION_REMOTE_NAME)) await gitRepo.removeRemote(INTEGRATION_REMOTE_NAME);
+                let repoDir = await pfs.mkdtemp(path.resolve(os.tmpdir(), "pmng_git_github_"));
+                let gitRepo = simpleGit(repoDir);
                 await gitRepo.addRemote(INTEGRATION_REMOTE_NAME, "https://" + gitUser.access_token + "@github.com/" + repo + ".git");
+                await gitRepo.addRemote(LOCAL_REMOTE_NAME, project_manager.getProjectRepository(projectname));
 
-                await gitRepo.fetch(INTEGRATION_REMOTE_NAME, branch);
-                await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME + "/" + branch]);
+                /*await gitRepo.fetch(INTEGRATION_REMOTE_NAME, branch);
+                await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME + "/" + branch]);*/
+
+                await gitRepo.fetch(LOCAL_REMOTE_NAME, "master");
+                await gitRepo.commit("cleared repo before pulling remote integration");
+                await gitRepo.mergeFromTo(INTEGRATION_REMOTE_NAME + "/" + branch, LOCAL_REMOTE_NAME + "/master", ["-m", "merged remote integration"]);
+                await gitRepo.push(LOCAL_REMOTE_NAME, "master");
+
+                await rmfr(repoDir);
                 res.status(200).json({error: false, code: 200, message: "Received hook and pulled repository"});
             }
         } else throw {status: 401, message: "Invalid project name."};
