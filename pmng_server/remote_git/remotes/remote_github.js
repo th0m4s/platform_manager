@@ -237,12 +237,12 @@ class RemoteGithub extends RemoteGit {
 
                 await gitRepo.fetch(LOCAL_REMOTE_NAME, "master");
                 await gitRepo.reset([LOCAL_REMOTE_NAME + "/master"]);
-                await gitRepo.commit("cleared repo before pulling remote integration");
-                await gitRepo.pull(INTEGRATION_REMOTE_NAME, branch, ["--allow-unrelated-histories"]);
+                await gitRepo.commit("cleared repo before pulling remote integration", ["-a"]);
+                await gitRepo.pull(INTEGRATION_REMOTE_NAME, branch, {"--allow-unrelated-histories": undefined});
                 await gitRepo.push(LOCAL_REMOTE_NAME, "master");
 
                 await rmfr(repoDir);
-                res.status(200).json({error: false, code: 200, message: "Received hook and pulled repository"});
+                res.status(200).json({error: false, code: 200, message: "Received hook and pulled/repushed repository"});
             }
         } else throw {status: 401, message: "Invalid project name."};
     }
