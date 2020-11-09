@@ -1,6 +1,8 @@
 const LOG_FILE = "/var/log/pmng/pmng.log";
+const ACCESS_FILE = "/var/log/pmng/access.log";
 const fs = require("fs"), pfs = fs.promises, path = require("path");
 const child_process = require("child_process");
+const cluster = require("cluster");
 const nodeLogger = require('simple-node-logger');
 
 /**
@@ -19,10 +21,8 @@ async function prepare() {
                 return _logrotate();
             });
         }
-
-        return _logrotate();
     } catch(notexist) {
-        return pfs.mkdir(logDir).catch(() => {}).then(() => {
+        pfs.mkdir(logDir).catch(() => {}).then(() => {
             return new Promise((resolve) => {
                 child_process.execSync('touch "' + LOG_FILE + '"');
                 // cannot easily touch a file with node fs
@@ -30,6 +30,33 @@ async function prepare() {
             });
         }).then(() => {
             return _setLogPerm(logDir);
+        }).then(() => {
+            return _logrotate();
+        });
+    }
+
+
+    // TODO: rewrite code (just a copy/paster of log_file)
+    let accessDir = path.dirname(ACCESS_FILE);
+    try {
+        await pfs.stat(ACCESS_FILE);
+        try {
+            pfs.access(ACCESS_FILE);
+        } catch(noperm) {
+            return _setLogPerm(accessDir).then(() => {
+                return _logrotate();
+            });
+        }
+
+        return _logrotate();
+    } catch(notexist) {
+        return pfs.mkdir(accessDir).catch(() => {}).then(() => {
+            return new Promise((resolve) => {
+                child_process.execSync('touch "' + ACCESS_FILE + '"');
+                resolve();
+            });
+        }).then(() => {
+            return _setLogPerm(accessDir);
         }).then(() => {
             return _logrotate();
         });
@@ -102,6 +129,32 @@ function logger() {
     return _logger;
 }
 
+function getWebAccess() {
+    let writeStream = fs.createWriteStream(ACCESS_FILE, {flags: "a", encoding: "utf8"});
+    return (req, res) => {
+        writeStream.write([req.socket.remoteAddress, beautifyReqPort(req) + (cluster.isMaster ? "master" : "#" + cluster.worker.id), process.pid, "[" + new Date().toISOString() + "]", "\"" + req.method + " " + req.headers["host"] + req.url + " HTTP/" + req.httpVersion + "\"", res.statusCode, finishedResSize(res)].join(" ") + "\n");
+    }
+}
+
+function beautifyReqPort(req) {
+    let port = req.socket.localPort;
+    if(port == 80) return "HTTP";
+    else if(port == 443) return "HTTPS";
+    else return port;
+}
+
+// from https://www.reddit.com/r/node/comments/6sa8fu/express_recording_size_of_response_sent/
+function finishedResSize(res) {
+    if ("_contentLength" in res){
+        return res["_contentLength"];
+    } else if(res.hasHeader("content-length")) {
+        return res.getHeader("content-length");
+    } else return -1;
+}
+
+
 module.exports.logger = logger;
 module.exports.prepare = prepare;
+module.exports.getWebAccess = getWebAccess;
 module.exports.LOG_FILE = LOG_FILE;
+module.exports.ACCESS_FILE = ACCESS_FILE;

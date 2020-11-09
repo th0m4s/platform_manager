@@ -1,4 +1,3 @@
-const child_process = require("child_process");
 const net = require("net");
 const http = require("http");
 const regex_utils = require("./regex_utils");
@@ -10,7 +9,9 @@ const httpProxyServer = require("http-proxy").createProxyServer();
 const pfs = require("fs").promises;
 const path = require("path");
 const cluster = require("cluster");
-const logger = require("./platform_logger").logger();
+const platformLogger = require("./platform_logger");
+const logger = platformLogger.logger();
+const webLogger = platformLogger.getWebAccess();
 const subprocess_util = require("./subprocess_util");
 
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
@@ -269,6 +270,10 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
  * @param {http.ServerResponse} res The server response to be sent back.
  */
 async function webServe(req, res) {
+    res.on("finish", () => {
+        webLogger(req, res);
+    });
+
     connCount++;
     if(req.method == "GET" && regex_utils.isACMEChallenge(req.url)) {
         let domain = req.headers.host, challenges = httpChallenges[domain];
