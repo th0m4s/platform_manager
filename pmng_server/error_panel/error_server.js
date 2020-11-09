@@ -23,7 +23,7 @@ app.get("/", (req, res, next) => {
 
 const errorPage = path.join(__dirname, "static/port_error.html");
 app.all("*", (req, res) => {
-    res.sendFile(errorPage);
+    res.status(404).sendFile(errorPage);
 });
 
 function start() {

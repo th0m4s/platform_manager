@@ -300,7 +300,7 @@ async function upgradeRequest(req, socket, head) {
 
 let errorPageCache = "";
 httpProxyServer.on("error", function (err, req, res) {
-    res.writeHead(200, {
+    res.writeHead(502, {
         "Content-Type": "text/html"
     });
 
