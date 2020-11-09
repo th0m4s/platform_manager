@@ -236,6 +236,7 @@ class RemoteGithub extends RemoteGit {
                 /*await gitRepo.fetch(INTEGRATION_REMOTE_NAME, branch);
                 await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME + "/" + branch]);*/
 
+                // files from local not present in integration are removed on merge
                 await gitRepo.pull(LOCAL_REMOTE_NAME, "master");
                 await gitRepo.checkout(["-b", INTEGRATION_BRANCH]);
                 await gitRepo.pull(INTEGRATION_REMOTE_NAME, "master");
