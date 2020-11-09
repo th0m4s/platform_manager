@@ -100,8 +100,8 @@ router.get("/arerunning/:projectnames", function(req, res) {
 router.get("/start/:projectname", function(req, res) {
     api_auth(req, res, function(user) {
         let projectname = req.params.projectname;
-        projects_manager.canAccessProject(projectname, user.id, true).then(() => {
-            intercom.sendPromise("dockermng", {command: "startProject", project: projectname}).then(() => {
+        projects_manager.canAccessProject(projectname, user.id, true).then(() => { // long timeout because image might need to be built
+            intercom.sendPromise("dockermng", {command: "startProject", project: projectname}, {timeout: 40}).then(() => {
                 res.status(200).json({error: false, code: 200, message: "Project started."});
             }).catch((error) => {
                 res.status(500).json({error: true, code: 500, message: "Cannot start project: " + error});
@@ -117,7 +117,7 @@ router.get("/stop/:projectname", function(req, res) {
     api_auth(req, res, function(user) {
         let projectname = req.params.projectname;
         projects_manager.canAccessProject(projectname, user.id, true).then(() => {
-            intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}).then(() => {
+            intercom.sendPromise("dockermng", {command: "stopProject", project: projectname}, {timeout: 12}).then(() => {
                 res.status(200).json({error: false, code: 200, message: "Project stopped."});
             }).catch((error) => {
                 res.status(500).json({error: true, code: 500, message: "Cannot stop project: " + error});
