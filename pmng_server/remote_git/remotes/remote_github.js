@@ -199,54 +199,60 @@ class RemoteGithub extends RemoteGit {
             // TODO: maybe also store remote on remote_git_integrations
             let project = await project_manager.getProject(projectname);
             let gitUser = await this._getGitUser(project.ownerid);
-            gitUser.access_token = await rgit_manager.ensureTokenValid(gitUser);
 
-            let gitInte = await database_server.database("remote_git_integrations").where("git_userid", gitUser.id).andWhere("projectname", projectname).select("*");
-            if(gitInte.length != 1) throw {status: 404, message: "GitHub integration doesn't exist for this project."};
-            gitInte = gitInte[0];
+            let eventName = req.headers["x-github-event"];
+            if(eventName == "ping") {
+                res.json({error: false, code: 200, message: "Hook created!"});
+            } else if(eventName == "push") {
+                gitUser.access_token = await rgit_manager.ensureTokenValid(gitUser);
 
-            await new Promise((resolve) => originalBodyParser.text({type: "application/json"})(req, res, resolve));
-            let {secret, repo_id, branch} = gitInte;
-            let bodyText = req.body, body = JSON.parse(bodyText);
+                let gitInte = await database_server.database("remote_git_integrations").where("git_userid", gitUser.id).andWhere("projectname", projectname).select("*");
+                if(gitInte.length != 1) throw {status: 404, message: "GitHub integration doesn't exist for this project."};
+                gitInte = gitInte[0];
 
-            let hash = crypto.createHmac("sha256", secret);
-            hash.update(bodyText);
-            let requiredSignature = hash.digest("hex");
+                await new Promise((resolve) => originalBodyParser.text({type: "application/json"})(req, res, resolve));
+                let {secret, repo_id, branch} = gitInte;
+                let bodyText = req.body, body = JSON.parse(bodyText);
 
-            let givenSignature = req.headers["x-hub-signature-256"] ?? "";
-            if(givenSignature.startsWith("sha256=")) givenSignature = givenSignature.substring(7);
-            if(givenSignature !== requiredSignature) throw {status: 403, message: "Invalid signature."};
+                let hash = crypto.createHmac("sha256", secret);
+                hash.update(bodyText);
+                let requiredSignature = hash.digest("hex");
 
-            let repo = body.repository.full_name;
-            let givenRepo_id = body.repository.id;
+                let givenSignature = req.headers["x-hub-signature-256"] ?? "";
+                if(givenSignature.startsWith("sha256=")) givenSignature = givenSignature.substring(7);
+                if(givenSignature !== requiredSignature) throw {status: 403, message: "Invalid signature."};
 
-            if(givenRepo_id != repo_id) throw {status: 404, message: "Invalid repository id."};
-            let refParts = body.ref.split("/");
+                let repo = body.repository.full_name;
+                let givenRepo_id = body.repository.id;
 
-            if(refParts.length < 3) throw {status: 401, message: "Malformed git ref."};
-            let givenBranch = refParts.slice(2).join("/");
-            if(givenBranch != branch) res.status(202).json({error: false, code: 202, message: "Push accepted but branch doesn't match."});
-            else {
-                let repoDir = await pfs.mkdtemp(path.resolve(os.tmpdir(), "pmng_git_github_"));
-                let gitRepo = simpleGit(repoDir);
-                await gitRepo.init();
-                await gitRepo.addRemote(INTEGRATION_REMOTE_NAME, "https://" + gitUser.access_token + "@github.com/" + repo + ".git");
-                await gitRepo.addRemote(LOCAL_REMOTE_NAME, project_manager.getProjectRepository(projectname));
+                if(givenRepo_id != repo_id) throw {status: 404, message: "Invalid repository id."};
+                let refParts = body.ref.split("/");
 
-                /*await gitRepo.fetch(INTEGRATION_REMOTE_NAME, branch);
-                await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME + "/" + branch]);*/
+                if(refParts.length < 3) throw {status: 401, message: "Malformed git ref."};
+                let givenBranch = refParts.slice(2).join("/");
+                if(givenBranch != branch) res.status(202).json({error: false, code: 202, message: "Push accepted but branch doesn't match."});
+                else {
+                    let repoDir = await pfs.mkdtemp(path.resolve(os.tmpdir(), "pmng_git_github_"));
+                    let gitRepo = simpleGit(repoDir);
+                    await gitRepo.init();
+                    await gitRepo.addRemote(INTEGRATION_REMOTE_NAME, "https://" + gitUser.access_token + "@github.com/" + repo + ".git");
+                    await gitRepo.addRemote(LOCAL_REMOTE_NAME, project_manager.getProjectRepository(projectname));
 
-                // files from local not present in integration are removed on merge
-                await gitRepo.pull(LOCAL_REMOTE_NAME, "master");
-                await gitRepo.checkout(["-b", INTEGRATION_BRANCH]);
-                await gitRepo.pull(INTEGRATION_REMOTE_NAME, "master");
-                await gitRepo.checkout("master");
-                await gitRepo.merge([INTEGRATION_BRANCH]);
-                await gitRepo.push(LOCAL_REMOTE_NAME, "master");
+                    /*await gitRepo.fetch(INTEGRATION_REMOTE_NAME, branch);
+                    await gitRepo.reset(["--hard", INTEGRATION_REMOTE_NAME + "/" + branch]);*/
 
-                await rmfr(repoDir);
-                res.status(200).json({error: false, code: 200, message: "Received hook and pulled/repushed repository"});
-            }
+                    // files from local not present in integration are removed on merge
+                    await gitRepo.pull(LOCAL_REMOTE_NAME, "master");
+                    await gitRepo.checkout(["-b", INTEGRATION_BRANCH]);
+                    await gitRepo.pull(INTEGRATION_REMOTE_NAME, "master");
+                    await gitRepo.checkout("master");
+                    await gitRepo.merge([INTEGRATION_BRANCH]);
+                    await gitRepo.push(LOCAL_REMOTE_NAME, "master");
+
+                    await rmfr(repoDir);
+                    res.status(200).json({error: false, code: 200, message: "Received hook and pulled/repushed repository"});
+                }
+            } else throw {status: 400, message: "Invalid GitHub event."};
         } else throw {status: 401, message: "Invalid project name."};
     }
 }
