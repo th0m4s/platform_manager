@@ -131,13 +131,13 @@ function logger() {
 
 function getWebAccess() {
     let writeStream = fs.createWriteStream(ACCESS_FILE, {flags: "a", encoding: "utf8"});
-    return (req, res) => {
-        writeStream.write([req.socket.remoteAddress, beautifyReqPort(req) + (cluster.isMaster ? "master" : "#" + cluster.worker.id), process.pid, "[" + new Date().toISOString() + "]", "\"" + req.method + " " + req.headers["host"] + req.url + " HTTP/" + req.httpVersion + "\"", res.statusCode, finishedResSize(res)].join(" ") + "\n");
+    return (req, res, originalPort) => {
+        writeStream.write([req.socket.remoteAddress, beautifyReqPort(req, originalPort) + (cluster.isMaster ? "master" : "#" + cluster.worker.id), process.pid, "[" + new Date().toISOString() + "]", "\"" + req.method + " " + req.headers["host"] + req.url + " HTTP/" + req.httpVersion + "\"", res.statusCode, req.socket.localPort != undefined ? finishedResSize(res) : "closed"].join(" ") + "\n");
     }
 }
 
-function beautifyReqPort(req) {
-    let port = req.socket.localPort;
+function beautifyReqPort(req, originalPort) {
+    let port = req.socket.localPort ?? originalPort;
     if(port == 80) return "HTTP";
     else if(port == 443) return "HTTPS";
     else return port;

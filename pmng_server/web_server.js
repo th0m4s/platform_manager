@@ -270,8 +270,13 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
  * @param {http.ServerResponse} res The server response to be sent back.
  */
 async function webServe(req, res) {
+    let originalPort = req.socket.localPort;
     res.on("finish", () => {
-        webLogger(req, res);
+        webLogger(req, res, originalPort);
+    });
+
+    res.on("close", () => {
+        if(!res.writableEnded) webLogger(req, res, originalPort);
     });
 
     connCount++;
@@ -281,6 +286,8 @@ async function webServe(req, res) {
             let token = req.url.split("/")[3], challenge = challenges[token];
             if(challenge == undefined) res.end("wrong challenge"); // TODO: why not just proxy as if challenges didnt exist?
             else res.end(challenge);
+
+            return; // don't continue to specific port, res is already ended
         }
     }
     
