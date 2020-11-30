@@ -13,11 +13,15 @@ const path = require("path");
 const rmfr = require("rmfr");
 const Octokit = require("@octokit/rest").Octokit;
 const string_utils = require("../../string_utils");
+const oauth2Refresh = require("passport-oauth2-refresh");
 
 // name of the git cli remote name
 const INTEGRATION_REMOTE_NAME = "github_integration";
 const LOCAL_REMOTE_NAME = "local_pmng";
 const INTEGRATION_BRANCH = "integration";
+
+const ACCESS_EXPIRATION = 28800;
+const REFRESH_EXPIRATION = 15811200;
 
 let passportAuthDone = false;
 class RemoteGithub extends RemoteGit {
@@ -29,7 +33,7 @@ class RemoteGithub extends RemoteGit {
         if(passportAuthDone) return;
         passportAuthDone = true;
 
-        passport.use(new GithubStrategy({
+        let strategy = new GithubStrategy({
             clientID: process.env.GITHUB_CLIENTID,
             clientSecret: process.env.GITHUB_CLIENTSECRET,
             passReqToCallback: false,
@@ -39,7 +43,10 @@ class RemoteGithub extends RemoteGit {
             profile.accessToken = accessToken;
             profile.refreshToken = refreshToken;
             cb(null, profile);
-        }));
+        });
+
+        passport.use(strategy);
+        oauth2Refresh.use(strategy);
     }
 
     static auth(req, res, next) {
@@ -57,7 +64,7 @@ class RemoteGithub extends RemoteGit {
                     let existingConnection = await database_server.database("remote_git_users").where("userid", req.user.id).andWhere("remote", "github").count("* as count");
                     if(existingConnection.length == 0 || existingConnection[0].count == 0) {
                         let hasRefresh = user.refreshToken != undefined, now = Math.floor(Date.now()/1000);
-                        await database_server.database("remote_git_users").insert({userid: req.user.id, remote: "github", access_token: user.accessToken, expire_time: hasRefresh ? now + 28800 : undefined, refresh_token: user.refreshToken, refresh_expire: hasRefresh ? now + 15811200 : undefined});
+                        await database_server.database("remote_git_users").insert({userid: req.user.id, remote: "github", access_token: user.accessToken, expire_time: hasRefresh ? new Date((now + ACCESS_EXPIRATION)*1000) : undefined, refresh_token: user.refreshToken, refresh_expire: hasRefresh ? new Date((now + REFRESH_EXPIRATION)*1000) : undefined});
                         req.flash("success", "GitHub account linked with success.");
                     } else req.flash("warn", "Your GitHub account is already linked, please first unlink your account and try again.");
                 } catch(error) {
@@ -68,6 +75,29 @@ class RemoteGithub extends RemoteGit {
 
             res.redirect("/panel/users/me");
         })(req, res, next);
+    }
+
+    static async _ensureUserValid(gitUser) {
+        let now = Math.floor(Date.now()/1000);
+        if(gitUser.expire_time != undefined && now >= Math.floor(gitUser.expire_time.getTime()/1000)) {
+            this._passportAuth();
+            return new Promise((resolve, reject) => {
+                oauth2Refresh.requestNewAccessToken("github", gitUser.refresh_token, async (err, accessToken, refreshToken) => {
+                    if(err) reject(err);
+                    else {
+                        refreshToken = refreshToken ?? gitUser.refresh_token;
+    
+                        gitUser.access_token = accessToken;
+                        gitUser.expire_time = new Date((now + ACCESS_EXPIRATION)*1000);
+                        gitUser.refresh_token = refreshToken;
+                        gitUser.refresh_expire = new Date((now + REFRESH_EXPIRATION)*1000);
+        
+                        await database_server.database("remote_git_users").where("id", gitUser.id).update(gitUser);
+                        resolve(gitUser);
+                    }
+                });
+            })
+        }
     }
 
     static async _getGitUser(userId) {
@@ -81,9 +111,10 @@ class RemoteGithub extends RemoteGit {
         let gitUser = isNaN(userId) ? userId : await this._getGitUser(userId);
         userId = gitUser.userid;
 
-        let token = await rgit_manager.ensureTokenValid(gitUser);
+        await this._ensureUserValid(gitUser);
+        let token = gitUser.access_token;
 
-        let octokit =  new Octokit({
+        let octokit = new Octokit({
             userAgent: rgit_manager.GIT_USER_AGENT,
             auth: token
         });
@@ -101,7 +132,7 @@ class RemoteGithub extends RemoteGit {
                 return {
                     repo_id: x.id.toString(), private: x.private, default_branch: x.default_branch, full_name: x.full_name
                 }
-            })
+            });
         } else throw response;
     }
 
@@ -204,7 +235,7 @@ class RemoteGithub extends RemoteGit {
             if(eventName == "ping") {
                 res.json({error: false, code: 200, message: "Hook created!"});
             } else if(eventName == "push") {
-                gitUser.access_token = await rgit_manager.ensureTokenValid(gitUser);
+                await this._ensureUserValid(gitUser);
 
                 let gitInte = await database_server.database("remote_git_integrations").where("git_userid", gitUser.id).andWhere("projectname", projectname).select("*");
                 if(gitInte.length != 1) throw {status: 404, message: "GitHub integration doesn't exist for this project."};
