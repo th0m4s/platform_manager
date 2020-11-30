@@ -67,7 +67,7 @@
                                 <button type="button" class="btn btn-sm btn-primary" id="button-add-domain" onclick="project_manage.addDomain()"><i class="fas fa-plus"></i> Add a custom domain</button>
                                 <small id="domain-info" class="form-text text-muted ml-md-1 d-inline-block" style="margin-top: -15px; position: relative; top: 11px;">
                                     If you've enabled full DNS custom domains, don't forget to use <i>ns1.<%- process.env.ROOT_DOMAIN %></i> and <i>ns2.<%- process.env.ROOT_DOMAIN %></i> as nameservers.
-                                    <br/>Full DNS management allows you to delegate the entire DNS zone to the Platform Manager. If you disable it, just create CNAME records to <i><%- process.env.ROOT_DOMAIN %></i> or A records to <i><%- process.env.SERVER_HOST %></i>.
+                                    <br/>Full DNS management allows you to delegate the entire DNS zone to the Platform Manager. If you disable it, just create CNAME records to <i><%- process.env.ROOT_DOMAIN %></i> or A records to <i><%- process.env.HOST_A %></i>.
                                 </small>
                             </div>
                         </div>
