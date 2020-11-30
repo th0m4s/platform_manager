@@ -13,6 +13,7 @@ const platformLogger = require("./platform_logger");
 const logger = platformLogger.logger();
 const webLogger = platformLogger.getWebAccess();
 const subprocess_util = require("./subprocess_util");
+const ip_manager = require("./ip_manager");
 
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 // const countPublic = enable_https ? 2 : 1, runningPublic = [];

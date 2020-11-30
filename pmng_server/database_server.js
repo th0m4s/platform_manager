@@ -200,6 +200,13 @@ function installDatabase() {
                 rgitinte.string("branch", 32).notNullable();
                 rgitinte.foreign("git_userid").references("id").inTable("remote_git_users");
                 rgitinte.foreign("projectname").references("name").inTable("projects");
+            }), createTableIfNotExists("ip_bans", (ipBans) => {
+                ipBans.increments("id").primary();
+                ipBans.string("ip", 39).notNullable();
+                ipBans.enum("type", ["ipv4", "ipv6"]).notNullable();
+                ipBans.datetime("banned_at").notNullable();
+                ipBans.datetime("planned_unban_at").notNullable();
+                ipBans.datetime("manuel_unban_at").defaultTo(null);
             })
         ]).then(() => {
             return true;
@@ -225,7 +232,8 @@ function hasDatabase() {
         knex.schema.hasTable("plans").then((exists) => {
           if(!exists) return false;
           else return hasDefaultPlans();
-      }), knex.schema.hasTable("password_resets"), knex.schema.hasTable("email_changes"), knex.schema.hasTable("remote_git_users"), knex.schema.hasTable("remote_git_integrations")
+      }), knex.schema.hasTable("password_resets"), knex.schema.hasTable("email_changes"), knex.schema.hasTable("remote_git_users"), knex.schema.hasTable("remote_git_integrations"),
+        knex.schema.hasTable("ip_bans")
     ]).then((results) => {
       return !results.includes(false);
     }).catch(() => { return false; });
