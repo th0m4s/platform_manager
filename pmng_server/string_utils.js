@@ -5,6 +5,7 @@
  * @param {string} alphabet A string of characters which can be found in the password.
  */
 function generatePassword(min = 10, max = 20, alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") {
+    if(max <= min) max = min+1;
     return Array(Math.floor(Math.random()*(max-min))+min).fill(alphabet).map(function(x) { return x[Math.floor(Math.random() * x.length)] }).join('')
 }
 
