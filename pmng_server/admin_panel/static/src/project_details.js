@@ -368,7 +368,7 @@ function gitInteHideBranch() {
     $("#gitinte-confirm").attr("disabled", "disabled");
 }
 
-let lastFetchedRepos = {};
+let lastFetchedRepos = {}, lastProvider = "";
 function gitInteProviderChosen() {
     $("#gitinte-provider-empty").remove();
 
@@ -380,7 +380,7 @@ function gitInteProviderChosen() {
             $("#gitinte-viewaccount").hide();
             gitInteHideBranch();
 
-            $.getJSON("/api/v1/git/github/listRepositories").fail((xhr, status, error) => {
+            $.getJSON("/api/v1/git/" + provider + "/listRepositories").fail((xhr, status, error) => {
                 $("#addGitInte-modal").modal("hide");
                 $.notify({message: "Cannot list repositories. Open the console for details."}, {type: "warning"});
                 console.error("Cannot list repos (server " + status + "): " + error);
@@ -390,6 +390,7 @@ function gitInteProviderChosen() {
                     $.notify({message: "Cannot list repositories. Open the console for details."}, {type: "warning"});
                     console.error("Cannot list repos (application): " + response.message, message.details);
                 } else {
+                    lastProvider = provider;
                     $("#gitinte-provider, #gitinte-repo").removeAttr("disabled");
                     let reposList = $("#gitinte-repo").html("<option selected value='' id='gitinte-repo-empty'></option>");
                     lastFetchedRepos = {};
@@ -407,6 +408,7 @@ function gitInteProviderChosen() {
     } else gitInteHideRepo();
 }
 
+let lastRepoId = "";
 function gitInteRepoChosen() {
     $("#gitinte-provider-empty").remove();
 
@@ -415,7 +417,7 @@ function gitInteRepoChosen() {
         $("#gitinte-provider, #gitinte-repo, #gitinte-branch").attr("disabled", "disabled");
             $("#gitinte-branch").parent().parent().show();
 
-            $.getJSON("/api/v1/git/github/listBranches/" + lastFetchedRepos[repoId].full_name).fail((xhr, status, error) => {
+            $.getJSON("/api/v1/git/" + lastProvider + "/listBranches/" + lastFetchedRepos[repoId].full_name).fail((xhr, status, error) => {
                 $("#addGitInte-modal").modal("hide");
                 $.notify({message: "Cannot list branches. Open the console for details."}, {type: "warning"});
                 console.error("Cannot list branches (server " + status + "): " + error);
@@ -425,6 +427,7 @@ function gitInteRepoChosen() {
                     $.notify({message: "Cannot list branches. Open the console for details."}, {type: "warning"});
                     console.error("Cannot list branches (application): " + response.message, response.details);
                 } else {
+                    lastRepoId = repoId;
                     $("#gitinte-provider, #gitinte-repo, #gitinte-branch").removeAttr("disabled");
                     let branchesList = $("#gitinte-branch").html("<option selected value='' id='gitinte-branch-empty'></option>");
                     for(let branch of response.branches)
@@ -442,8 +445,8 @@ function gitInteBranchChosen() {
 function confirmAddGitInte() {
     $("#addGitInte-modal").modal("hide");
 
-    let provider = $("#gitinte-provider").val() || "";
-    let repo_id = $("#gitinte-repo").val() || "";
+    let provider = lastProvider;
+    let repo_id = lastRepoId;
     let branch = $("#gitinte-branch").val() || "";
 
     if(provider.length > 0 && repo_id.length > 0 && branch.length > 0) {

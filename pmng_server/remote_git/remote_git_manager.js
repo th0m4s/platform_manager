@@ -56,14 +56,8 @@ async function listIntegrations(projectName) {
     });
 }
 
-async function ensureTokenValid(gitUserLine) {
-    // TODO: real check
-    return gitUserLine.access_token;
-}
-
 module.exports.getRemote = getRemote;
 module.exports.listRemotes = listRemotes;
 module.exports.listRemotesDetails = listRemotesDetails;
 module.exports.listIntegrations = listIntegrations;
-module.exports.ensureTokenValid = ensureTokenValid;
 module.exports.GIT_USER_AGENT = GIT_USER_AGENT;
