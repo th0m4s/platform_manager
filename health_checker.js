@@ -119,7 +119,7 @@ async function performCheck() {
                                     reject("Incorrect data received from intercom: " + message);
                                 }
                             } catch(error) {
-                                reject("Could not check intercom server: " + error);l
+                                reject("Could not check intercom server: " + error);
                             }
                         });
 
