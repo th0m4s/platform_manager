@@ -164,8 +164,10 @@ function registerHttpChallenges(bindGet = false) {
                 respond({error: false});
                 break;
             case "remove":
-                delete httpChallenges[domain][token];
-                if(Object.keys(httpChallenges[domain]).length == 0) delete httpChallenges[domain];
+                if(httpChallenges[domain] != undefined) {
+                    delete httpChallenges[domain][token];
+                    if(Object.keys(httpChallenges[domain]).length == 0) delete httpChallenges[domain];
+                }
 
                 respond({error: false});
                 break;
