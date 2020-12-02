@@ -100,9 +100,9 @@ class SRVRecordPlugin extends Plugin {
             let command = message.command;
             switch(command) {
                 case "dns":
-                    regex_utils.testProjectOrCustom(message.dnsName).then((projectname) => {
-                        if(projectname != null) {
-                            getRecord(message.dnsName, projectname).then((record) => {
+                    regex_utils.testProjectOrCustom(message.dnsName).then(({project}) => {
+                        if(project != null) {
+                            getRecord(message.dnsName, project).then((record) => {
                                 if(record == undefined) respond([]);
                                 else respond([record]);
                             });

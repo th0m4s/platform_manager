@@ -26,6 +26,30 @@ class Plugin {
     static async getUsage(projectname) {
         return {type: "not_measurable"};
     }
+
+    static webInterceptors() {
+        return this._parentInterceptors();
+    }
+
+    // util method to default missing interceptors to lib_plugin.js interceptors
+    static _parentInterceptors(interceptors = {}) {
+        let parentInterceptors = {
+            async requestInterceptor(projectname, pluginconfig, req, portdetails, res) { },
+
+            async responseHeadInterceptor(projectname, pluginconfig, data) {
+                // data: {status: {code: number, message: string}, headers: Object}
+
+                // should return true to stop all remaining interceptors, false to stop remaining interceptors but keep body interceptors
+                // and undefined to continue all interceptors
+            },
+
+            responseBodyInterceptor(projectname, pluginconfig, input, output) {
+                input.pipe(output);
+            }
+        };
+
+        return Object.fromEntries(Object.keys(parentInterceptors).map((x) => [x, interceptors[x] ?? parentInterceptors[x]]));
+    }
 }
 
 module.exports = Plugin;

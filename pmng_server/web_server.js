@@ -5,7 +5,7 @@ const database_server = require("./database_server");
 // const privileges = require("./privileges");
 const intercom = require("./intercom/intercom_client").connect();
 const runtime_cache_delay = 10000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
-const httpProxyServer = require("http-proxy").createProxyServer();
+const httpProxyServer = require("http-proxy").createProxyServer({selfHandleResponse: true});
 const pfs = require("fs").promises;
 const path = require("path");
 const cluster = require("cluster");
@@ -13,6 +13,7 @@ const platformLogger = require("./platform_logger");
 const logger = platformLogger.logger();
 const webLogger = platformLogger.getWebAccess();
 const subprocess_util = require("./subprocess_util");
+const plugins_manager = require("./plugins_manager");
 const ip_manager = require("./ip_manager");
 
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
@@ -67,8 +68,9 @@ async function prepareSocketError() {
 // 8042 is for local server, 8043 for intercom
 // projects start at 11000
 const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort, "mail": errorPort}; // ftp/mail are bound to error port when using http
+const errorDetails = {isSpecial: true, port: errorPort, special: "error"};
 let isInstalled = false;
-async function _getPort(host) {
+async function _getPortDetails(host) {
     host = host.toLowerCase();
 
     let isDefault = false;
@@ -78,28 +80,28 @@ async function _getPort(host) {
         let special = regex_utils.testSpecial(host);
         if(special !== null) {
             if(special == "www") isDefault = true;
-            else return special_ports[special];
+            else return {isSpecial: true, port: special_ports[special], special};
         }
     }
 
     if(isDefault) {
-        if(portMappings.hasOwnProperty("default")) return portMappings["default"];
-        else return errorPort;
+        if(portMappings.hasOwnProperty("default")) return {isSpecial: false, port: portMappings["default"], project: "default", custom: false};
+        else return errorDetails;
     }
     
     if(isInstalled !== true) {
         isInstalled = await database_server.isInstalled();
-        if(isInstalled !== true) return errorPort;
+        if(isInstalled !== true) return errorDetails;
     }
 
-    let project = await regex_utils.testProjectOrCustom(host);
+    let {project, custom} = await regex_utils.testProjectOrCustom(host);
     if(project !== null) {
-        if(portMappings.hasOwnProperty(project)) return portMappings[project];
-        else return errorPort;
+        if(portMappings.hasOwnProperty(project)) return {isSpecial: false, port: portMappings[project], project, custom, host};
+        else return errorDetails;
     }
 
-    return errorPort;
-}; const getPort = runtime_cache(_getPort);
+    return errorDetails;
+}; const getPortDetails = runtime_cache(_getPortDetails);
 
 /*function getTextHeaders(headers) {
     let resp = "";
@@ -129,6 +131,10 @@ function registerIntercomThread() {
 
                 break;
         }
+    });
+
+    intercom.subscribe(["updateplugins"], (message) => {
+        loadPluginsForProject(message.projectname);
     });
 
     // only process remove and set (get are in start)
@@ -265,6 +271,23 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
     }
 }
 
+let pluginsPerProject = {};
+async function loadPluginsForProject(projectname) {
+    let results = await database_server.database("projects").where("name", projectname).select("plugins");
+    if(results.length == 1)
+        pluginsPerProject[projectname] = Object.entries(JSON.parse(results[0].plugins));
+}
+
+let interceptors = {};
+function getPluginInterceptors(pluginname) {
+    if(interceptors[pluginname] == undefined) {
+        let plugin = plugins_manager.getPlugin(pluginname);
+        interceptors[pluginname] = plugin.hasOwnProperty("webInterceptors") ? plugin.webInterceptors() : false;
+    }
+
+    return interceptors[pluginname];
+}
+
 /**
  * Handles a single connection from a public server.
  * @param {http.IncomingMessage} req The client incoming message.
@@ -292,8 +315,34 @@ async function webServe(req, res) {
         }
     }
     
-    httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
+    let portDetails = await getPortDetails((req.headers.host || "").trimLeft().split(":")[0]), port = portDetails.port;
+    if(!portDetails.isSpecial) {
+        let projectname = portDetails.project;
+        if(pluginsPerProject[projectname] == undefined) await loadPluginsForProject(projectname);
+        for(let [pluginname, pluginconfig] of (pluginsPerProject[projectname] ?? [])) {
+            let interceptor = getPluginInterceptors(pluginname);
+            if(interceptor !== false) {
+                await interceptor.requestInterceptor(projectname, pluginconfig, req, portDetails, res);
+                if(res.writableEnded) break; // plugin stopped the response, so we stop here
+            }
+        }
+    }
+
+    if(!res.writableEnded) httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port}});
 }
+
+httpProxyServer.on("proxyRes", (proxyRes, req, res) => {
+    for(let [header, value] of Object.entries(proxyRes.headers))
+        res.setHeader(header, value);
+    res.writeHead(proxyRes.statusCode, proxyRes.statusMessage);
+
+    proxyRes.on("data", (chunk) => {
+        res.write(chunk);
+    });
+    proxyRes.on("end", () =>  {
+        res.end();
+    });
+});
 
 /**
  * Upgrades a standard HTTP connection to a WebSocket connection.
@@ -303,7 +352,7 @@ async function webServe(req, res) {
  */
 async function upgradeRequest(req, socket, head) {
     connCount++;
-    httpProxyServer.ws(req, socket, head, {xfwd: true, target: {host: "127.0.0.1", port: await getPort((req.headers.host || "").trimLeft().split(":")[0])}});
+    httpProxyServer.ws(req, socket, head, {xfwd: true, target: {host: "127.0.0.1", port: await getPortDetails((req.headers.host || "").trimLeft().split(":")[0]).port}});
 }
 
 let errorPageCache = "";

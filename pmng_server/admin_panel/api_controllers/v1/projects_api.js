@@ -219,7 +219,9 @@ router.post("/edit/:projectname", bodyParser(), function(req, res) {
                                 postInstalls.push(plugins_manager.postInstall(item, projectname, originalproject.plugins));
                             });
 
-                            return Promise.all(postInstalls);
+                            return Promise.all(postInstalls).then(() => {
+                                intercom.send("updateplugins", {projectname});
+                            });
                         }));
                     }
         
