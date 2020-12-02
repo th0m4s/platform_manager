@@ -120,7 +120,7 @@ function logger() {
         });
     
         process.on("unhandledRejection", (reason) => {
-            _logger.error("An unhandled rejection occured: " + reason);
+            _logger.error("An unhandled rejection occured:\n" + (reason.stack ?? reason.toString()));
         });
 
         require("./process_stats").stats();
