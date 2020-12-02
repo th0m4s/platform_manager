@@ -460,7 +460,7 @@ function startProject(projectname) {
             let logFile = path.join(logFolder, LOGFILE_NAME);
             let rotateConf = path.join(logFolder, "rotate.conf"), rotateStatus = path.join(logFolder, "rotate.status");
 
-            await pfs.writeFile(rotateConf, logFile + " {\n\tsize 1\n\trotate 7\n\tcompress\n\tdelaycompress\n\tmissingok\n}");
+            await pfs.writeFile(rotateConf, logFile + " {\n\tsize 1\n\trotate 7\n\tcompress\n\tdelaycompress\n\tcreate\n\tmissingok\n}");
             try {
                 child_process.execSync("logrotate -s " + rotateStatus + " " + rotateConf, privileges.droppingOptions(true));
             } catch(e) {}
