@@ -236,13 +236,14 @@ let currentClosing = [], currentStarting = [];
  */
 function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
     // called on the master, so conncount is not synced with webServe and upgradeRequest, so use cluster process comm to send counter messages
+    let originalCount = connCount;
     let workersForConn = connCount / maxConnPerSec / seconds;
     connCount = 0;
     workersForConn = Math.max(Math.min(Math.max(workersForConn, minFork), maxFork), 1);
     let actualCount = Object.keys(cluster.workers).length - currentClosing.length;
     if(actualCount < workersForConn) {
         for(let i = 0; i < workersForConn - actualCount - currentStarting.length; i++) {
-            logger.tag(clusterName, `Starting new worker... (actually ${Object.keys(cluster.workers).length} running).`);
+            logger.tag(clusterName, `Starting new worker... (actually ${Object.keys(cluster.workers).length} running, ${currentClosing.length} closing, because of ${originalCount} connections).`);
             let worker = cluster.fork();
 
             let rdnId = Math.floor(Math.random()*Number.MAX_SAFE_INTEGER);
