@@ -290,7 +290,7 @@ function addUser(name, fullname, password, email, scope, plan) {
     let autoDatabasePassword = string_utils.generatePassword(16, 24);
 
     return Promise.all([hashPassword(password).then((hash) => {
-        return knex("users").insert({name, fullname, password: hash, email, scope, plan});
+        return knex("users").insert({name, fullname, password: hash, email, scope, plan, dbautopass: autoDatabasePassword});
     }), getPluginKnex().then((plk) => Promise.all([
         plk.raw("CREATE USER '" + name + "' IDENTIFIED BY '" + password + "';"),
         plk.raw("CREATE USER 'dbau_" + name + "' IDENTIFIED BY '" + autoDatabasePassword + "';")
