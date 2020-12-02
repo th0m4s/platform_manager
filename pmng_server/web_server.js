@@ -357,12 +357,16 @@ async function upgradeRequest(req, socket, head) {
 
 let errorPageCache = "";
 httpProxyServer.on("error", function (err, req, res) {
-    res.writeHead(502, {
-        "Content-Type": "text/html"
-    });
-
-    if(errorPageCache == "") res.end("<p>Could not connect to server: " + err + "</p>");
-    else res.end(errorPageCache.replace("error_message", err));
+    try {
+        res.writeHead(502, {
+            "Content-Type": "text/html"
+        });
+    
+        if(errorPageCache == "") res.end("<p>Could not connect to server: " + err + "</p>");
+        else res.end(errorPageCache.replace("error_message", err));
+    } catch(error) {
+        // already an error, fail silently
+    }
 });
 
 
