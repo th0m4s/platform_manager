@@ -1,5 +1,6 @@
 const LOG_FILE = "/var/log/pmng/pmng.log";
 const ACCESS_FILE = "/var/log/pmng/access.log";
+const CONNECTIONS_FILE = "/var/log/pmng/connections.log";
 const fs = require("fs"), pfs = fs.promises, path = require("path");
 const child_process = require("child_process");
 const cluster = require("cluster");
@@ -50,13 +51,38 @@ async function prepare() {
 
         return _logrotate();
     } catch(notexist) {
-        return pfs.mkdir(accessDir).catch(() => {}).then(() => {
+        pfs.mkdir(accessDir).catch(() => {}).then(() => {
             return new Promise((resolve) => {
                 child_process.execSync('touch "' + ACCESS_FILE + '"');
                 resolve();
             });
         }).then(() => {
             return _setLogPerm(accessDir);
+        }).then(() => {
+            return _logrotate();
+        });
+    }
+
+    let connectDir = path.dirname(CONNECTIONS_FILE);
+    try {
+        await pfs.stat(CONNECTIONS_FILE);
+        try {
+            pfs.access(CONNECTIONS_FILE);
+        } catch(noperm) {
+            return _setLogPerm(accessconnectDirDir).then(() => {
+                return _logrotate();
+            });
+        }
+
+        return _logrotate();
+    } catch(notexist) {
+        return pfs.mkdir(connectDir).catch(() => {}).then(() => {
+            return new Promise((resolve) => {
+                child_process.execSync('touch "' + CONNECTIONS_FILE + '"');
+                resolve();
+            });
+        }).then(() => {
+            return _setLogPerm(connectDir);
         }).then(() => {
             return _logrotate();
         });
@@ -136,6 +162,13 @@ function getWebAccess() {
     }
 }
 
+function getConnectionsAccess() {
+    let writeStream = fs.createWriteStream(CONNECTIONS_FILE, {flags: "a", encoding: "utf8"});
+    return (req, res) => {
+        writeStream.write([new Date().toISOString(), req.socket.remoteAddress].join(" ") + "\n");
+    }
+}
+
 function beautifyReqPort(req, originalPort) {
     let port = req.socket.localPort ?? originalPort;
     if(port == 80) return "HTTP";
@@ -156,5 +189,7 @@ function finishedResSize(res) {
 module.exports.logger = logger;
 module.exports.prepare = prepare;
 module.exports.getWebAccess = getWebAccess;
+module.exports.getConnectionsAccess = getConnectionsAccess;
 module.exports.LOG_FILE = LOG_FILE;
 module.exports.ACCESS_FILE = ACCESS_FILE;
+module.exports.CONNECTIONS_FILE = CONNECTIONS_FILE;

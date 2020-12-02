@@ -12,6 +12,8 @@ const cluster = require("cluster");
 const platformLogger = require("./platform_logger");
 const logger = platformLogger.logger();
 const webLogger = platformLogger.getWebAccess();
+const connectionsLogger = platformLogger.getConnectionsAccess();
+const CONNECTIONS_LOG = process.env.CONNECTIONS_LOG.toLowerCase() == "true";
 const subprocess_util = require("./subprocess_util");
 const plugins_manager = require("./plugins_manager");
 const ip_manager = require("./ip_manager");
@@ -305,6 +307,8 @@ async function webServe(req, res) {
     res.on("close", () => {
         if(!res.writableEnded) webLogger(req, res, originalPort);
     });
+
+    if(CONNECTIONS_LOG) connectionsLogger(req, res);
 
     connCount++;
     if(req.method == "GET" && regex_utils.isACMEChallenge(req.url)) {
