@@ -2,6 +2,7 @@ const Greenlock = require("greenlock");
 const path = require("path");
 const intercom = require("../intercom/intercom_client").connect();
 const runtime_cache_delay = 300000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
+const logger = require("../platform_logger").logger();
 const tls = require("tls");
 const pfs = require("fs").promises;
 
@@ -68,6 +69,7 @@ function getChallenges(full_dns) {
 }
 
 function add(domain, full_dns = true) {
+    logger.tag("GREENLOCK", "Adding " + domain + "..." + (full_dns ? " (fulldns)" : ""));
     greenlock.add({
         subject: domain,
         altnames: [domain, ...(full_dns ? ["*." + domain] : ["www." + domain])],
@@ -76,6 +78,7 @@ function add(domain, full_dns = true) {
 }
 
 function remove(domain) {
+    logger.tag("GREENLOCK", "Removing " + domain + "...");
     greenlock.remove({
         subject: domain
     });
