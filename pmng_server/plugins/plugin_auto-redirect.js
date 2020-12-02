@@ -59,7 +59,7 @@ class AutoRedirectPlugin extends Plugin {
         return [
             {config: "forceHTTPS", text: "Force HTTPS access", small: "Redirects the users to the HTTPS version of the website if HTTPS is enabled and if they try to access it with HTTP.", type: "checkbox", localCheck: checkBoolean},
             {config: "forceWWW", text: "Force www prefix for custom domains", small: "If subdomains are enabled for the custom domain, the user will be forced to use the www prefix.", type: "checkbox", localCheck: checkBoolean},
-            {config: "forceWWW", text: "Redirect only GET requests", small: "Only redirect GET requests to avaid issues with APIs.", type: "checkbox", localCheck: checkBoolean}
+            {config: "onlyGET", text: "Redirect only GET requests", small: "Only redirect GET requests to avaid issues with APIs.", type: "checkbox", localCheck: checkBoolean}
         ];
     }
 
