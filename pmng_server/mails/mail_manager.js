@@ -157,7 +157,7 @@ async function checkDomainIdUsers(domainId) {
         let ssoPassword = string_utils.generatePassword(16, 24), ssoEncrypt = cryptPassword(ssoPassword);
         if(isSystem && remainingName == "pmng") inserts.push({system: "true", pwdset: "true", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId, projectName: undefined, sso_decrypt: ssoPassword, sso_encrypt: ssoEncrypt});
         else if(isSystem) inserts.push({system: "true", pwdset: "false", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId, projectName: projectName == "" ? undefined : projectName, sso_decrypt: ssoPassword, sso_encrypt: ssoEncrypt});
-        else inserts.push({system: "true", domain_id: domainId, source: remainingName + "@" + domain, destination: mail, projectName: projectName == "" ? undefined : projectName, sso_decrypt: ssoPassword, sso_encrypt: ssoEncrypt});
+        else inserts.push({system: "true", domain_id: domainId, source: remainingName + "@" + domain, destination: mail, projectName: projectName == "" ? undefined : projectName});
     }
     
     return Promise.all(proms.concat(mailDb().insert(inserts)));
