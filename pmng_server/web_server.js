@@ -189,8 +189,8 @@ function registerHttpChallenges(bindGet = false) {
     });
 }
 
-let secConnInterval = -1, connCount = 0, totalCount = 0;
-const clusterUpdateInterval = 3;
+let secConnInterval = -1, connCount = 0;
+const clusterUpdateInterval = 1;
 /**
  * Manages a cluster of servers based on the number of connections per second.
  * @param {number} maxConnPerSec The maximum number of connections per second for a single process. The master will attempt
@@ -220,7 +220,7 @@ function registerClusterMaster(maxConnPerSec, minFork, maxFork, clusterName) {
             // per worker online message is handled in updateCluster
             switch(message.action) {
                 case "counter":
-                    totalCount += message.count;
+                    connCount += message.count;
                     break;
             }
         });
@@ -240,9 +240,9 @@ let currentClosing = [], currentStarting = [];
  */
 function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
     // called on the master, so conncount is not synced with webServe and upgradeRequest, so use cluster process comm to send counter messages
-    let originalCount = totalCount;
-    let workersForConn = totalCount / maxConnPerSec / seconds;
-    totalCount = 0;
+    let originalCount = connCount;
+    let workersForConn = connCount / maxConnPerSec / seconds;
+    connCount = 0;
     workersForConn = Math.max(Math.min(Math.max(workersForConn, minFork), maxFork), 1);
     let actualCount = Object.keys(cluster.workers).length - currentClosing.length;
     if(actualCount < workersForConn) {
@@ -358,7 +358,7 @@ httpProxyServer.on("proxyRes", (proxyRes, req, res) => {
  * @param {Buffer} head The current head of the connection.
  */
 async function upgradeRequest(req, socket, head) {
-    connCount++;
+    // connCount++;
     httpProxyServer.ws(req, socket, head, {xfwd: true, target: {host: "127.0.0.1", port: await getPortDetails((req.headers.host || "").trimLeft().split(":")[0]).port}});
 }
 
