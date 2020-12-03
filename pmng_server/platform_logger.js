@@ -69,7 +69,7 @@ async function prepare() {
         try {
             pfs.access(CONNECTIONS_FILE);
         } catch(noperm) {
-            return _setLogPerm(accessconnectDirDir).then(() => {
+            return _setLogPerm(connectDir).then(() => {
                 return _logrotate();
             });
         }
