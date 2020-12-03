@@ -227,7 +227,7 @@ function registerClusterMaster(maxConnPerSec, minFork, maxFork, clusterName) {
     }
 }
 
-let currentClosing = [], currentStarting = [];
+let currentClosing = [], currentStarting = [], closeWait = 0;
 /**
  * Called by registerClusterMaster. Method responsible for spawning and killing processes.
  * Should not be called directly!
@@ -246,6 +246,7 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
     workersForConn = Math.max(Math.min(Math.max(workersForConn, minFork), maxFork), 1);
     let actualCount = Object.keys(cluster.workers).length - currentClosing.length;
     if(actualCount < workersForConn) {
+        closeWait = 0;
         for(let i = 0; i < workersForConn - actualCount - currentStarting.length; i++) {
             logger.tag(clusterName, `Starting new worker... (actually ${Object.keys(cluster.workers).length} running, ${currentClosing.length} closing, because of ${originalCount} connections).`);
             let worker = cluster.fork();
@@ -265,15 +266,18 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
             });
         }
     } else if(actualCount > workersForConn) {
-        let workers = Object.entries(cluster.workers), index = 0;
-        for(let i = 0; i < actualCount - workersForConn; i++) {
-            if(!currentClosing.includes(workers[index][0])) {
-                currentClosing.push(workers[index][0]);
-                workers[index][1].kill();
-                index++;
-            } else i--;
+        closeWait += clusterUpdateInterval;
+        if(closeWait >= 10) {
+            let workers = Object.entries(cluster.workers), index = 0;
+            for(let i = 0; i < actualCount - workersForConn; i++) {
+                if(!currentClosing.includes(workers[index][0])) {
+                    currentClosing.push(workers[index][0]);
+                    workers[index][1].kill();
+                    index++;
+                } else i--;
+            }
         }
-    }
+    } else if(actualCount == workersForConn) closeWait = 0;
 }
 
 let pluginsPerProject = {};
