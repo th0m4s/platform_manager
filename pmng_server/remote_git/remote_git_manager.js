@@ -64,7 +64,7 @@ async function listRemotes(userid) {
  */
 async function listRemotesDetails(userid) {
     return Object.fromEntries(userid == undefined
-        ? (await listRemotes()).map((x) => [x, getRemote(x, true)])
+        ? (await listRemotes()).map((x) => [x, getRemote(x, true).getDetails()])
         : Object.entries(await listRemotes(userid)).map((x) => [x[0], Object.assign({available: x[1]}, getRemote(x[0], true).getDetails())]));
 }
 
