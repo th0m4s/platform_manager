@@ -46,6 +46,13 @@ function install(plugin, projectname, pluginconfig) {
     return getPlugin(plugin).installPlugin(projectname, pluginconfig);
 }
 
+/**
+ * Runs postInstall procedure for a specific plugin (for example if the plugin needs information from other preinstalled plugins).
+ * @param {string} plugin The name of the plugin.
+ * @param {string} projectname The name of the project to execute the postInstall procedure for.
+ * @param {Object} pluginconfig The configuration of that plugin for that project.
+ * @returns {Promise} A promise resolved when the plugin postInstall procedure is finished.
+ */
 function postInstall(plugin, projectname, allconfigs) {
     return getPlugin(plugin).postInstall(projectname, allconfigs);
 }
@@ -64,12 +71,17 @@ function uninstall(plugin, projectname, pluginconfig) {
 /**
  * Gets the default config form for a specific plugin.
  * @param {string} plugin The name of the requested plugin config form.
- * @returns {{config: string, text: string, small: string | undefined, placeholder: string | undefined, type: string, localCheck: function, remoteCheck: string | undefined, configSaved: function}[]} The requested plugin config form.
+ * @returns {{config: string, text: string, small: string | undefined, placeholder: string | undefined, type: string, remoteCheck: string | undefined, localCheck: function, configSaved: function}[]} The requested plugin config form.
  */
 function getConfigForm(plugin) {
     return getPlugin(plugin).getConfigForm();
 }
 
+/**
+ * Gets an object with methods to save and check if a project restart is required after a plugin config update.
+ * @param {string} plugin The name of the requested plugin config details.
+ * @returns {{saved: (projectname: string, oldconfig: object, newconfig: object) => Promise<void>, needRestart: (projectname: string, oldconfig: object, newconfig: object) => void}} An object with the details for the configuration of that plugin.
+ */
 function getConfigDetails(plugin) {
     return getPlugin(plugin).getConfigDetails();
 }
@@ -88,6 +100,11 @@ function isPluginConfigurable(plugin) {
 }
 
 let detailedPlugins = {};
+/**
+ * Checks if a plugin can show details to the user.
+ * @param {string} plugin The name of the plugin to check.
+ * @returns {boolean} If the plugin has details to show, *true*, *false* otherwise.
+ */
 function isPluginDetailed(plugin) {
     if(!detailedPlugins.hasOwnProperty(plugin)) {
         let details = getPlugin(plugin).getUserDetails();
@@ -202,6 +219,12 @@ function getAllConfigs(pluginname) {
     });
 }
 
+/**
+ * Gets the configuration of a single plugin for a single project.
+ * @param {string} pluginname The name of the project to retrieve the configuration for.
+ * @param {string} projectname The name of the plugin.
+ * @returns {Promise} The configuration of the *pluginname* plugin for the *projectname* project.
+ */
 function getConfig(pluginname, projectname) {
     // not get project nor getAllConfigs because only want part of all the information
     return database_server.database("projects").where("name", projectname).select("plugins").then((results) => {

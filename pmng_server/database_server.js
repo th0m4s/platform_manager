@@ -42,7 +42,7 @@ knex.raw("SHOW DATABASES;").catch((error) => {
 // TODO: change User to a class
 /**
  * Represents a user fetched from the database.
- * @typedef{{id: number, fullname: string, name: string, email: string, password: string, scope: number}} User
+ * @typedef {{id: number, fullname: string, name: string, email: string, password: string, scope: number}} User
 */
 
 /**

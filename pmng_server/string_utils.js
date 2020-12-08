@@ -29,6 +29,11 @@ function formatBytes(bytes, decimals = 2, tens = false) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) +  sizePrefixes[i] + (tens && i > 0 ? "B" : "");
 }
 
+/**
+ * Parses a string representation of the size into a bytes count.
+ * @param {string} sizeInput The string representation of the size to parse.
+ * @returns {number} The numbers of bytes specified by *sizeInput* if it represents a valid size, *NaN* otherwise.
+ */
 function parseBytesSize(sizeInput) {
     sizeInput = sizeInput.toString().trim();
     if(sizeInput.length == 0) return NaN;
@@ -41,7 +46,7 @@ function parseBytesSize(sizeInput) {
             let secondEnd = sizeInput.slice(-1);
             sizeInput = sizeInput.substr(0, sizeInput.length-1);
             if(sizePrefixes.includes(secondEnd)) {
-                if(secondEnd == "B") return naN;
+                if(secondEnd == "B") return NaN;
                 else storage = validParseFloat(sizeInput)*Math.pow(1000, sizePrefixes.indexOf(secondEnd))
             } else storage = validParseFloat(sizeInput + secondEnd);
         }
@@ -53,10 +58,21 @@ function parseBytesSize(sizeInput) {
 }
 
 const numberRegex = /^[\d.]+$/;
+/**
+ * Stricly parses a positive float number from a string representation (parseFloat allows letters arround number, validParseFloat not).
+ * @param {string} value The string representation of the value to test.
+ * @returns {number} The stricly parsed float value if the input is in the correct form, *NaN* otherwise.
+ */
 function validParseFloat(value) {
     return numberRegex.test(value) ? parseFloat(value) : NaN;
 }
 
+/**
+ * Batch regex to replace multiple parts of a given text.
+ * @param {string} text The text to search and replace in.
+ * @param {object} args An object containing search values as keys and replacements as values.
+ * @returns {text} The modified text with all arguments replaced. 
+ */
 function replaceArgs(text, args) {
     for(let arg of Object.entries(args)) {
         text = text.replace(new RegExp(arg[0], "g"), arg[1]);
@@ -65,6 +81,13 @@ function replaceArgs(text, args) {
     return text;
 }
 
+/**
+ * Modify a *configuration* file and only keeps certain lines based on *keepsLines* and *removeLines* tags.
+ * @param {string} text A configuration file or any given text to modify. 
+ * @param {Array<string>} keepLines Tags to remove in front of lines to keep.
+ * @param {Array<string>} removeLines Tags of lines that should not be included in the result (ie. removed).
+ * @returns {string} A new text only containing valid lines.
+ */
 function keepConfigLines(text, keepLines, removeLines = []) {
     let newLines = [];
     for(let line of text.split("\n")) {

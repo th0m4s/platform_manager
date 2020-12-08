@@ -129,9 +129,10 @@ async function maininstance() {
 
     logger.tag("DOCKER", "Docker is running.");
     
-    // required images like panels/servers/... are ensured just before container creation, with the exception of php images required by panels
+    // required images like panels/servers/... are checked just before container creation, with the exception of php images required by panels
     const required_images = [
         {name: "pmng/base", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "base", "Dockerfile")},
+        // {name: "pmng/base-glibc", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "base_glibc", "Dockerfile")},
         {name: "pmng/apache2-php7", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "php", "apache-php")},
         {name: "pmng/nginx-php7", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "php", "nginx-php")}
     ];
@@ -142,7 +143,7 @@ async function maininstance() {
 
     logger.tag("DOCKER", "Starting global plugins...");
     // loading plugins (starting global plugins containers)
-    // paths relative to platform.js:
+    // paths relative to platform_manager.js:
     //    - plugins is normally the data directory
     //    - server/plugins contains the plugins scripts
     pluginsConfigFile = path.join(process.env.PLUGINS_PATH, "config.json");

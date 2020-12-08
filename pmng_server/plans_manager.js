@@ -1,5 +1,9 @@
 const database_server = require("./database_server");
-const { use } = require("passport");
+
+/**
+ * Represents a user under different forms.
+ * @typedef {string | number | object} UserResolvable
+*/
 
 function getPlanDetails(planId) {
     return database_server.database("plans").where("id", planId).select("usage").then((plans) => {
@@ -15,6 +19,11 @@ function getPlanDetails(planId) {
 }
 
 // TODO: move this in database_server
+/**
+ * Resolves a *UserResolvable* into a *User* object.
+ * @param {UserResolvable} userInfo A user resolvable
+ * @returns {Promise<import("./database_server").User>} The resolved user.
+ */
 function resolveUser(userInfo) {
     if(typeof userInfo == "string") return database_server.findUserByName(userInfo);
     else if(typeof userInfo == "number") return database_server.findUserById(userInfo);
@@ -23,6 +32,11 @@ function resolveUser(userInfo) {
 }
 
 // TODO: use cache and invalidate
+/**
+ * Checks if a user can create a new project.
+ * @param {UserResolvable} userInfo A user resolvable for the user to check.
+ * @returns {Promise<boolean>} *true* if the user can create a new project, *false* otherwise.
+ */
 function canUserCreateProject(userInfo) {
     return resolveUser(userInfo).then((user) => {
         if(user == null) return false;
@@ -37,6 +51,12 @@ function canUserCreateProject(userInfo) {
     })
 }
 
+/**
+ * Gets the maximum memory in megabytes per project allocated to a user.
+ * @param {UserResolvable} userInfo A user resolvable for the user to check.
+ * @returns {Promise<number>} The maximum memory for a project in megabytes.
+ * 0 means no limit and any plan limit between 0 and 4 return a default value of 512 megabytes.
+ */
 function userMaxMemory(userInfo) {
     return resolveUser(userInfo).then((user) => {
         if(user == null) user = {plan: 1};
@@ -48,6 +68,11 @@ function userMaxMemory(userInfo) {
     })
 }
 
+/**
+ * Gets the maximum storage space for a single project in bytes.
+ * @param {UserResolvable} userInfo A user resolvable for the user to check.
+ * @returns {Promise<number>} The maximum space of a *persistent-storage* volume in bytes.
+ */
 function userMaxStorage(userInfo) {
     return resolveUser(userInfo).then((user) => {
         if(user == null) user = {plan: 1};

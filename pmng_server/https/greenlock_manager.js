@@ -6,6 +6,7 @@ const logger = require("../platform_logger").logger();
 const tls = require("tls");
 const pfs = require("fs").promises;
 
+/** @type {ReturnType<typeof Greenlock.create>} */
 let greenlock = null;
 
 function init() {

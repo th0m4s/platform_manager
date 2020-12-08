@@ -9,7 +9,7 @@ const intercom = require("./intercom/intercom_client").connect();
  */
 
 /**
- * @typedef{{getProcess: function, restart: function, isRunning: Function<boolean>}} Subfork
+ * @typedef {{getProcess: function, restart: function, isRunning: Function<boolean>}} Subfork
  */
 
 /**
@@ -110,6 +110,10 @@ function forkNamed(file, id, name) {
     });
 }
 
+/**
+ * Registers a *master* intercom responder to manage individual subprocesses intercom subjects.
+ * Should only be called once by the master process.
+ */
 function responder() {
     intercom.subscribe(["subprocesses"], (message, respond) => {
         let timeout = new Promise((resolve, reject) => {

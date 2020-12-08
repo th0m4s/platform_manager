@@ -1,5 +1,17 @@
 const net = require("net");
 
+/**
+ * @typedef {{subscribe: (subjects: string[], callback: (message: object, respond: (response: object) => void) => void) => void,
+ *  send: (subject: string, message: object, responseCallback: (response: object) => void) => void,
+ *  sendPromise: (subject: string, message: object) => Promise<object>,
+ *  changeConfig: (newConfig: {timeout?: number, autoReject?: boolean, autoResolve?: boolean}) => void}} IntercomClient 
+ */
+
+/**
+ * Starts a connection to the intercom server and return a newly created client object.
+ * Multiple clients may exist per process.
+ * @returns {IntercomClient} The connected intercom client.
+ */
 function connect() {
     let connection = net.createConnection(8043);
     let subs = {}, waitingResp = {};
@@ -56,6 +68,14 @@ function connect() {
 }
 
 // subs and waitingResp cannot be in global scope because each connect() has it's own arrays
+/**
+ * Process a received command from the socket.
+ * @param {net.Socket} connection The socket that connects this client and the server.
+ * @param {string} command The command received by the socket.
+ * @param {{subject: string, message: object}} value The parsed and received object containing a *subject* property and a *message* property.
+ * @param {{[subject: string]: ((message: object, respond: (response: object) => void) => void)[]}} subs All the subscriptions for this client.
+ * @param {{[responseId: number]: (response: object) => void}} waitingResp All the response callbacks for this client.
+ */
 function processCommand(connection, command, value, subs, waitingResp) {
     switch(command) {
         case "recv":

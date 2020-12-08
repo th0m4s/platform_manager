@@ -1,6 +1,12 @@
 const intercom = require("./intercom/intercom_client").connect();
 const os = require("os");
 
+/**
+ * Util function to calculate important cpu stats with *process.cpuUsage()*.
+ * @param {NodeJS.CpuUsage} previous The last CpuUsage object returned by *process.cpuUsage()*.
+ * @returns {{current: {total: number, user: number, sys: number}, previous: NodeJS.CpuUsage}} Returns both the numeric results in a *current* property and the
+ * *NodeJS.CpuUsage* object for a future use in the *previous* (aka will be previous next time) property.
+ */
 function getCpu(previous) {
     let cpus = os.cpus();
     let processCpu = process.cpuUsage(previous);
@@ -26,6 +32,10 @@ function getCpu(previous) {
     return {current: {total: total - (previous == undefined ? 0 : previous.total), user: Math.floor(processCpu.user/1000), sys: Math.floor(processCpu.system/1000)}, previous: newPrevious};
 }
 
+/**
+ * Starts a stats interval for the given process. This function will periodically send usage and memory stats via the intercom.
+ * This should be called automatically by *platform_logger*.
+ */
 function stats() {
     let previousCpu = getCpu();
     let sendStats = () => {
@@ -36,6 +46,10 @@ function stats() {
     let statsInterval = setInterval(sendStats, parseInt(process.env.STATS_INTERVAL));
 }
 
+/**
+ * Registers a PID callack (and send the current PID) for a process that doesn't support *subprocess_util*.
+ * @param {string} id The process name/id to register.
+ */
 function pidId(id) {
     let sendPid = () => {
         intercom.send("pid", {pid: process.pid, id});

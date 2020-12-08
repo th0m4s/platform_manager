@@ -1,10 +1,14 @@
 const pfs = require("fs").promises;
 const path = require("path");
 const database_server = require("../database_server");
+const lib_remote = require("./lib_remote_git");
 
 const GIT_USER_AGENT = "PlatformManager v1.0.0";
 
 let remoteCache = {}, remotesList = [], initialized = false;
+/**
+ * If not previously called, load the list of installed git remotes from the disk by listing .js files starting with *remote_* in the remotes directory.
+ */
 async function _checkInitialized() {
     if(!initialized) {
         remotesList = (await pfs.readdir(path.resolve(__dirname, "remotes"))).filter((x) => x.startsWith("remote_") && x.endsWith(".js")).map((x) => x.substring(7, x.length-3));
@@ -12,6 +16,12 @@ async function _checkInitialized() {
     }
 }
 
+/**
+ * Loads a remote git object.
+ * @param {string} remoteName The name of the remote to get.
+ * @param {boolean} forceSync Should the method take time to check installed git remotes from the disk.
+ * @returns {lib_remote | Promise<lib_remote>} A remote git object, asynchronously in a promise if *forceSync* was set to true, synchronously otherwise.
+ */
 function getRemote(remoteName = ".", forceSync = false) {
     if(remoteName.includes(".")) return undefined;
 
@@ -29,6 +39,11 @@ function getRemote(remoteName = ".", forceSync = false) {
     }
 }
 
+/**
+ * Lists installed git remotes.
+ * @param {number | undefined} userid A possible user id to check account links.
+ * @returns {object | array<string>} A list of remotes as a string array if *userId* was nullish or an object with remote names as keys and availability for this user as a boolean.
+ */
 async function listRemotes(userid) {
     await _checkInitialized();
     if(userid == undefined) return remotesList;
@@ -41,12 +56,23 @@ async function listRemotes(userid) {
     }
 }
 
+/**
+ * Gets the details for all the installed git remotes.
+ * @param {number | undefined} userid A possible userId.
+ * @returns {{icon: string, name: string available?: boolean}} An object with remote names as keys and details as values.
+ * If a user id was provided, each remote includes an available boolean property set to *true* if the user linked that remote, set to *false* otherwise.
+ */
 async function listRemotesDetails(userid) {
     return Object.fromEntries(userid == undefined
         ? (await listRemotes()).map((x) => [x, getRemote(x, true)])
         : Object.entries(await listRemotes(userid)).map((x) => [x[0], Object.assign({available: x[1]}, getRemote(x[0], true).getDetails())]));
 }
 
+/**
+ * Returns the integrations details for each integration of a project.
+ * @param {string} projectName The name of the project to find the integrations for.
+ * @returns {{[remoteName: string]: {id: number, git_userid: number, repo: string, branch: string, remote: string}}} An object with remote names as keys and details as values.
+ */
 async function listIntegrations(projectName) {
     await _checkInitialized();
 
