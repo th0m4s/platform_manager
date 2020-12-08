@@ -300,6 +300,15 @@ async function maininstance() {
     }, 60*1000); // check containers every minute
 
     logger.tag("DOCKER", "Docker Manager initialized!");
+
+    /*let pythonPack = require("./buildpacks/pack_python");
+    let imageDetails = await pythonPack.imageDetails({version: "3.8"});
+    console.log("Ensuring image built!");
+    if(imageDetails.built != true) {
+        console.log("Building...");
+        await imageDetails.build();
+        console.log("Built!");
+    } else console.log("Image already built!");*/
 }
 
 /**
