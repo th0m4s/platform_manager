@@ -23,18 +23,15 @@ async function prepare() {
             });
         }
     } catch(notexist) {
-        pfs.mkdir(logDir).catch(() => {}).then(() => {
+        await pfs.mkdir(logDir).catch(() => {}).then(() => {
             return new Promise((resolve) => {
                 child_process.execSync('touch "' + LOG_FILE + '"');
                 // cannot easily touch a file with node fs
                 resolve();
             });
-        }).then(() => {
-            return _setLogPerm(logDir);
-        }).then(() => {
-            return _logrotate();
-        });
+        })
     }
+    await _setLogPerm(logDir);
 
 
     // TODO: rewrite code (just a copy/paster of log_file)
@@ -51,17 +48,14 @@ async function prepare() {
 
         return _logrotate();
     } catch(notexist) {
-        pfs.mkdir(accessDir).catch(() => {}).then(() => {
+        await pfs.mkdir(accessDir).catch(() => {}).then(() => {
             return new Promise((resolve) => {
                 child_process.execSync('touch "' + ACCESS_FILE + '"');
                 resolve();
             });
-        }).then(() => {
-            return _setLogPerm(accessDir);
-        }).then(() => {
-            return _logrotate();
         });
     }
+    await _setLogPerm(accessDir);
 
     let connectDir = path.dirname(CONNECTIONS_FILE);
     try {
@@ -76,17 +70,16 @@ async function prepare() {
 
         return _logrotate();
     } catch(notexist) {
-        return pfs.mkdir(connectDir).catch(() => {}).then(() => {
+        await pfs.mkdir(connectDir).catch(() => {}).then(() => {
             return new Promise((resolve) => {
                 child_process.execSync('touch "' + CONNECTIONS_FILE + '"');
                 resolve();
             });
-        }).then(() => {
-            return _setLogPerm(connectDir);
-        }).then(() => {
-            return _logrotate();
         });
     }
+    await _setLogPerm(connectDir);
+
+    return _logrotate();
 }
 
 /**
