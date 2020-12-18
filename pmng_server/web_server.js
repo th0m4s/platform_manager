@@ -363,7 +363,7 @@ httpProxyServer.on("proxyRes", (proxyRes, req, res) => {
  */
 async function upgradeRequest(req, socket, head) {
     // connCount++;
-    httpProxyServer.ws(req, socket, head, {xfwd: true, target: {host: "127.0.0.1", port: await getPortDetails((req.headers.host || "").trimLeft().split(":")[0]).port}});
+    httpProxyServer.ws(req, socket, head, {xfwd: true, target: {host: "127.0.0.1", port: (await getPortDetails((req.headers.host || "").trimLeft().split(":")[0])).port}});
 }
 
 let errorPageCache = "";
