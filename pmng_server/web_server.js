@@ -304,12 +304,15 @@ function getPluginInterceptors(pluginname) {
  */
 async function webServe(req, res) {
     let originalPort = req.socket.localPort;
-    res.on("finish", () => {
+    res.once("finish", () => {
         webLogger(req, res, originalPort);
     });
 
-    res.on("close", () => {
+    res.once("close", () => {
         if(!res.writableEnded) webLogger(req, res, originalPort);
+
+        res.removeAllListeners();
+        req.removeAllListeners();
     });
 
     if(CONNECTIONS_LOG) connectionsLogger(req, res);
@@ -352,6 +355,7 @@ httpProxyServer.on("proxyRes", (proxyRes, req, res) => {
     });
     proxyRes.on("end", () =>  {
         res.end();
+        proxyRes.removeAllListeners();
     });
 });
 
