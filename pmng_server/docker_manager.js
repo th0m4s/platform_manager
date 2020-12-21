@@ -239,7 +239,7 @@ async function maininstance() {
                                 }).catch((error) => {
                                     // something's wrong, stop the container
                                     logger.warn(projectname + " cannot be attached and will be stopped: " + error);
-                                    stopProject(projectname, true);
+                                    stopProject(projectname, {forceReason: "cannot_attach_logs"});
                                 });
                             }
                         });
@@ -293,7 +293,7 @@ async function maininstance() {
             containers.forEach((container) => {
                 if(container.data.Status.indexOf("unhealthy") !== -1) {
                     // unhealthy container == port not used
-                    stopProject(container.data.Labels["pmng.projectname"], true);
+                    stopProject(container.data.Labels["pmng.projectname"], {forceReason: "unhealthy_container"});
                 }
             });
         });
@@ -309,10 +309,12 @@ async function maininstance() {
  * @returns {Promise} A promise resolved when the project is stopped and all the the associated plugins containers and network are removed.
  */
 function stopProject(projectname, force = false) {
+    let forceData = force !== false ? force : undefined;
+    force = force !== false;
     return (force ? Promise.resolve(true) : isProjectContainerRunning(projectname)).then((result) => {
         if(!result) return Promise.reject("Cannot stop a stopped project.");
         stoppingProjects.push(projectname);
-        logger.tag("DOCKER", "Stopping project " + projectname + "...", force ? "(forced)" : undefined);
+        logger.tag("DOCKER", "Stopping project " + projectname + "...", force ? "(" + JSON.stringify(forceData) + ")" : undefined);
         return docker.container.list({filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
             let prom = [];
             containers.forEach((container) => {
@@ -406,7 +408,7 @@ function attachLogs(projectname, container) {
                 stoppingProjects.splice(stoppingProjects.indexOf(projectname), 1);
             } else {
                 logger.warn("Container of project " + projectname + " was closed without stopping project.");
-                stopProject(projectname, true).then(() => { // maybe use finally
+                stopProject(projectname, {forceReason: "container_closed"}).then(() => { // maybe use finally
                     stoppingProjects.splice(stoppingProjects.indexOf(projectname), 1);
                 });
             }
