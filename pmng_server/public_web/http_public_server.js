@@ -20,7 +20,8 @@ let databaseInstalled = false;
 function start() {
     let serve = web.webServe;
 
-    if(enable_https) {
+    // TODO: check will auto_redirect plugin
+    /*if(enable_https) {
         let redirect = (req, res) => {
             res.writeHead(302, {Location: "https://" + req.headers.host + req.url});
             res.end();
@@ -61,7 +62,7 @@ function start() {
 
             web.webServe(req, res);
         };
-    }
+    }*/
 
     let httpServer = http.createServer(/*(req, res) => {
         req.socket.on("error", (error) => {
