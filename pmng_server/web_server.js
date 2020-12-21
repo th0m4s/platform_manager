@@ -308,8 +308,9 @@ async function webServe(req, res) {
         webLogger(req, res, originalPort);
     });
 
-    res.once("close", () => {
+    res.socket.once("close", () => {
         if(!res.writableEnded) webLogger(req, res, originalPort);
+        res.end();
 
         res.removeAllListeners();
         req.removeAllListeners();
@@ -345,7 +346,8 @@ async function webServe(req, res) {
     if(!res.writableEnded) httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port}});
 }
 
-httpProxyServer.on("proxyRes", (proxyRes, req, res) => {
+// TODO: check memory usage for large responses
+/*httpProxyServer.on("proxyRes", (proxyRes, req, res) => {
     for(let [header, value] of Object.entries(proxyRes.headers))
         res.setHeader(header, value);
     res.writeHead(proxyRes.statusCode, proxyRes.statusMessage);
@@ -357,7 +359,7 @@ httpProxyServer.on("proxyRes", (proxyRes, req, res) => {
         res.end();
         proxyRes.removeAllListeners();
     });
-});
+});*/
 
 /**
  * Upgrades a standard HTTP connection to a WebSocket connection.
