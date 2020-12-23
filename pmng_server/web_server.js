@@ -5,7 +5,7 @@ const database_server = require("./database_server");
 // const privileges = require("./privileges");
 const intercom = require("./intercom/intercom_client").connect();
 const runtime_cache_delay = 10000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
-const httpProxyServer = require("http-proxy").createProxyServer({selfHandleResponse: true});
+const httpProxyServer = require("http-proxy").createProxyServer({selfHandleResponse: false});
 const pfs = require("fs").promises;
 const path = require("path");
 const cluster = require("cluster");
