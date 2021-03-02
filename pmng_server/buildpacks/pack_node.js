@@ -66,7 +66,7 @@ class NodeBuildpack extends Buildpack {
     }
 
     static availableAddons(projectData) {
-        return ["openjdk", "python", "buildtools"];
+        return ["openjdk", "python", "buildtools", "appbinary"];
     }
 
     static async imageDetails(projectData) {
