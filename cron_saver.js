@@ -19,6 +19,9 @@ async function saveStorages() {
         startTime = startTime.getTime();
 
         for(let project of projects) {
+            if(project == "ledosmaths" || project == "naixd") continue;
+            // temporary fix for large projects
+
             let projectStorageDir = path.resolve(storagesDir, project);
             try {
                 let stats = await pfs.stat(projectStorageDir);
