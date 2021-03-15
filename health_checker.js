@@ -12,18 +12,46 @@ const PMNG_DIR="/etc/pmng";
 process.chdir(PMNG_DIR);
 require("dotenv").config();
 
-function restartProject() {
-    child_process.execSync("/usr/sbin/service pmng restart");
-    console.log("Restart command sent.\n");
+let currentTry = 0;
+let maxTries = 3;
+let tryWait = 10*1000;
+
+function nextTry() {
+    currentTry++;
+
+    if(currentTry > maxTries) {
+        child_process.execSync("/usr/sbin/service pmng restart");
+        console.log("Restart command sent.\n");
+
+        setTimeout(() => {
+            process.exit();
+        }, 100);
+    } else {
+        let tryFn = () => {
+            console.log(">>> Trying check " + currentTry + "/" + maxTries + "...");
+            performCheck();
+        };
+
+        if(currentTry == 1) {
+            tryFn();
+        } else {
+            console.log("=> Waiting before next try...");
+            setTimeout(tryFn, tryWait);
+        }
+    }
 }
 
 async function performCheck() {
-    console.log(">>>> Performing check on " + new Date().toString() + ":");
     try {
         let pid = parseInt(await pfs.readFile(PID_FILE));
         console.log("Read PID file: " + pid);
 
-        if(process.kill(pid, 0)) {
+        let killSuccess = false;
+        try {
+            killSuccess = process.kill(pid, 0);
+        } catch(_) { }
+
+        if(killSuccess) {
             console.log("A program is running with this PID.");
 
             try {
@@ -43,10 +71,10 @@ async function performCheck() {
 
                     if(ipv4resp.error != null) {
                         console.error("IPv4 test check failed: " + ipv4resp.error);
-                        return restartProject();
+                        return nextTry();
                     } else if(!ipv4resp.status) {
                         console.error("IPv4 test check failed: Incorrect resolved IP.");
-                        return restartProject();
+                        return nextTry();
                     } else {
                         console.log("IPv4 test passed.");
                     }
@@ -69,10 +97,10 @@ async function performCheck() {
 
                     if(ipv6resp.error != null) {
                         console.error("IPv6 test check failed: " + ipv6resp.error);
-                        return restartProject();
+                        return nextTry();
                     } else if(!ipv6resp.status) {
                         console.error("IPv6 test check failed: Incorrect resolved IP.");
-                        return restartProject();
+                        return nextTry();
                     } else {
                         console.log("IPv6 test passed.");
                     }
@@ -85,13 +113,13 @@ async function performCheck() {
                     let response = await getJSON("http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s": "") + "://admin." + process.env.ROOT_DOMAIN + "/check");
                     if(response.server != "adminpanel") {
                         console.error("Wrong response from admin panel: " + JSON.stringify(response));
-                        return restartProject();
+                        return nextTry();
                     } else {
                         console.log("Panel, ports and redirections are working.");
                     }
                 } catch(error) {
                     console.error("Cannot connect to the admin panel.");
-                    return restartProject();
+                    return nextTry();
                 }
 
                 console.log("Checking intercom server...");
@@ -131,7 +159,7 @@ async function performCheck() {
                     intercomConn.destroy();
 
                     console.error(error);
-                    return restartProject();
+                    return nextTry();
                 }
 
                 intercomConn.destroy();
@@ -141,11 +169,12 @@ async function performCheck() {
             }
 
         } else {
-            console.error("No program is running with this PID. Restarting project...");
-            return restartProject();
+            console.error("No program is running with this PID.");
+            return nextTry();
         }
     } catch(error) {
         console.log("Cannot read PID file. Program must not be running (and was previously successfully stopped).");
+        console.error(error);
         return;
     }
 
@@ -155,5 +184,6 @@ async function performCheck() {
 if(process.getuid() != 0) {
     console.error("You must be root to run the health check (cannot check pid file without these privileges).\n");
 } else {
-    performCheck();
+    console.log(">>>> Performing check on " + new Date().toString() + ":");
+    nextTry();
 }
