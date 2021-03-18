@@ -67,7 +67,7 @@ async function prepareSocketError() {
     errorPageCache = errorPageCache.replace("style_cache", style);
 }
 
-// 8042 is for local server, 8043 for intercom
+// 8041 for local web server, 8042 for local net server, 8043 for intercom
 // projects start at 11000
 const errorPort = 8099, special_ports = {"admin": 8080, "git": 8081, "ftp": errorPort, "mail": errorPort}; // ftp/mail are bound to error port when using http
 const errorDetails = {isSpecial: true, port: errorPort, special: "error"};

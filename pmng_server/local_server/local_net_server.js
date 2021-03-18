@@ -1,16 +1,15 @@
-const logger = require("./platform_logger").logger();
+const logger = require("../platform_logger").logger();
 const net = require("net");
-const project_manager = require("./project_manager");
+const project_manager = require("../project_manager");
 const fs = require("fs"), pfs = fs.promises;
 const rmfr = require("rmfr");
 const child_process = require("child_process");
 const tar = require("tar");
 const path = require("path");
-const database_server = require("./database_server");
-const docker_manager = require("./docker_manager");
-const intercom = require("./intercom/intercom_client").connect();
-const string_utils = require("./string_utils");
-const privileges = require("./privileges");
+const database_server = require("../database_server");
+const docker_manager = require("../docker_manager");
+const intercom = require("../intercom/intercom_client").connect();
+const string_utils = require("../string_utils");
 
 const LINE = "\n-----> ", SPACES = "       ";
 let predeploys = {};
@@ -19,8 +18,6 @@ let predeploys = {};
  * Starts the local platform server.
  */
 function start() {
-    privileges.drop();
-
     let server = net.createServer();
     server.on("connection", function (connection) {
         let command = "", isProcessing = false, processExit = () => {};
@@ -517,7 +514,7 @@ function start() {
     });
 
     server.listen(8042, "127.0.0.1", () => {
-        logger.info("Local server started.");
+        logger.info("Local net server started.");
     });
 }
 
@@ -535,5 +532,4 @@ async function clearDeploy(buildFolder, connection, lastTime = true) {
     }
 }
 
-
-start();
+module.exports.start = start;
