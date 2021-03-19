@@ -5,7 +5,7 @@
     <body>
         <%- include("../../default/flash.ejs") %>
         <%- include("../../default/api.ejs") %>
-        <%- startPageScript("docker_ndetails") %>
+        <%- startPageScript("docker_ndetails", ["/static/js/moment.dist.js"]) %>
         <script>
         window.reference = "<%- value %>";
         </script>
