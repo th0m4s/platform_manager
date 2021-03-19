@@ -6,6 +6,7 @@ const project_manager = require("./project_manager");
 const database_server = require("./database_server");
 const privileges = require("./privileges");
 const intercom = require("./intercom/intercom_client").connect();
+const subprocess_util = require("./subprocess_util");
 
 const getResponse = (question, type) => {
     return dns[type]({
@@ -139,6 +140,10 @@ function start() {
         privileges.drop();
     });
 
+    subscribeIntercom(false);
+}
+
+async function subscribeIntercom(isMaster) {
     intercom.subscribe(["dnsChallenges"], (message, respond) => {
         let command = message.command, host = message.host, token = message.token;
         switch(command) {
@@ -170,8 +175,32 @@ function start() {
             customHooks.push({subject, message: askMessage, types, enabled: true});
         }
     });
-    // indicate to docker/plugins that this hook is ready
+
+    if(isMaster) {
+        intercom.subscribe(["dnsChildRequestAll"], (message, respond) => {
+            respond({customHooks, challenges});
+        });
+    } else {
+        let resp = await intercom.sendPromise("dnsChildRequestAll", {});
+        customHooks = resp.customHooks;
+        challenges = resp.challenges;
+
+        logger.info("DNS child received hooks and challenges from master.");
+    }
+
     intercom.send("hookStarted", {hook: "dns"});
 }
 
-start();
+function master() {
+    logger.info("Starting DNS master manager...");
+    subscribeIntercom(true);
+
+    logger.info("Forking DNS server...");
+    subprocess_util.forkNamed("./pmng_server/dns_server", "dns_server", "local dns_server"); // path is relative to platform_manager.js
+}
+
+if(require.main === module) start();
+// else we were require'd by the platform_manager to start the master
+
+
+module.exports.master = master;

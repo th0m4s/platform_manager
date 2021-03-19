@@ -23,7 +23,7 @@ let subprocesses = {
     "dns_server": {
         name: "DNS server",
         text: "Responds to client DNS queries about projects, panels, mails records (also used by challenges and plugins).",
-        check: -1
+        check: 1
     },
     "root_commands": {
         name: "Root processor",

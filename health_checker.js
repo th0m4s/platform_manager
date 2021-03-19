@@ -16,12 +16,32 @@ let currentTry = 0;
 let maxTries = 3;
 let tryWait = 10*1000;
 
-function nextTry() {
+async function nextTry(subprocessId) {
     currentTry++;
 
     if(currentTry > maxTries) {
-        child_process.execSync("/usr/sbin/service pmng restart");
-        console.log("Restart command sent.\n");
+        let restarted = false;
+
+        try {
+            if(subprocessId != undefined) {
+                console.log("Sending '" + subprocessId + "' restart request...");
+                let resp = await getJSON("http://localhost:8041/restart/" + subprocessId);
+
+                if(resp.error == false) {
+                    console.log("Service restarted!");
+                    restarted = true;
+                } else {
+                    console.log("Cannot restart server: " + resp.message);
+                }
+            }
+        } catch(e) {
+            console.error("Cannot send '" + subprocessId + "' service restart request", e);
+        }
+
+        if(!restarted) {
+            child_process.execSync("/usr/sbin/service pmng restart");
+            console.log("Restart command sent.\n");
+        }
 
         setTimeout(() => {
             process.exit();
@@ -71,10 +91,10 @@ async function performCheck() {
 
                     if(ipv4resp.error != null) {
                         console.error("IPv4 test check failed: " + ipv4resp.error);
-                        return nextTry();
+                        return nextTry("dns_server");
                     } else if(!ipv4resp.status) {
                         console.error("IPv4 test check failed: Incorrect resolved IP.");
-                        return nextTry();
+                        return nextTry("dns_server");
                     } else {
                         console.log("IPv4 test passed.");
                     }
@@ -97,10 +117,10 @@ async function performCheck() {
 
                     if(ipv6resp.error != null) {
                         console.error("IPv6 test check failed: " + ipv6resp.error);
-                        return nextTry();
+                        return nextTry("dns_server");
                     } else if(!ipv6resp.status) {
                         console.error("IPv6 test check failed: Incorrect resolved IP.");
-                        return nextTry();
+                        return nextTry("dns_server");
                     } else {
                         console.log("IPv6 test passed.");
                     }
@@ -113,7 +133,7 @@ async function performCheck() {
                     let response = await getJSON("http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s": "") + "://admin." + process.env.ROOT_DOMAIN + "/check");
                     if(response.server != "adminpanel") {
                         console.error("Wrong response from admin panel: " + JSON.stringify(response));
-                        return nextTry();
+                        return nextTry("admin_web_server");
                     } else {
                         console.log("Panel, ports and redirections are working.");
                     }

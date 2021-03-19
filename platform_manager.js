@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 const logger_tools = require("./pmng_server/platform_logger");
-const child_process = require('child_process');
 // should be using subprocess_util instead of child_process
 
 if(process.getuid() > 0) {
@@ -47,9 +46,7 @@ if(process.getuid() > 0) {
     await require("./pmng_server/docker_manager").maininstance();
     
     // even if both next scripts don't require docker, docker is a requirement for the program (no need to start these if docker is not running)
-    logger.info("Forking DNS server...");
-    child_process.fork("./pmng_server/dns_server");
-    // TODO: how to deal with stored dnsChallenges (maybe copy here and resend all on forking)
+    require("./pmng_server/dns_server").master();
 
     subprocess_util.forkNamed("./pmng_server/ftp_server/ftp_server", "ftp_server", "FTP server");
 
