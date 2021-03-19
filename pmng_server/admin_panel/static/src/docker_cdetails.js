@@ -148,6 +148,13 @@ function refreshDetails() {
                 labelsList.append(`<li>${name}: ${value}</li>`);
             }
 
+            let portsList = $("#info-ports").html("");
+            for(let [name, value] of Object.entries(details.ports)) {
+                for(let portData of value) {
+                    portsList.append(`<li>${name}: Bound on host to ${(portData.HostIp == undefined || portData.HostIp == "0.0.0.0" ? "port " : portData.HostIp + ":") + portData.HostPort}</li>`);
+                }
+            }
+
             let networksList = $("#info-networks").html("");
             for(let network of details.networks) {
                 networksList.append(`<li class="list-group-item"><i>Name (Id):</i> ${getDetailsLink(network.name, "networks")} (${getDetailsLink(network.networkId, "networks")})<br/><i>IP address:</i> ${network.ipAddress} (gateway ${network.gateway})<br/><i>MAC address:</i> ${network.macAddress}<br/>${network.aliases.length > 0 ? "<i>Aliases:</i> " + network.aliases.join(", ") : ""}</li>`);

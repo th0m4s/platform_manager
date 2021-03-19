@@ -911,7 +911,8 @@ function getContainerDetails(reference) {
             startedAt: data.State.StartedAt,
             image: data.Config.Image,
             labels: data.Config.Labels,
-            networks: networks
+            networks: networks,
+            ports: data.NetworkSettings.Ports
         }
     });
 }
