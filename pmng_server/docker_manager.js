@@ -521,7 +521,7 @@ function startProject(projectname) {
             env.push("PORT=" + hostPort);
 
             let portBindings = {}; // bind the two ports
-            portBindings[hostPort + "/tcp"] = [{HostPort: hostPort.toString()}];
+            portBindings[hostPort + "/tcp"] = [{HostPort: hostPort.toString(), HostIp: "127.0.0.1"}];
 
             let networkName = getProjectNetworkName(projectname);
 
