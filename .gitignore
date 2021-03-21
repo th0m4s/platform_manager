@@ -7,3 +7,4 @@ greenlock.d
 *.inc.*
 /saves
 remote_testprovider.js
+pmng_execs.sock
