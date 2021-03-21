@@ -151,14 +151,14 @@ function start() {
                                 let typeVersion = projectData.version;
                                 if(type !== undefined && type.length > 0) {
                                     try {
-                                        let buildpack = require("./buildpacks/pack_" + type);
+                                        let buildpack = require("../buildpacks/pack_" + type);
 
                                         let availableAddons = buildpack.availableAddons(projectData);
                                         for(let addon of addons) {
                                             if(!(availableAddons.includes(addon.name || ""))) throw "Addon '" + addon.name + "' is not available for this buildpack.";
                                             try {
                                                 // require to check if exists, and caches for future require
-                                                require("./buildpacks/addons/addon_" + addon.name);
+                                                require("../buildpacks/addons/addon_" + addon.name);
 
                                                 let deployOnly = addon.deployOnly || false; // no problem with || because default is false
                                                 addon.deployOnly = deployOnly;
@@ -265,7 +265,7 @@ function start() {
                                                 }
 
                                                 let addonName = addonData.name;
-                                                let addon = require("./buildpacks/addons/addon_" + addonName);
+                                                let addon = require("../buildpacks/addons/addon_" + addonName);
 
                                                 try {
                                                     connection.write(SPACES + "Executing addon " + addon.displayName() + " (" + addonName + ")...\n");
@@ -290,7 +290,7 @@ function start() {
                                             }
 
                                             let addonName = addonData.name;
-                                            let addon = require("./buildpacks/addons/addon_" + addonName);
+                                            let addon = require("../buildpacks/addons/addon_" + addonName);
 
                                             try {
                                                 connection.write(SPACES + "Executing deployment addon " + addon.displayName() + " (" + addonName + ")...\n");
