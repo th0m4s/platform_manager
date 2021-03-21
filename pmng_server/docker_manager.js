@@ -131,7 +131,7 @@ async function maininstance() {
     
     // required images like panels/servers/... are checked just before container creation, with the exception of php images required by panels
     const required_images = [
-        {name: "pmng/base", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "base", "Dockerfile")},
+        {name: "pmng/base", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "base")},
         // {name: "pmng/base-glibc", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "base_glibc", "Dockerfile")},
         {name: "pmng/apache2-php7", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "php", "apache-php")},
         {name: "pmng/nginx-php7", dockerfile: "file:" + path.resolve(__dirname, "docker_images", "php", "nginx-php")}
@@ -751,7 +751,7 @@ function removePort(projectname) {
     }
 }
 
-let portMappings = {}, firstPort = 49152, lastPort = 49999;
+let portMappings = {}, firstPort = parseInt(process.env.DOCKER_FIRST_PORT), lastPort = parseInt(process.env.DOCKER_LAST_PORT);
 
 async function ensureImageExists(name, dockerfile, {latest = false, adminLogs = true, buildLogs = false} = {}) {
     let nameParts = name.split(":");
