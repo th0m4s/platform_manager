@@ -6,7 +6,6 @@ ENV NODE_VERSION %nodeVersion%
 RUN apk update && apk add --no-cache \
         libstdc++ \
     && apk add --no-cache --virtual .build-deps \
-        curl \
     && ARCH= && alpineArch="$(apk --print-arch)" \
       && case "${alpineArch##*-}" in \
         x86_64) \
@@ -73,7 +72,7 @@ RUN apk update && apk add --no-cache \
 
 ENV YARN_VERSION 1.22.5
 
-RUN apk add --no-cache --virtual .build-deps-yarn curl gnupg tar \
+RUN apk add --no-cache --virtual .build-deps-yarn gnupg tar \
   && for key in \
     6A010C5166006599AA17F08146C2130DFD2497F5 \
   ; do \
