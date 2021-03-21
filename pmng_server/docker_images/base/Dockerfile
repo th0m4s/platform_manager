@@ -1,6 +1,6 @@
 FROM alpine:3.11
 
-RUN apk update && apk add bash --no-cache
+RUN apk update && apk add bash curl --no-cache
 RUN addgroup -g 1000 -S project && adduser -u 1000 -D -S -G project project --home /var/project
 
 # RUN mkdir /var/utils
@@ -15,6 +15,10 @@ RUN addgroup -g 1000 -S project && adduser -u 1000 -D -S -G project project --ho
 RUN mkdir /var/storage
 WORKDIR /var/storage
 RUN chown -R 1000:1000 ./
+
+WORKDIR /var/run/
+ADD --chown=root:root exec.sh ./
+RUN chmod 100 exec.sh
 
 WORKDIR /var/project
 RUN mkdir ./logs && mkdir ./build && chown -R 1000:1000 ./

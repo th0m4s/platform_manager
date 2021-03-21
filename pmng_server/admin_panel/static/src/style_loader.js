@@ -5,4 +5,4 @@ import '@fortawesome/fontawesome-free/js/regular';
 import '@fortawesome/fontawesome-free/js/brands';
 import 'animate.css';
 import 'bootstrap4-tagsinput-umd/tagsinput.css'
-import './style.css';
+import './css/style.css';

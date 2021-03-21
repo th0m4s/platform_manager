@@ -1,12 +1,14 @@
 const logger = require("../platform_logger").logger();
 const express = require("express"), admin = express();
-const passport = require('passport');
+const intercom = require("../intercom/intercom_client").connect();
 const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
 const privileges = require("../privileges");
 const socket_auth = require("./socket_controllers/socket_auth");
 const socketio_auth = require("socketio-auth");
 const fs = require("fs");
+const child_process = require("child_process");
+const got = require("got");
 const panelRouter = require("./panel_router");
 
 function handleCustomPanel(route, panel) {
@@ -121,6 +123,22 @@ function authNamespace(namespace) {
 }
 
 async function start() {
+    // need to create container com server as root
+    let containerComServerRunning = false;
+    let containerComPath = process.env.CONTAINER_SOCKET_PATH;
+    try {
+        let resp = await got("http://unix:" + containerComPath + ":/status");
+        if(resp.statusCode == 200 && resp.body.trim() == "running") containerComServerRunning = true;
+    } catch(_) { }
+
+    if(!containerComServerRunning) {
+        logger.info("Forking process for com container socket server...");
+        let comLog = fs.openSync("/var/log/pmng/container_com.log", "a");
+        child_process.spawn("node", ["./pmng_server/admin_panel/container_com_server"], {detached: true, stdio: ["ignore", comLog, comLog], shell: true}).unref();
+    } else {
+        logger.info("Container com socket server process already running.");
+    }
+
     privileges.drop();
 
     for(let name of fs.readdirSync(path.resolve(__dirname, "custom_panels"))) {
@@ -189,6 +207,18 @@ async function start() {
     require("./socket_controllers/v1/users_socket").initializeNamespace(authNamespace(io.of("/v1/users")));
     require("./socket_controllers/v1/processes_socket").initializeNamespace(authNamespace(io.of("/v1/processes")));
 
+    const exec_socket = require("./socket_controllers/v1/exec_socket");
+    exec_socket.initializeNamespace(authNamespace(io.of("/v1/exec")));
+
+    intercom.subscribe(["containerCom"], (message) => {
+        switch(message.command) {
+            case "execPid":
+                exec_socket.pidReceived(message.execId, message.pid);
+                break;
+        }
+    });
+
+    intercom.send("dockermng", {command: "analyzeRunning"});
     if(process.env.ENABLE_HTTPS.toLowerCase() == "true") greenlock_manager.init();
 }
 

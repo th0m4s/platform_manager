@@ -35,8 +35,6 @@ function start() {
         }
     });*/
 
-    intercom.send("dockermng", {command: "analyzeRunning"});
-
     // launching 2 processes to handle both HTTP and HTTPS public requests
     // each process will be the master of a cluster of web servers
     logger.info("Separating public servers into forks:");
