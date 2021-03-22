@@ -63,9 +63,17 @@ function getProjectNetworkName(projectname) {
  * @returns {Promise<boolean>} A promise resolved with *true* if this project is running, *false* otherwise.
  */
 function isProjectContainerRunning(projectname) {
-    return docker.container.list({filters: {name: [getProjectMainContainer(projectname)]}}).then((containers) => {
-        return containers.length > 0 && containers[0].data.State == "running";
-    });
+    return isContainerRunning(getProjectMainContainer(projectname));
+}
+
+async function isContainerRunning(containerReference) {
+    try {
+        let status = await docker.container.get(containerReference).status();
+        return status.data.State.Status == "running";
+    } catch(e) {
+        if(e.statusCode == 404) return false;
+        else throw e;
+    }
 }
 
 /**
@@ -1013,6 +1021,7 @@ function registerEvents(callback) {
 module.exports.docker = docker;
 module.exports.getProjectMainContainer = getProjectMainContainer;
 module.exports.canProjectRunExec = canProjectRunExec;
+module.exports.isContainerRunning = isContainerRunning;
 module.exports.isProjectContainerRunning = isProjectContainerRunning;
 module.exports.areProjectContainersRunning = areProjectContainersRunning;
 module.exports.utils = {execCommand, pathExists};
