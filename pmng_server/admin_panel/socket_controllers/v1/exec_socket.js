@@ -1,5 +1,6 @@
 const docker_manager = require("../../../docker_manager");
 const project_manager = require("../../../project_manager");
+const database_server = require("../../../database_server");
 const crypto = require("crypto");
 
 allExecsPid = {};
@@ -41,28 +42,61 @@ function handleConnection(socket) {
         let {
             rows,
             cols,
-            projectName
         } = params;
 
-        if(!(await project_manager.canAccessProject(projectName, socket.user.id, true))) {
-            socket.emit("terminal_error", {message: "Project not found or not enough permissions."});
-            return;
+        let containerName = undefined;
+
+        switch(params.execType) {
+            case "project":
+                let projectName = params.name;
+
+                if(!(await project_manager.canAccessProject(projectName, socket.user.id, true))) {
+                    socket.emit("terminal_error", {message: "Project not found or not enough permissions."});
+                    return;
+                }
+        
+                if(!docker_manager.canProjectRunExec(projectName)) {
+                    socket.emit("terminal_error", {message: "Please restart this project before running a terminal."});
+                    return;
+                }
+        
+                if(!(await docker_manager.isProjectContainerRunning(projectName))) {
+                    socket.emit("terminal_error", {message: "The project is not running."});
+                    return;
+                }
+
+                containerName = docker_manager.getProjectMainContainer(projectName);
+                break;
+
+            case "container":
+                containerName = params.name;
+
+                if(!database_server.checkScope(socket.user.scope, "docker")) {
+                    socket.emit("terminal_error", {message: "Not enough permissions."});
+                    return;
+                }
+
+                if(!(await docker_manager.isContainerRunning(containerName))) {
+                    socket.emit("terminal_error", {message: "The container is not running."});
+                    return;
+                }
+
+                break;
+
+            default:
+                socket.emit("terminal_error", {message: "Unknown exec type."});
+                return;
         }
 
-        if(!docker_manager.canProjectRunExec(projectName)) {
-            socket.emit("terminal_error", {message: "Please restart this project before running a terminal."});
-            return;
-        }
-
-        if(!(await docker_manager.isProjectContainerRunning(projectName))) {
-            socket.emit("terminal_error", {message: "The project is not running."});
+        if(containerName == undefined) {
+            socket.emit("terminal_error", {message: "Unexpected error: Invalid container after checks."});
             return;
         }
 
         let execId = crypto.randomBytes(4).toString("hex");
 
         if(containerExec == undefined) {
-            containerExec = docker_manager.docker.container.get(docker_manager.getProjectMainContainer(projectName)).exec;
+            containerExec = docker_manager.docker.container.get(containerName).exec;
         }
 
         if(exec == undefined) {
@@ -97,7 +131,7 @@ function handleConnection(socket) {
         };
         
         let onDisconnect = async () => {
-            stream.removeListener("close", onExit);
+            stream.removeListener("end", onExit);
             stream.destroy();
 
             let pid = allExecsPid[execId];
@@ -129,7 +163,7 @@ function handleConnection(socket) {
             socket.emit("data", data.toString("utf-8"));
         });
         
-        stream.on("close", onExit);
+        stream.on("end", onExit);
         
         socket.on("data", onData);
         socket.on("resize", onResize);

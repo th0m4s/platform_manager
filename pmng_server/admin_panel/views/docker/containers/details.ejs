@@ -18,7 +18,10 @@
             <div class="row mt-3 mx-3" id="details-row">
                 <div class="w-100">
                     <h3 class="d-inline">Container details:</h3><h5 class="d-inline ml-md-2">(from reference <i><%- value %>)</i></h5>
-                    <a href="../list" class="my-1 btn btn-sm btn-secondary float-right"><i class="fas fa-arrow-left"></i> Back</a>
+                    <div class="float-right btn-group">
+                        <a href="../list" class="my-1 btn btn-sm btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
+                        <a href="/panel/docker/containers/exec/<%- value %>" class="my-1 btn btn-sm btn-outline-secondary"><i class="fas fa-terminal"></i> Command shell</a>
+                    </div>
                     <div id="status-msg">Loading details...</div>
 
                     <div class="card w-100 mt-1 mb-3" style="display: none;" id="details-card">

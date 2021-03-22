@@ -28,6 +28,15 @@ router.get("/containers/details/:reference", (req, res) => {
     res.render("docker/containers/details");
 });
 
+router.get("/containers/exec/:reference", (req, res) => {
+    let reference = req.params.reference;
+    res.locals.name = reference;
+    res.locals.execType = "container";
+
+    req.setPage(res, "Command execution inside container", "docker", "containers_exec");
+    res.render("projects/exec");
+});
+
 router.get("/networks/list", (req, res) => {
     req.setPage(res, "List of docker networks", "docker", "networks");
     res.render("docker/networks/list");

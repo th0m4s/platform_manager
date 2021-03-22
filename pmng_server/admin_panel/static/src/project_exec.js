@@ -61,7 +61,7 @@ function createTerminal() {
     window.addEventListener("resize", onWindowResize(fitAddon));
     
     let {cols, rows} = terminal;
-    socket.emit("terminal", {cols, rows, projectName: window.projectname});
+    socket.emit("terminal", {cols, rows, name: window.name, execType: window.execType});
     fitAddon.fit();
     
     socket.on("disconnect", onDisconnect(terminal));
@@ -93,6 +93,13 @@ function init() {
         socket.on("terminal_error", (message) => {
             $.notify({message: "Terminal error: " + message.message}, {type: "danger"});
             console.error("Terminal error:", message.message);
+        });
+
+        socket.on("exit", () => {
+            $("#closedModal").modal({
+                backdrop: "static",
+                keyboard: false
+            });
         });
     });
 

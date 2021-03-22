@@ -170,7 +170,8 @@ router.get("/logs/:projectname", (req, res) => {
 router.get("/exec/:projectname", (req, res) => {
     let projectname = req.params.projectname;
     project_manager.canAccessProject(projectname, req.user.id, true).then(() => {
-        res.locals.projectname = projectname;
+        res.locals.execType = "project";
+        res.locals.name = projectname;
 
         req.setPage(res, "Command execution in project", "projects", "exec");
         res.render("projects/exec");

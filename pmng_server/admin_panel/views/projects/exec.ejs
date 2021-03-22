@@ -6,10 +6,22 @@
         <%- include("../default/flash.ejs") %>
         <%- include("../default/api.ejs") %>
         <script>
-        window.projectname = "<%- projectname %>";
+        window.name = "<%- name %>";
+        window.execType = "<%- execType %>";
         </script>
         <%- startPageScript("project_exec", ["/socket.io/socket.io.js", "/static/js/xterm.dist.js"]) %>
-        
+        <%
+            let backUrl = "";
+
+            switch(execType) {
+                case "project":
+                    backUrl = "/panel/projects/details/" + name;
+                    break;
+                case "container":
+                    backUrl = "/panel/docker/containers/details/" + name;
+                    break;
+            }
+        %>
         <header>
             <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
                 <a class="navbar-brand" href="#" onclick="return false;"><%= site.title %></a>
@@ -17,10 +29,10 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarContent">
-                    <span id="exec-title" class="ml-md-4" style="color: white;">Terminal inside container context for project <%= projectname %>:</span>
+                    <span id="exec-title" class="ml-md-4" style="color: white;">Terminal inside container context for <%= execType %> <%= name %>:</span>
                     <ul class="navbar-nav ml-auto">
                         <li class="nav-item">
-                            <a class="nav-link" href="/panel/projects/details/<%= projectname %>">Leave console</a>
+                            <a class="nav-link" href="<%= backUrl %>">Leave console</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/panel/login/logout">Logout</a>
@@ -41,6 +53,26 @@
         <%- include("../default/loading.ejs") %>
         <div id="main-container">
             <div id="project_exec-console"></div>
+        </div>
+
+        <div class="modal fade" id="closedModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Terminal process terminated</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="closedModal-content">
+                        The terminal process was terminated, do you want to reload the page to open a new terminal?
+                    </div>
+                    <div class="modal-footer">
+                        <a href="<%= backUrl %>" class="btn btn-secondary">Close terminal</a>
+                        <button type="button" class="btn btn-primary" onclick="location.reload()">Reload terminal</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </body>
 </html>
