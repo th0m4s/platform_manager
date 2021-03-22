@@ -152,6 +152,8 @@ function handleConnection(socket) {
                     Detach: false
                 });
             }
+
+            delete allExecsPid[execId];
             
             socket.removeListener("resize", onResize);
             socket.removeListener("data", onData);
