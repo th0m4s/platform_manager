@@ -46,7 +46,7 @@ function _getProject(project_name, check = true) {
 
 /**
  * Fetches a project from the cache or the database.
- * @param {string} project_name 
+ * @param {string} project_name The name of the project to fetch.
  * @param {boolean} check Checks if the project exists before fetching it (result is also rejected if set *false* and if project doesn't exist).
  * @returns {Promise<Project>} A promise resolved with the project if it exists.
  */

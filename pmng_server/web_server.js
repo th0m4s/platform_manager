@@ -279,6 +279,11 @@ function updateCluster(maxConnPerSec, minFork, maxFork, seconds, clusterName) {
 }
 
 let pluginsPerProject = {};
+/**
+ * Stores in cache (ie. doesn't return) the plugins for a specific project from the database
+ * @param {string} projectname The project to load the plugins for.
+ * @returns {Promise<void>} A promise resolved when the plugins are cached.
+ */
 async function loadPluginsForProject(projectname) {
     let results = await database_server.database("projects").where("name", projectname).select("plugins");
     if(results.length == 1)
