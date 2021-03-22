@@ -1,0 +1,29 @@
+/var/log/pmng/pmng.log { 
+	daily
+	missingok
+	size 1k
+	copytruncate
+	rotate 7
+	compress
+	delaycompress
+}
+
+/var/log/pmng/access.log {
+	daily
+	missingok
+	size 3k
+	copytruncate
+	rotate 7
+	compress
+	delaycompress
+}
+
+/var/log/pmng/connections.log {
+        daily
+        missingok
+        size 3k
+        copytruncate
+        rotate 2
+        compress
+        delaycompress
+}
