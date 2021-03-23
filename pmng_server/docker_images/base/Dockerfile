@@ -16,6 +16,8 @@ RUN mkdir /var/storage
 WORKDIR /var/storage
 RUN chown -R 1000:1000 ./
 
+RUN mkdir /var/mount_utils
+
 WORKDIR /var/run/
 ADD --chown=root:root exec.sh ./
 RUN chmod 100 exec.sh

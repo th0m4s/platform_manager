@@ -219,7 +219,6 @@ async function maininstance() {
                 break;
             case "analyzeRunning":
                 logger.info("Searching for running docker containers...");
-                let containerComRestarted = message.containerComRestarted ?? false;
                 docker.container.list({filters: {label: ["pmng.containertype=project"]}}).then((containers) => {
                     let alreadyRunning = [];
                     if(containers.length > 0) {
@@ -243,7 +242,6 @@ async function maininstance() {
                                 logger.info("Binding " + projectname + " to port " + port);
                                 attachLogs(projectname, container).then(() => {
                                     alreadyRunning.push(projectname);
-                                    if(containerComRestarted) setCanProjectRunExec(projectname, false);
 
                                     // container is working
                                     addPort(projectname, port);
@@ -254,9 +252,6 @@ async function maininstance() {
                                 });
                             }
                         });
-
-                        if(containerComRestarted && alreadyRunning.length > 0)
-                            logger.warn(alreadyRunning.length + " container(s) will not be able to run exec commands without a restart because of a restarted container com server.");
                     } else logger.info("No containers running.");
 
                     database_server.isInstalled().then((result) => {
@@ -366,7 +361,6 @@ function stopProject(projectname, force = false) {
                     });
                 }), dbProm])
             }).then(() => {
-                setCanProjectRunExec(projectname, true);
                 logger.tag("DOCKER", "Project " + projectname + " stopped.");
             });
         }).catch((error) => {
@@ -434,22 +428,6 @@ function attachLogs(projectname, container) {
         logger.tagWarn("DOCKER", "Could not attach to the logs of project " + projectname + ":", error);
         throw error;
     });
-}
-
-let noExecProjects = [];
-
-function canProjectRunExec(projectName) {
-    return !noExecProjects.includes(projectName);
-}
-
-function setCanProjectRunExec(projectName, canExec) {
-    if(canProjectRunExec(projectName) != canExec) {
-        if(canExec) {
-            noExecProjects.splice(noExecProjects.indexOf(projectName), 1);
-        } else {
-            noExecProjects.push(projectName);
-        }
-    }
 }
 
 /**
@@ -615,7 +593,7 @@ function startProject(projectname) {
                     PortBindings: portBindings,
                     AutoRemove: true,
                     NetworkMode: networkName,
-                    Binds: [process.env.CONTAINER_SOCKET_PATH + ":/var/run/pmng_execs.sock"],
+                    Binds: [process.env.CONTAINERUTILS_MOUNT_PATH + ":/var/mount_utils"],
                     Memory: (await plans_manager.userMaxMemory(project.ownerid))*1024*1024 // if no limit (0), it will be multiplied but stay at 0 which indicates unlimited
                 },
                 NetworkingConfig: {
@@ -665,8 +643,6 @@ function startProject(projectname) {
 
             // start the container
             await container.start();
-
-            setCanProjectRunExec(projectname, true);
 
             // attach logs
             await attachLogs(projectname, container);
@@ -1020,7 +996,6 @@ function registerEvents(callback) {
 
 module.exports.docker = docker;
 module.exports.getProjectMainContainer = getProjectMainContainer;
-module.exports.canProjectRunExec = canProjectRunExec;
 module.exports.isContainerRunning = isContainerRunning;
 module.exports.isProjectContainerRunning = isProjectContainerRunning;
 module.exports.areProjectContainersRunning = areProjectContainersRunning;

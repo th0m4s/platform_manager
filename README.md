@@ -31,7 +31,7 @@ chown -R pmng:pmng ./
 ...and get back the ownership of a system file) then link it to the `/etc/logrotate.d` directory:
 ```bash
 chown root:root ./utils/pmng.logrotate
-ln -s ./utils/pmng.logrotate /etc/logrotate.d/pmng
+ln -s /etc/pmng/utils/pmng.logrotate /etc/logrotate.d/pmng
 ```
 
 Now login as your program user and edit with your favorite editor the `.env` conf file:

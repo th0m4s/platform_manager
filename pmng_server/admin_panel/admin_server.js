@@ -6,9 +6,7 @@ const greenlock_manager = require("../https/greenlock_manager");
 const privileges = require("../privileges");
 const socket_auth = require("./socket_controllers/socket_auth");
 const socketio_auth = require("socketio-auth");
-const fs = require("fs");
-const child_process = require("child_process");
-const got = require("got");
+const fs = require("fs"), pfs = fs.promises;
 const panelRouter = require("./panel_router");
 
 function handleCustomPanel(route, panel) {
@@ -124,7 +122,14 @@ function authNamespace(namespace) {
 
 async function start() {
     // need to create container com server as root
-    containerCom.listen(path.resolve(process.env.CONTAINERUTILS_MOUNT_PATH, "container_com.sock"), () => {
+    let comSocketFile = path.resolve(process.env.CONTAINERUTILS_MOUNT_PATH, "container_com.sock");
+
+    try {
+        await pfs.access(comSocketFile);
+        await pfs.unlink(comSocketFile);
+    } catch(_) { }
+
+    containerCom.listen(comSocketFile, () => {
         logger.info("Container com server started.");
     });
 
@@ -202,8 +207,6 @@ async function start() {
     containerCom.get("/exec/:execId/:pid", (req, res) => {
         let execId = req.params.execId;
         let pid = parseInt(req.params.pid);
-
-        console.log("received", execId, pid);
     
         if(!isNaN(pid)) exec_socket.pidReceived(execId, pid);
         res.end();

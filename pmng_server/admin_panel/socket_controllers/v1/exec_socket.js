@@ -55,11 +55,6 @@ function handleConnection(socket) {
                     return;
                 }
         
-                if(!docker_manager.canProjectRunExec(projectName)) {
-                    socket.emit("terminal_error", {message: "Please restart this project before running a terminal."});
-                    return;
-                }
-        
                 if(!(await docker_manager.isProjectContainerRunning(projectName))) {
                     socket.emit("terminal_error", {message: "The project is not running."});
                     return;
