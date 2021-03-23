@@ -1,5 +1,5 @@
 const logger = require("../platform_logger").logger();
-const express = require("express"), admin = express();
+const express = require("express"), admin = express(), containerCom = express();
 const intercom = require("../intercom/intercom_client").connect();
 const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
@@ -124,20 +124,9 @@ function authNamespace(namespace) {
 
 async function start() {
     // need to create container com server as root
-    let containerComServerRunning = false;
-    let containerComPath = process.env.CONTAINER_SOCKET_PATH;
-    try {
-        let resp = await got("http://unix:" + containerComPath + ":/status");
-        if(resp.statusCode == 200 && resp.body.trim() == "running") containerComServerRunning = true;
-    } catch(_) { }
-
-    if(!containerComServerRunning) {
-        logger.info("Forking process for com container socket server...");
-        let comLog = fs.openSync("/var/log/pmng/container_com.log", "a");
-        child_process.spawn("node", ["./pmng_server/admin_panel/container_com_server"], {detached: true, stdio: ["ignore", comLog, comLog], shell: true}).unref();
-    } else {
-        logger.info("Container com socket server process already running.");
-    }
+    containerCom.listen(path.resolve(process.env.CONTAINERUTILS_MOUNT_PATH, "container_com.sock"), () => {
+        logger.info("Container com server started.");
+    });
 
     privileges.drop();
 
@@ -210,12 +199,14 @@ async function start() {
     const exec_socket = require("./socket_controllers/v1/exec_socket");
     exec_socket.initializeNamespace(authNamespace(io.of("/v1/exec")));
 
-    intercom.subscribe(["containerCom"], (message) => {
-        switch(message.command) {
-            case "execPid":
-                exec_socket.pidReceived(message.execId, message.pid);
-                break;
-        }
+    containerCom.get("/exec/:execId/:pid", (req, res) => {
+        let execId = req.params.execId;
+        let pid = parseInt(req.params.pid);
+
+        console.log("received", execId, pid);
+    
+        if(!isNaN(pid)) exec_socket.pidReceived(execId, pid);
+        res.end();
     });
 
     intercom.send("dockermng", {command: "analyzeRunning"});
