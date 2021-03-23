@@ -47,6 +47,7 @@
     "ip6addr": "^0.2.3",
     "knex": "^0.21.12",
     "knex-mariadb": "^2.0.0",
+    "longjohn": "^0.2.12",
     "mariadb": "^2.5.1",
     "native-dns": "https://github.com/tjfontaine/node-dns",
     "net": "^1.0.2",

@@ -136,6 +136,8 @@ function logger() {
         process.on("uncaughtExceptionMonitor", (exception) => {
             _logger.fatal("PLATFORM MANAGER ENCOUNTERED A FATAL EXCEPTION!");
             _logger.fatal(exception);
+            _logger.fatal("FATAL EXCEPTION TRACE");
+            _logger.fatal(exception?.stack);
         });
     
         process.on("unhandledRejection", (reason) => {
