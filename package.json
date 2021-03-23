@@ -16,7 +16,9 @@
     "lint:ejs": "ejslint",
     "build": "yarn run webpack:build",
     "run": "node platform_manager.js",
-    "debug": "sudo node platform_manager.js"
+    "debug": "sudo node platform_manager.js",
+    "checkinstall": "node scripts/checkinstall.js",
+    "update": "node scripts/checkinstall.js --update"
   },
   "dependencies": {
     "@gitbeaker/node": "^25.4.0",
@@ -27,6 +29,7 @@
     "bent": "^7.3.12",
     "body-parser": "^1.19.0",
     "bunyan-blackhole": "^1.1.1",
+    "chownr": "^2.0.0",
     "connect-session-knex": "^2.0.0",
     "dotenv": "^8.2.0",
     "downloadjs": "^1.4.7",

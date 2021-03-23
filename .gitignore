@@ -7,4 +7,4 @@ greenlock.d
 *.inc.*
 /saves
 remote_testprovider.js
-/container_utils/*
+/container_utils

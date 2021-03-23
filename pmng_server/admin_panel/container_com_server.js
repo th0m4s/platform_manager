@@ -29,5 +29,5 @@ async function start() {
     });
 }
 
-start();
-
+// start();
+console.error("This script cannot be used in production anymore!");
