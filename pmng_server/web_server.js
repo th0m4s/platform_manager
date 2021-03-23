@@ -13,7 +13,7 @@ const platformLogger = require("./platform_logger");
 const logger = platformLogger.logger();
 const webLogger = platformLogger.getWebAccess();
 const connectionsLogger = platformLogger.getConnectionsAccess();
-const CONNECTIONS_LOG = process.env.CONNECTIONS_LOG.toLowerCase() == "true";
+const CONNECTIONS_LOG = process.env.CONNECTIONS_LOG?.toLowerCase() == "true", DEBUG_HTTP_S_ERRORS = process.env.DEBUG_HTTP_S_ERRORS?.toLowerCase() == "true";
 const subprocess_util = require("./subprocess_util");
 const plugins_manager = require("./plugins_manager");
 const ip_manager = require("./ip_manager");
@@ -306,6 +306,30 @@ function getPluginInterceptors(pluginname) {
  * @param {http.ServerResponse} res The server response to be sent back.
  */
 async function webServe(req, res) {
+    req.on("error", (error) => {
+        if(DEBUG_HTTP_S_ERRORS) {
+            console.log("HTTP/S req error", error);
+        }
+    });
+
+    res.on("error", (error) => {
+        if(DEBUG_HTTP_S_ERRORS) {
+            console.log("HTTP/S res error", error);
+        }
+    });
+
+    req.socket.on("error", (error) => {
+        if(DEBUG_HTTP_S_ERRORS) {
+            console.log("HTTP/S req socket error", error);
+        }
+    });
+
+    res.socket.on("error", (error) => {
+        if(DEBUG_HTTP_S_ERRORS) {
+            console.log("HTTP/S res socket error", error);
+        }
+    });
+
     let originalPort = req.socket.localPort;
     res.once("finish", () => {
         webLogger(req, res, originalPort);
