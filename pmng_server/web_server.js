@@ -395,6 +395,24 @@ async function webServe(req, res) {
  * @param {Buffer} head The current head of the connection.
  */
 async function upgradeRequest(req, socket, head) {
+    req.on("error", (error) => {
+        if(DEBUG_HTTP_S_ERRORS) {
+            console.log("HTTP/S upgraded req error", error);
+        }
+    });
+
+    req.socket.on("error", (error) => {
+        if(DEBUG_HTTP_S_ERRORS) {
+            console.log("HTTP/S upgraded req socket error", error);
+        }
+    });
+
+    socket.on("error", (error) => {
+        if(DEBUG_HTTP_S_ERRORS) {
+            console.log("HTTP/S upgraded socket error", error);
+        }
+    });
+
     // connCount++;
     httpProxyServer.ws(req, socket, head, {xfwd: true, target: {host: "127.0.0.1", port: (await getPortDetails((req.headers.host || "").trimLeft().split(":")[0])).port}});
 }
