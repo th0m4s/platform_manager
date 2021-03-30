@@ -82,10 +82,10 @@ async function saveFile() {
             if(!isNaN(fileTime)) {
                 let diff = timestamp - fileTime;
                 if(diff > usageHistory) {
-                    filePath = path.resolve(historyDir, filePath);
-                    let stats = await pfs.stat(filePath);
+                    let fullPath = path.resolve(historyDir, filePath);
+                    let stats = await pfs.stat(fullPath);
                     if(stats.isFile())
-                        await pfs.unlink(filePath);
+                        await pfs.unlink(fullPath);
                 }
             }
         }
