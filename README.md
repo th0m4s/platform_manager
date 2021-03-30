@@ -47,7 +47,7 @@ service pmng (stop|restart)
 
 ## Update
 
-You just have one command to update the Platform Manager (excluding the service restart). Internally, it pulls files from the remote git repository and runs `yarn run checkinstall`
+You just have one command to run as root to update the Platform Manager (excluding the service restart). Internally, it pulls files from the remote git repository and runs `yarn run checkinstall`
 
 If specific steps are required, they will be indicated on the changelog or the release description.
 ```bash
