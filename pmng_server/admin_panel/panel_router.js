@@ -125,6 +125,10 @@ function getRouter(headerLinks) {
                 return "<script>$(document).ready(() => {loadAndInit(\"" + script + "\"" + (requirements.length > 0 ? ", " + JSON.stringify(requirements) : "") + ");});</script>";
             }
 
+            res.locals.instantFinishLoad = function() {
+                return "<script>$(document).ready(instantFinishLoad);</script>"
+            }
+
             res.locals.isEdit = function() {
                 return this.edit != undefined;
             }
