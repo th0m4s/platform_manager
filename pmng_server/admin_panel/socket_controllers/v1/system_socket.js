@@ -93,6 +93,7 @@ async function saveFile() {
 }
 
 let currentPIDs = {};
+let dnsChallenges = {};
 function initializeNamespace(namespace) {
     namespace.on("connection", (socket) => {
         let setup = false;
@@ -103,15 +104,50 @@ function initializeNamespace(namespace) {
             }
 
             if(socket.hasAccess("SYSTEM")) {
-                setup = true;
-                socket.join("usage_" + message.proc);
-                socket.join("cpu");
-                socket.emit("setup", {error: false, message: "Socket setup."});
+                switch(message.type) {
+                    case "processes":
+                        setup = true;
+                        socket.join("usage_" + message.proc);
+                        socket.join("cpu");
 
-                for(let entry of Object.entries(currentPIDs))
-                    socket.emit("pid", {pid: entry[0], id: entry[1]});
+                        setImmediate(() => {
+                            for(let entry of Object.entries(currentPIDs)) {
+                                socket.emit("pid", {pid: entry[0], id: entry[1]});
+                            }
+                        });
+                        break;
+                    case "dns_challenges":
+                        setup = true;
+                        socket.join("dns_challenges");
+
+                        setImmediate(() => {
+                            for(let [host, tokens] of Object.entries(dnsChallenges)) {
+                                for(let token of tokens) {
+                                    socket.emit("dns_challenges_add", {host, token});
+                                }
+                            }
+                        });
+                        break;
+                    default:
+                        socket.emit("setup", {error: true, message: "Unknown system socket type."});
+                        break;
+                }
+
+                if(setup) {
+                    socket.emit("setup", {error: false, message: "Socket setup."});
+                    socket.usageType = message.type;
+                }
             } else {
                 socket.emit("setup", {error: true, message: "Insufficient permissions."});
+            }
+        });
+
+        socket.on("dns_challenge_cmd", (message) => {
+            if(setup && socket.usageType == "dns_challenges") {
+                let {command, host, token} = message;
+                if(["set", "remove"].includes(command)) intercom.send("dnsChallenges", {command, host, token});
+            } else {
+                socket.emit("dns_challenge_error", {message: "Socket was not set up."});
             }
         });
     });
@@ -136,6 +172,29 @@ function initializeNamespace(namespace) {
             namespace.to("usage_" + id).emit("usage", message);
 
             minuteHistory[id].push(message);
+        }
+    });
+
+    intercom.subscribe(["dnsChallenges"], (message) => {
+        let {command, host, token} = message;
+        switch(command) {
+            case "set":
+                if(dnsChallenges[host] == undefined) dnsChallenges[host] = [];
+                dnsChallenges[host].push(token);
+
+                namespace.to("dns_challenges").emit("dns_challenges_add", {host, token});
+                break;
+            case "remove":
+                if(dnsChallenges[host] != undefined) {
+                    let index = dnsChallenges[host].indexOf(token);
+                    if(index >= 0) {
+                        dnsChallenges[host].splice(index, 1);
+                        if(dnsChallenges[host].length == 0) delete dnsChallenges[host];
+
+                        namespace.to("dns_challenges").emit("dns_challenges_remove", {host, token});
+                    }
+                }
+                break;
         }
     });
 

@@ -3,7 +3,7 @@ let chartColors = ["#3B6A9C", "#007BFF", "#86C0FF"];
 
 let socket = undefined, authenticated = false, lastSystemCpu;
 function init() {
-    socket = io("/v1/processes");
+    socket = io("/v1/system");
     window.socket = socket;
 
     socket.on("connect", function() {
@@ -17,7 +17,7 @@ function init() {
             authenticated = true;
 
             console.log("Socket authenticated.");
-            socket.emit("setup", {proc: "all"});
+            socket.emit("setup", {type: "processes", proc: "all"});
         });
 
         socket.on("unauthorized", function(err) {

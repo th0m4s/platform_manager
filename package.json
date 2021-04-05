@@ -79,7 +79,7 @@
   "devDependencies": {
     "@fortawesome/fontawesome-free": "^5.13.0",
     "acme-dns-01-test": "^3.3.2",
-    "animate.css": "^3.7.2",
+    "animate.css": "3.7.2",
     "bootstrap": "^4.4.1",
     "bootstrap-email": "https://github.com/th0m4s/bootstrap-email",
     "bootstrap-notify": "^3.1.3",

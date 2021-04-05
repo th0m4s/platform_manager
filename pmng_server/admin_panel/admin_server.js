@@ -210,7 +210,7 @@ async function start() {
     require("./socket_controllers/v1/projects_socket").initializeNamespace(authNamespace(io.of("/v1/projects")));
     require("./socket_controllers/v1/logs_socket").initializeNamespace(authNamespace(io.of("/v1/logs")));
     require("./socket_controllers/v1/users_socket").initializeNamespace(authNamespace(io.of("/v1/users")));
-    require("./socket_controllers/v1/processes_socket").initializeNamespace(authNamespace(io.of("/v1/processes")));
+    require("./socket_controllers/v1/system_socket").initializeNamespace(authNamespace(io.of("/v1/system")));
 
     const exec_socket = require("./socket_controllers/v1/exec_socket");
     exec_socket.initializeNamespace(authNamespace(io.of("/v1/exec")));

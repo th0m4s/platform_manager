@@ -88,9 +88,15 @@ router.get("/subprocesses", (req, res) => {
     if(process.env.DB_MODE != "socket")
         res.locals.hide.push("rc_panel");
 
-    res.render("processes/usage");
+    res.render("system/processes/usage");
 });
 
+router.get("/dns_challenges", (req, res) => {
+    req.setPage(res, "DNS challenges", "system", "dns_challenges");
+    res.locals.root_domain = process.env.ROOT_DOMAIN;
+
+    res.render("system/dns_challenges");
+});
 
 router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/system/subprocesses");});
 module.exports = router;

@@ -1,19 +1,19 @@
 <html>
     <head>
-        <%- include("../default/head.ejs") %>
+        <%- include("../../default/head.ejs") %>
     </head>
     <body>
-        <%- include("../default/flash.ejs") %>
-        <%- include("../default/api.ejs") %>
+        <%- include("../../default/flash.ejs") %>
+        <%- include("../../default/api.ejs") %>
         <script>
             window.subprocesses = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(subprocesses)) %>"));
         </script>
         <%- startPageScript("processes_platform") %>
         
         <header>
-            <%- include("../default/header.ejs") %>
+            <%- include("../../default/header.ejs") %>
         </header>
-        <%- include("../default/loading.ejs") %>
+        <%- include("../../default/loading.ejs") %>
         <div class="container-fluid" id="main-container">
             <div class="row mt-3 mx-3" id="details-row">
                 <div class="w-100">

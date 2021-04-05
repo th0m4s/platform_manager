@@ -145,29 +145,31 @@ function start() {
 
 async function subscribeIntercom(isMaster) {
     intercom.subscribe(["dnsChallenges"], (message, respond) => {
-        let command = message.command, host = message.host, token = message.token;
+        let {command, host, token} = message;
         switch(command) {
             case "set":
                 if(challenges[host] == undefined) challenges[host] = [];
                 challenges[host].push(token);
-                respond({error: false});
+                if(isMaster) respond({error: false});
                 break;
             case "get":
-                respond({error: false, token: challenges[host]});
+                if(isMaster) respond({error: false, token: challenges[host]});
                 break;
             case "remove":
                 if(challenges[host] != undefined) {
-                    challenges[host].splice(challenges[host].indexOf(token), 1);
-                    if(challenges[host].length == 0) delete challenges[host];
+                    let index = challenges[host].indexOf(token);
+                    if(index >= 0) {
+                        challenges[host].splice(index, 1);
+                        if(challenges[host].length == 0) delete challenges[host];
+                    }
                 }
-                respond({error: false});
+                if(isMaster) respond({error: false});
                 break;
         }
     });
 
     intercom.subscribe(["dnsHooks"], (message) => {
-        let {subject, types} = message;
-        let askMessage = message.message;
+        let {subject, types, message: askMessage} = message;
         if(types == undefined) types = [];
         else if (typeof types == "string") types = [types];
 
