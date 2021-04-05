@@ -6,3 +6,7 @@
 #fullscreenGraph-parent .chart-row {
     height: 80vh;
 }
+
+.chart-parent {
+    height: 100%;
+}
