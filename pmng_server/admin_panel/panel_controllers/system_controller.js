@@ -77,8 +77,8 @@ let subprocesses = {
     }
 };
 
-router.get("/", (req, res) => {
-    req.setPage(res, "Platform subprocesses", "processes", "usage");
+router.get("/subprocesses", (req, res) => {
+    req.setPage(res, "Platform subprocesses", "system", "subprocesses");
     res.locals.subprocesses = subprocesses;
     res.locals.hide = [];
 
@@ -92,5 +92,5 @@ router.get("/", (req, res) => {
 });
 
 
-router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/processes");});
+router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/system/subprocesses");});
 module.exports = router;

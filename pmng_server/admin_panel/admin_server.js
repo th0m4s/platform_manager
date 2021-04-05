@@ -83,13 +83,24 @@ let headerLinks = {
             }
         }
     },
-    processes: {
-        name: "Processes",
-        type: "link",
-        link: "/panel/processes",
-        active: ["processes", "usage"],
+    system: {
+        name: "System",
+        type: "list",
+        active: ["system"],
         allHeader: true,
-        access: "system"
+        access: "system",
+        list: {
+            subprocess: {
+                name: "Platform subprocesses",
+                link: "/panel/system/subprocesses",
+                active: ["system", "subprocesses"]
+            },
+            dns_challenges: {
+                name: "DNS challenges",
+                link: "/panel/system/dns_challenges",
+                active: ["system", "dns_challenges"]
+            }
+        }
     },
     users: {
         name: "Users",
