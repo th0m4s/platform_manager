@@ -149,7 +149,7 @@ function initializeNamespace(namespace) {
                 if(["set", "remove"].includes(command)) intercom.send("dnsChallenges", {command, host, token});
                 else if(command == "check") {
                     dns.resolveTxt(message.host, (error, results) => {
-                        socket.emit("dns_challenges_checked", {error, results, uniqueResponseId: message.uniqueResponseId, cid: message.cid});
+                        socket.emit("dns_challenges_checked", {error, results: results.map(x => x.join(" ")), uniqueResponseId: message.uniqueResponseId, cid: message.cid});
                     });
                 }
             } else {
