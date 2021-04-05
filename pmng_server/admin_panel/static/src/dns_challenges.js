@@ -8,6 +8,10 @@ function getCid(host, token) {
     return invertedIndex[getIndex(host, token)];
 }
 
+function getId() {
+    return Math.floor(Math.random()*1000000);
+}
+
 function init() {
     socket = io("/v1/system");
 
@@ -35,7 +39,7 @@ function init() {
     });
 
     socket.on("dns_challenges_add", (addMessage) => {
-        let cid = Math.floor(Math.random()*1000000);
+        let cid = getId();
         let {host, token} = addMessage;
 
         challenges[cid] = {host, token};
@@ -57,6 +61,42 @@ function init() {
         }
     });
 
+    socket.on("dns_challenges_checked", (respMessage) => {
+        let cid = respMessage.cid;
+        let challenge = challenges[cid];
+
+        if(respMessage.uniqueResponseId == lastCheckId && challenge != undefined) {
+            if(checkTimeoutId >= 0) {
+                clearTimeout(checkTimeoutId);
+                checkTimeoutId = -1;
+            }
+
+            lastCheckId = undefined;
+
+            if(respMessage.error != null) {
+                let error = respMessage.error;
+                if(!(error instanceof Error)) error = new Error(JSON.stringify(error));
+
+                $("#testPopup-status").html("Check encountered an error:")
+                $("#testPopup-close").html("Close");
+                $("#testPopup-results").html(error).parent().show();
+            } else {
+                let correctToken = challenge.token;
+                let hasCorrect = respMessage.results.includes(correctToken);
+
+                $("#testPopup-status").html("Check done. Results are below:")
+                $("#testPopup-close").html("Close results");
+                $("#testPopup-results").html(respMessage.results.map(x => "<span class='" + (hasCorrect && correctToken != x ? "text-black-50" : "") + "'>" + x + "</span>").join("\n")).parent().show();
+
+                if(hasCorrect) {
+                    $("#testPopup-alert").addClass("alert-success").html("Result: <b>SUCCESS</b><span class='ml-md-3'>(token found in records)</span>").show();
+                } else {
+                    $("#testPopup-alert").addClass("alert-danger").html("Result: <b>FAILED</b><span class='ml-md-3'>(token not found in records)</span>").show();
+                }
+            }
+        }
+    });
+
     socket.on("setup", (status) => {
         if(status.error) {
             $.notify({message: "Cannot setup server connection."}, {type: "danger"});
@@ -74,7 +114,8 @@ function formatHost(host) {
 function addChallengeLine(challenge) {
     $("#challenges-list").append(`<li class="list-group-item" id="challenge-${challenge.cid}">
         ${formatHost(challenge.host)}<samp class="ml-md-4 text-secondary">${challenge.token}</samp>
-        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><button id="challenge-${challenge.cid}-rembtn" onclick="dns_challenges.askRemove(${challenge.cid})" class="btn btn-sm btn-danger"><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
+        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><button onclick="dns_challenges.testChallenge(${challenge.cid})" class="btn btn-sm btn-info"><i class="fas fa-clipboard-check"></i> Check</button>
+        <button id="challenge-${challenge.cid}-rembtn" onclick="dns_challenges.askRemove(${challenge.cid})" class="btn btn-sm btn-danger"><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
 
     updateStatusCount();
 }
@@ -136,4 +177,37 @@ function confirmAdd() {
     }
 }
 
-window.dns_challenges = {init, askRemove, confirmRemove, openAddPopup, confirmAdd};
+let lastCheckId = undefined, checkTimeoutId = -1;
+function testChallenge(cid) {
+    let challenge = challenges[cid];
+
+    if(challenge != undefined) {
+        if(checkTimeoutId >= 0) {
+            clearTimeout(checkTimeoutId);
+            checkTimeoutId = -1;
+        }
+
+        lastCheckId = getId();
+
+        $("#testPopup-status").html("Checking challenge...");
+        $("#testPopup-results").html("").parent().hide();
+        $("#testPopup-close").html("Cancel");
+        $("#testPopup-alert").removeClass("alert-success alert-danger").html("").hide();
+
+        $("#testPopup").modal();
+
+        socket.emit("dns_challenge_cmd", {
+            command: "check", host: challenge.host, uniqueResponseId: lastCheckId, cid
+        });
+
+        checkTimeoutId = setTimeout(() => {
+            checkTimeoutId = -1;
+            lastCheckId = undefined;
+
+            $("#testPopup-status").html("Check timed out!<br/>Please try again.");
+            $("#testPopup-close").html("Close");
+        }, 8000);
+    }
+}
+
+window.dns_challenges = {init, askRemove, confirmRemove, openAddPopup, confirmAdd, testChallenge};
