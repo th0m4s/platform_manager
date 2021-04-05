@@ -1,3 +1,5 @@
+import './css/processes_usage.css';
+
 let color = Chart.helpers.color;
 let chartColors = ["#3B6A9C", "#007BFF", "#86C0FF"];
 
@@ -63,13 +65,17 @@ function init() {
         });
 
         socket.on("pid", (message) => {
-            $("#pid-" + message.id).html(" (" + message.pid + ")").show();
+            $(".pid-" + message.id).html(" (" + message.pid + ")").show();
         });
     });
 
     socket.on("error", (err) => {
         $.notify({message: "Connection with the socket lost. Please reload the page."}, {type: "danger"});
         console.log("Socket error", err);
+    });
+
+    $("#fullscreenGraph-modal").on("hidden.bs.modal", () => {
+        restoreExitFullscreen();
     });
 }
 
@@ -83,10 +89,10 @@ function showCharts() {
         if(!window.not_applicable.includes(id)) {
             if(subprocess.check < 2) {
                 let canRestart = subprocess.check >= 0;
-                grid.append(`<div class="col-xl-4 col-lg-6 col-12 mb-3 chart-panel"><h5 class="subprocess-title" style="display: inline-block;" data-toggle="tooltip" title="${subprocess.text}">${subprocess.name}<span style="display: none;" id="pid-${id}"></span>:</h5>`
+                grid.append(`<div class="col-xl-4 col-lg-6 col-12 mb-3 chart-panel" id="cell-${id}"><h5 class="subprocess-title" style="display: inline-block;" data-toggle="tooltip" title="${subprocess.text}">${subprocess.name}<span style="display: none;" class="pid-${id}"></span>:</h5>`
                     + `<div class="btn-group btn-group-sm" style="position: absolute; right: 15; top: -4; height: 31px" role="group">` + (canRestart ? `<button class="btn btn-info" data-action="restart" onclick="processes_usage.buttonClicked('${id}')" id="button-${id}"><i class="fas fa-undo-alt"></i></button>` : "")
-                    + `<button class="btn btn-secondary"><i class="fas fa-expand-alt"></i></button></div>`
-                    + `<div style="width: 100%; height: 200px;" class="row"><div class="col-12 chart-parent chart-mem"><canvas height="200px" width="100%" id="mem-${id}"></canvas></div><div class="col-12 chart-parent chart-cpu" style="display: none;"><canvas height="200px" width="100%" id="cpu-${id}"></canvas></div></div></div>`);
+                    + `<button class="btn btn-secondary" onclick="processes_usage.fullscreen('${id}')"><i class="fas fa-expand-alt"></i></button></div>`
+                    + `<div style="width: 100%;" class="row chart-row" id="charts-${id}"><div class="col-12 chart-parent chart-mem"><canvas id="mem-${id}"></canvas></div><div class="col-12 chart-parent chart-cpu" style="display: none;"><canvas id="cpu-${id}"></canvas></div></div></div>`);
                 
                 charts.mem[id] = new Chart($("#mem-" + id), {
                     type: "line",
@@ -231,6 +237,26 @@ function buttonClicked(id) {
     }
 }
 
+function restoreExitFullscreen() {
+    if(lastFullscreenId != undefined) {
+        $("#charts-" + lastFullscreenId).appendTo("#cell-" + lastFullscreenId);
+        lastFullscreenId = undefined;
+    }
+}
+
+let lastFullscreenId = undefined;
+function fullscreen(id) {
+    restoreExitFullscreen();
+    lastFullscreenId = id;
+
+    $("#charts-" + id).appendTo("#fullscreenGraph-parent");
+
+    let pidClass = "pid-" + id;
+    $("#fullscreenGraph-title").html(subprocesses[id].name + "<span class='" + pidClass + "'>" + $("." + pidClass).html() + "</span>");
+
+    $("#fullscreenGraph-modal").modal();
+}
+
 function checkSubprocess(id, delay = 0) {
     let button = $("#button-" + id);
     button.attr("disabled", "disabled").removeClass("btn-info").removeClass("btn-warning").addClass("btn-secondary").html("<i class='fas fa-sync fa-spin'></i>");
@@ -288,4 +314,4 @@ function confirmRestart(restart = true) {
 }
 
 
-window.processes_usage = {init, buttonClicked, confirmRestart, toggleVisible};
+window.processes_usage = {init, buttonClicked, confirmRestart, toggleVisible, fullscreen};

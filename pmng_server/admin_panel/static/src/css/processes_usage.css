@@ -1,0 +1,8 @@
+.chart-panel .chart-row {
+    height: 200px;
+    overflow: hidden;
+}
+
+#fullscreenGraph-parent .chart-row {
+    height: 80vh;
+}
