@@ -468,12 +468,12 @@ function start() {
                                     if(canPush) {
                                         predeploys[projectname] = true;
                                         connection.write("-----> Accepting changes from local repository...\n");
-                                        connection.write(SPACES + "If you quit the git process, the deployment will continue in the background.\n\n");
+                                        connection.write(SPACES + "If you quit the git process after the transfer, the deployment will continue in the background.\n\n");
                                         connection.end();
                                     } else {
                                         predeploys[projectname] = false;
                                         connection.write("-----> Cannot accept changes because the project " + projectname + " is protected.\n");
-                                        connection.write(SPACES + "Please open your admin panel and allow pushes for this project.\n");
+                                        connection.write(SPACES + "Please open your admin panel and allow pushes for this project, then repush your commit(s).\n");
                                         connection.end();
 
                                         await clearDeploy(buildFolder, undefined);

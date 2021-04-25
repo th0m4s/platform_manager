@@ -330,9 +330,9 @@ function stopProject(projectname, force = false) {
             containers.forEach((container) => {
                 // check if deployment instead of listing only plugins because must stop main container
                 if(container.data.Labels["pmng.containertype"] != "deployment") {
-                    prom.push(container.stop().catch((err) => {
-                        if(!force) return Promise.reject("Cannot stop " + container.data.Names[0] + ": " + err);
-                    })); // delete is automatic
+                    prom.push(container[container.data.State?.toLowerCase() == "exited" ? "delete" : "stop"]().catch((err) => {
+                        return Promise.reject("Error during prestart clean. Cannot stop/delete (" + container.data.State + ") " + container.data.Names[0] + ": " + err);
+                    }));
                 }
             });
 
@@ -450,14 +450,14 @@ function startProject(projectname) {
 
             // clear remaining secondary project containers (like plugins)
             // TODO: make this clear in a separate function (because same clear in stopProject)
-            await docker.container.list({filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
+            await docker.container.list({all: true, filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
                 let prom = [];
                 containers.forEach((container) => {
                     // like for stopProject, don't delete deployment
                     if(container.data.Labels["pmng.containertype"] != "deployment") {
-                        prom.push(container.stop().catch((err) => {
-                            return Promise.reject("Error during prestart clean. Cannot stop " + container.data.Names[0] + ": " + err);
-                        })); // delete is automatic
+                        prom.push(container[container.data.State?.toLowerCase() == "exited" ? "delete" : "stop"]().catch((err) => {
+                            return Promise.reject("Error during prestart clean. Cannot stop/delete (" + container.data.State + ") " + container.data.Names[0] + ": " + err);
+                        }));
                     }
                 });
 
