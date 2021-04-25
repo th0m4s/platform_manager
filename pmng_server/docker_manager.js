@@ -14,6 +14,7 @@ const child_process = require("child_process");
 const regex_utils = require("./regex_utils");
 const privileges = require("./privileges");
 const treekill = require("tree-kill");
+const net = require("net");
 const DockerContainer = require("node-docker-api/lib/container").Container;
 
 const docker = new Docker(Object.assign({version: process.env.DOCKER_API_VERSION}, process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)}));
@@ -520,7 +521,7 @@ function startProject(projectname) {
             env.push("PROJECT_VERSION=" + project.version);
 
             // request port
-            let hostPort = requestPort(projectname);
+            let hostPort = await requestPort(projectname);
             // port broadcasted by requestPort
 
             if(hostPort == 0) {
@@ -716,20 +717,67 @@ function pathExists(containerExec, type, path, wd = "/") {
 }
 
 /**
+ * Checks if a port is used a program on the system.
+ * @param {number} port The port to check.
+ * @returns {Promise<boolean>} A promise indicating if the port is free or not.
+ */
+function checkPortFree(port) {
+    return new Promise((resolve, reject) => {
+        let srv = net.createServer();
+        srv.maxConnections = 0;
+
+        srv.once("error", (error) => {
+            srv.removeAllListeners();
+            if(srv.listening) srv.close();
+
+            if(error.code == "EADDRINUSE") resolve(false);
+            else reject(error);
+        });
+
+        let portFree = false;
+        srv.once("listening", () => {
+            portFree = true;
+            srv.close();
+        });
+
+        srv.once("close", () => {
+            srv.removeAllListeners();
+            if(portFree) resolve(true);
+        });
+
+        srv.listen(port, "127.0.0.1");
+    });
+}
+
+/**
  * Requests a free port on the host machine and broadcasts it to all the public webservers.
  * @param {string} projectname The project to request a port for.
- * @returns {number} The attributed port for this project.
+ * @returns {Promise<number>} The attributed port for this project.
  */
-function requestPort(projectname) {
+async function requestPort(projectname) {
     let wantPort = firstPort;
     let usedPorts = Object.values(portMappings).sort();
-    
-    usedPorts.some((port) => {
-        if(wantPort == port) {
-            wantPort++;
-            return false;
-        } return true;
-    });
+    let errors = 0, found = false;
+
+    while(!found) {
+        usedPorts.some((port) => {
+            if(wantPort == port) {
+                wantPort++;
+                return false;
+            } return true;
+        });
+
+        try {
+            if(await checkPortFree(wantPort)) found = true;
+            else {
+                usedPorts.filter((x) => x > wantPort);
+                wantPort++;
+            }
+        } catch(e) {
+            errors++;
+            if(errors >= 3) throw e;
+        }
+    }
 
     if(wantPort > lastPort) return 0;
 
@@ -1008,4 +1056,5 @@ module.exports.ensureImageExists = ensureImageExists;
 module.exports.getProjectDeployingContainer = getProjectDeployingContainer;
 module.exports.registerEvents = registerEvents;
 module.exports.sortContainer = sortContainer;
+module.exports.checkPortFree = checkPortFree;
 module.exports.maininstance = maininstance;
