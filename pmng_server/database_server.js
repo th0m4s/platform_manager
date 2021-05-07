@@ -113,19 +113,19 @@ function installDatabase() {
         return Promise.all([
             createTableIfNotExists("projects", (projects) => {
                 projects.increments("id").primary();
-                projects.string("name", 32).unique().index();
-                projects.integer("ownerid", 10).unsigned();
-                projects.text("userenv");
+                projects.string("name", 32).notNullable().unique().index();
+                projects.integer("ownerid", 10).notNullable().unsigned();
+                projects.text("userenv").notNullable().defaultTo("{}");
                 projects.text("type");
-                projects.integer("version").defaultTo(0);
-                projects.text("plugins").defaultTo("{}");
-                projects.enum("autostart", ["true", "false"]).defaultTo("false");
-                projects.enum("forcepush", ["true", "false"]).defaultTo("false");
-                projects.enum("allow_https", ["true", "false"]).defaultTo("true");
+                projects.integer("version").notNullable().defaultTo(0);
+                projects.text("plugins").notNullable().defaultTo("{}");
+                projects.enum("autostart", ["true", "false"]).notNullable().defaultTo("false");
+                projects.enum("forcepush", ["true", "false"]).notNullable().defaultTo("false");
+                projects.enum("allow_https", ["true", "false"]).notNullable().defaultTo("true");
                 projects.foreign("ownerid").references("id").inTable("users");
             }), createTableIfNotExists("remote_git_users", (rgitusers) => {
                 rgitusers.increments("id").primary();
-                rgitusers.integer("userid", 10).unsigned();
+                rgitusers.integer("userid", 10).notNullable().unsigned();
                 rgitusers.string("remote", 16).notNullable();
                 rgitusers.string("remote_user", 48).nullable().defaultTo(null);
                 rgitusers.string("access_token", 128).notNullable();
@@ -139,30 +139,30 @@ function installDatabase() {
         return Promise.all([
             createTableIfNotExists("keys", (keys) => {
                 keys.increments("id").primary();
-                keys.string("key", 64).unique().index();
+                keys.string("key", 64).notNullable().unique().index();
                 keys.integer("userid", 10).unsigned().nullable();
                 keys.enum("expired", ["true", "false"]).defaultTo("false");
                 keys.enum("mode", ["session", "api"]);
                 keys.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
             }), createTableIfNotExists("collabs", (collabs) => {
                 collabs.increments("id").primary();
-                collabs.string("projectname", 32).index();
+                collabs.string("projectname", 32).notNullable().index();
                 collabs.integer("userid", 10);
-                collabs.enum("mode", ["view", "manage"]).defaultTo("view");
+                collabs.enum("mode", ["view", "manage"]).notNullable().defaultTo("view");
                 collabs.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
                 collabs.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
             }), createTableIfNotExists("domains", (domains) => {
                 domains.increments("id").primary();
-                domains.text("domain").unique().index();
+                domains.text("domain").notNullable().unique().index();
                 domains.string("projectname", 32).notNullable();
-                domains.enum("enablesub", ["true", "false"]).defaultTo("true");
+                domains.enum("enablesub", ["true", "false"]).notNullable().defaultTo("true");
                 domains.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
             }), createTableIfNotExists("plans", (plans) => {
                 plans.increments("id").primary();
-                plans.text("name").unique().index();
-                plans.text("usage").defaultTo("{}");
-                plans.decimal("price", 3, 2).defaultTo(0);
-                plans.enum("restricted", ["true", "false"]).defaultTo("false");
+                plans.text("name").notNullable().unique().index();
+                plans.text("usage").notNullable().defaultTo("{}");
+                plans.decimal("price", 3, 2).notNullable().defaultTo(0);
+                plans.enum("restricted", ["true", "false"]).notNullable().defaultTo("false");
             }).then(() => {
                 return hasDefaultPlans();
             }).then((exists) => {
