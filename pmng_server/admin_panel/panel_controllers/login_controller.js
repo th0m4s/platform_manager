@@ -25,11 +25,12 @@ router.get("/logout", async function(req, res) {
     res.redirect("/panel/login");
 });
 
-let SSO_TYPES = {"database": "/databases/login.sso.php", "webmail": "/webmail/"}
+let SSO_TYPES = {"database": {url: "/databases/login.sso.php", name: "MySQL databases explorer"}, "webmail": {url: "/webmail/", name: "Platform Manager webmail"}};
 router.post('/', bodyParser(), async (req, res, next) => {
     if(await database_server.isInstalled()) {
         let ssotype = req.body.sso;
-        let ssoredirect = ssotype == undefined ? undefined : SSO_TYPES[ssotype];
+        let ssodata = ssotype == undefined ? undefined : SSO_TYPES[ssotype];
+        let ssoredirect = ssodata?.url;
 
         let successRedirect = "/panel/dashboard", failureRedirect = "/panel/login";
         if(ssoredirect != undefined) {
@@ -67,7 +68,8 @@ router.get("/", async function(req, res) {
 router.get("/sso/:sso_type", async (req, res) => {
     if(await database_server.isInstalled()) {
         let ssotype = req.params.sso_type;
-        let ssoredirect = SSO_TYPES[ssotype];
+        let ssodata = SSO_TYPES[ssotype];
+        let ssoredirect = ssodata?.url;
         if(ssoredirect == undefined) {
             res.redirect("/panel/login");
         } else {
@@ -84,6 +86,7 @@ router.get("/sso/:sso_type", async (req, res) => {
             } else {
                 req.setPage(res, "Login");
                 res.locals.sso = ssotype;
+                res.locals.ssoname = ssodata.name;
                 res.locals.query = req.query;
                 res.render("login/login");
             }
