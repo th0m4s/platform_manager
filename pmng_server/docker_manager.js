@@ -15,6 +15,7 @@ const regex_utils = require("./regex_utils");
 const privileges = require("./privileges");
 const treekill = require("tree-kill");
 const net = require("net");
+const crypto = require("crypto");
 const DockerContainer = require("node-docker-api/lib/container").Container;
 
 const docker = new Docker(Object.assign({version: process.env.DOCKER_API_VERSION}, process.env.DOCKER_MODE == "socket" ? {socketPath: process.env.DOCKER_SOCKET} : {protocol: process.env.DOCKER_MODE, host: process.env.DOCKER_HOST, port: parseInt(process.env.DOCKER_PORT)}));
@@ -337,7 +338,7 @@ function stopProject(projectname, force = false) {
             });
 
             // updating database
-            let dbProm = database_server.database("projects").where("name", projectname).update({autostart: "false"});
+            let dbProm = database_server.database("projects").where("name", projectname).update({autostart: "false", customconf_key: null});
 
             removePort(projectname);
 
@@ -512,13 +513,17 @@ function startProject(projectname) {
                    
             if(imageName == undefined) throw "Unknown image for project.";
 
-            let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "CUSTOM_PORT"];
+            // generating customconf (runtime variables) key
+            let customconf_key = crypto.randomBytes(8).toString("hex");
+
+            let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "CUSTOM_PORT", "CUSTOMCONF_KEY"];
             for(let [key, value] of Object.entries(project.userenv)) {
                 if(!specialEnv.includes(key.toUpperCase())) env.push(key + "=" + value);
             }
 
-            // add version env
+            // add version and customconf key to env
             env.push("PROJECT_VERSION=" + project.version);
+            env.push("CUSTOMCONF_KEY=" + customconf_key);
 
             // request port
             let hostPort = await requestPort(projectname);
@@ -642,13 +647,16 @@ function startProject(projectname) {
                 await plugins_manager.getPlugin(pluginName).projectContainerCreated(projectname, containerConfig, networkName, getProjectPluginContainer(projectname, pluginName), pluginConfig);
             }
 
+            // updating database customconf_key (required to start the container because init scripts can depend on realtime configuration)
+            await database_server.database("projects").where("name", projectname).update({customconf_key});
+
             // start the container
             await container.start();
 
             // attach logs
             await attachLogs(projectname, container);
 
-            // updating database
+            // updating database autostart (not required to start the container)
             try {
                 await database_server.database("projects").where("name", projectname).update({autostart: "true"});
             } catch(error) {}

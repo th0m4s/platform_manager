@@ -129,6 +129,22 @@ router.get("/stop/:projectname", function(req, res) {
     });
 });
 
+router.get("/syncVariables/:projectname", (req, res) => {
+    api_auth(req, res, function(user) {
+        let projectname = req.params.projectname;
+        projects_manager.canAccessProject(projectname, user.id, false).then(() => {
+            projects_manager.getProject(projectname).then((project) => {
+                res.json({error: false, code: 200, variables: project.customconf});
+            }).catch((error) => {
+                res.status(500).json({error: true, code: 500, message: error});
+            });
+        }).catch((response) => {
+            console.warn(response);
+            res.status(500).json(response);
+        });
+    });
+});
+
 router.get("/create", (req, res) => {
     api_auth(req, res, function(user) {
         plans_manager.canUserCreateProject(user).then((canCreate) => {
@@ -149,11 +165,12 @@ router.post("/create", bodyParser(), function(req, res) {
         }
 
         let userenv = req.body.userenv || {};
+        let customconf = req.body.customconf || {};
         let pluginnames = req.body.pluginnames || [];
         let collaborators = req.body.collaborators || [];
         let customdomains = req.body.customdomains || [];
 
-        projects_manager.addProject(projectname, user.id, userenv, pluginnames).then((id) => {
+        projects_manager.addProject(projectname, user.id, userenv, customconf, pluginnames).then((id) => {
             let domProm = [], collabsProm = [];
             customdomains.forEach((domain) => {
                 if(domain !== "") domProm.push(projects_manager.addCustomDomain(projectname, domain.domain, domain.enablesub == true || domain.enablesub == "true", domain.full_dns == true || domain.full_dns == "true"));
@@ -239,6 +256,22 @@ router.post("/edit/:projectname", bodyParser(), function(req, res) {
                         });
         
                         promises.push(database_server.database("projects").where("name", projectname).update({userenv: originalproject.userenv}));
+                    }
+
+                    if(differences.customconf.add.length > 0 || differences.customconf.remove.length > 0 || differences.customconf.modify.length > 0) {
+                        differences.customconf.add.forEach((item) => {
+                            originalproject.customconf[item.key] = item.value;
+                        });
+        
+                        differences.customconf.remove.forEach((item) => {
+                            delete originalproject.customconf[item];
+                        });
+        
+                        differences.customconf.modify.forEach((item) => {
+                            originalproject.customconf[item.key] = item.newvalue;
+                        });
+        
+                        promises.push(database_server.database("projects").where("name", projectname).update({customconf: originalproject.customconf}));
                     }
         
                     differences.collabs.add.forEach((item) => {

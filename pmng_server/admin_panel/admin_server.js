@@ -1,5 +1,5 @@
 const logger = require("../platform_logger").logger();
-const express = require("express"), admin = express(), containerCom = express();
+const express = require("express"), admin = express();
 const intercom = require("../intercom/intercom_client").connect();
 const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
@@ -8,6 +8,7 @@ const socket_auth = require("./socket_controllers/socket_auth");
 const socketio_auth = require("socketio-auth");
 const fs = require("fs"), pfs = fs.promises;
 const panelRouter = require("./panel_router");
+const containerCom = require("./container_com_server");
 
 function handleCustomPanel(route, panel) {
     return (req, res, next) => {
@@ -132,17 +133,10 @@ function authNamespace(namespace) {
 }
 
 async function start() {
-    // need to create container com server as root
-    let comSocketFile = path.resolve(process.env.CONTAINERUTILS_MOUNT_PATH, "container_com.sock");
+    let rootCom = await containerCom.listenRootCom();
 
-    try {
-        await pfs.access(comSocketFile);
-        await pfs.unlink(comSocketFile);
-    } catch(_) { }
-
-    containerCom.listen(comSocketFile, () => {
-        logger.info("Container com server started.");
-    });
+    let userCom = await containerCom.listenUserCom();
+    await userCom.dropPrivileges();
 
     privileges.drop();
 
@@ -215,13 +209,8 @@ async function start() {
     const exec_socket = require("./socket_controllers/v1/exec_socket");
     exec_socket.initializeNamespace(authNamespace(io.of("/v1/exec")));
 
-    containerCom.get("/exec/:execId/:pid", (req, res) => {
-        let execId = req.params.execId;
-        let pid = parseInt(req.params.pid);
-    
-        if(!isNaN(pid)) exec_socket.pidReceived(execId, pid);
-        res.end();
-    });
+    rootCom.prepareRoutes(exec_socket);
+    userCom.prepareRoutes();
 
     intercom.send("dockermng", {command: "analyzeRunning"});
     if(process.env.ENABLE_HTTPS.toLowerCase() == "true") greenlock_manager.init();

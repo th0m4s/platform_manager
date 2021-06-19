@@ -1,6 +1,13 @@
+import "./css/project_manage.css";
+
 let forbidden_names = [];
 let containerRunning = 0; // 0 no info, 1 running, -1 stopped
 // only for edit
+
+function canBeNum(value) {
+    return typeof value === "number" || (value != null && typeof value === "string" && value.trim().length > 0 && !isNaN(Number(value))); // not using parseFloat because "3px" is a valid number
+}
+
 function init() {
     const plugins = ["mariadb", "redis", "persistent-storage", "custom-port", "srv-record", "plan-limiter", "auto-redirect"];
 
@@ -105,6 +112,10 @@ function init() {
             displayEnv(key, value)
         }
 
+        for(let [key, value] of Object.entries(values.customconf)) {
+            displayCustomConf(key, value)
+        }
+
         // domains are not in project. they should be fetched from the domains table
         values.domains.forEach((domain) => {
             displayDomain(domain.domain, domain.enablesub, domain.full_dns);
@@ -133,18 +144,56 @@ function init() {
     }
 }
 
+function getRowTypeAttr(value) {
+    if(typeof value === "number") return "num_forced";
+    else if(canBeNum(value)) return "str_forced";
+    else return "str_default";
+}
+
+function getRowTypeButtons() {
+    return "<span class='rowtype-buttons'><span class='rowtype-str' onclick='project_manage.setRowTypeFromButton(this, \"num\");'>str</span><span class='rowtype-num' onclick='project_manage.setRowTypeFromButton(this, \"str\");'>num</span></span>";
+}
+
+function setRowTypeFromButton(button, type) {
+    $(button).parent().parent().parent().parent().parent().attr("data-rowtype", type + "_forced");
+}
+
 function displayEnv(key, value) {
     let rdnId = Math.floor(Math.random()*10000000);
     $("#env-list").append(`<div class="row env-row mb-2"><div class="col-md-4"><input type="text" required class="form-control input-env-key" placeholder="Variable name" value="${key}"></div><div class="col-md-8">`
-     + `<div class="input-group"><input type="text" class="form-control input-env-val" placeholder="Value" id="env_${rdnId}"><div class="input-group-append">`
+     + `<div class="input-group"><input type="text" class="form-control input-env-val" oninput="project_manage.onRowInput(this);" placeholder="Value" id="env_${rdnId}"><div class="input-group-append">`
      // + `<button class="btn btn-primary button-add-env-line" style="display: none;" type="button" onclick="project_manage.addEnv()"><i class="fas fa-plus"></i> Add new</button>`
      + `<button class="btn btn-danger btn-delete" type="button" onclick="project_manage.deleteRow(this);"><i class="fas fa-trash-alt"></i> Delete</button></div></div></div></div>`);
      $("#env_" + rdnId).val(value);
      updateAdd();
 }
 
+function displayCustomConf(key, value) {
+    let rdnId = Math.floor(Math.random()*10000000);
+    $("#customconf-list").append(`<div class="row customconf-row mb-2" data-rowtype="${getRowTypeAttr(value)}"><div class="col-md-4"><input type="text" required class="form-control input-customconf-key" placeholder="Variable name" value="${key}"></div><div class="col-md-8">`
+     + `<div class="input-group"><input type="text" class="form-control input-customconf-val" oninput="project_manage.onRowInput(this);" placeholder="Value" id="customconf_${rdnId}"><div class="input-group-append">`
+     // + `<button class="btn btn-primary button-add-env-line" style="display: none;" type="button" onclick="project_manage.addEnv()"><i class="fas fa-plus"></i> Add new</button>`
+     + `${getRowTypeButtons()}<button class="btn btn-danger btn-delete" type="button" onclick="project_manage.deleteRow(this);"><i class="fas fa-trash-alt"></i> Delete</button></div></div></div></div>`);
+     $("#customconf_" + rdnId).val(value);
+     updateAdd();
+}
+
+function onRowInput(input) {
+    input = $(input);
+
+    let row = input.parent().parent().parent();
+    let currentType = row.attr("data-rowtype");
+    if(canBeNum(input.val())) {
+        row.attr("data-rowtype", currentType == "str_default" ? "str_forced" : currentType);
+    } else row.attr("data-rowtype", "str_default");
+}
+
 function addEnv() {
     displayEnv("", "");
+}
+
+function addCustomConf() {
+    displayCustomConf("", "");
 }
 
 function deleteRow(button) {
@@ -222,6 +271,22 @@ function confirm() {
             if(key.length > 0) userenv[key] = row.find(".input-env-val").val();
         }
         projectData.userenv = userenv;
+
+        let confrows = $(".customconf-row"), customconf = {};
+        for(let i = 0; i < confrows.length; i++) {
+            let row = $(confrows.get(i));
+            let key = row.find(".input-customconf-key").val().trim();
+            if(key.length > 0) {
+                let val = row.find(".input-customconf-val").val();
+                if(row.attr("data-rowtype") == "num_forced") {
+                    let numVal = Number(val);
+                    if(!isNaN(numVal)) val = numVal;
+                }
+    
+                wantconf[key] = val;
+            }
+        }
+        projectData.customconf = customconf;
 
         let domrows = $(".domain-row"), domains = [];
         for(let i = 0; i < domrows.length; i++) {
@@ -379,6 +444,53 @@ function confirm() {
                 diffTexts.push(text);
             }
 
+            // custom conf
+            if(differences.customconf.remove.length > 0) {
+                let text = "You removed the following realtime configuration variable" + (differences.customconf.remove.length > 1 ? "s" : "") + ":<ul>";
+                specialWithoutRestart++;
+                differences.customconf.remove.forEach((item) => {
+                    text += "<li>" + item + "</li>";
+                });
+                text += "</ul>";
+                diffTexts.push(text);
+            }
+
+            if(differences.customconf.add.length > 0) {
+                let text = "You added the following realtime configuration variable" + (differences.customconf.add.length > 1 ? "s" : "") + ":<ul>";
+                specialWithoutRestart++;
+                differences.customconf.add.forEach((item) => {
+                    text += "<li>" + item.key + ": " + item.value;
+
+                    if(typeof item.value == "number") {
+                        text += "<span class='confirm-rc-small'>(number)</span>";
+                    } else if(canBeNum(item.value)) {
+                        text += "<span class='confirm-rc-small'>(string)</span>";
+                    }
+
+                    text += "</li>";
+                });
+                text += "</ul>";
+                diffTexts.push(text);
+            }
+
+            if(differences.customconf.modify.length > 0) {
+                let text = "You modified the following realtime configuration variable" + (differences.customconf.modify.length > 1 ? "s" : "") + ":<ul>";
+                specialWithoutRestart++;
+                differences.customconf.modify.forEach((item) => {
+                    text += "<li>" + item.key + ": " + item.newvalue;
+
+                    if(typeof item.newvalue == "number") {
+                        text += "<span class='confirm-rc-small'>(number)</span>";
+                    } else if(canBeNum(item.newvalue)) {
+                        text += "<span class='confirm-rc-small'>(string)</span>";
+                    }
+
+                    text += "</li>";
+                });
+                text += "</ul>";
+                diffTexts.push(text);
+            }
+
             if(specialWithoutRestart == count) needRestart = false;
 
             let restartText = "";
@@ -446,6 +558,21 @@ function getChanges() {
         let row = $(envrows.get(i));
         let key = row.find(".input-env-key").val().trim();
         if(key.length > 0) wantenv[key] = row.find(".input-env-val").val();
+    }
+
+    let confrows = $(".customconf-row"), wantconf = {};
+    for(let i = 0; i < confrows.length; i++) {
+        let row = $(confrows.get(i));
+        let key = row.find(".input-customconf-key").val().trim();
+        if(key.length > 0) {
+            let val = row.find(".input-customconf-val").val();
+            if(row.attr("data-rowtype") == "num_forced") {
+                let numVal = Number(val);
+                if(!isNaN(numVal)) val = numVal;
+            }
+
+            wantconf[key] = val;
+        }
     }
 
     let domrows = $(".domain-row"), wantdomains = [];
@@ -546,6 +673,26 @@ function getChanges() {
         }
     }
 
+    differences.customconf = {add: [], remove: [], modify: []}
+    let wantconfkeys = Object.keys(wantconf), originalconfkeys = Object.keys(values.customconf);
+
+    for(let originalkey of originalconfkeys) {
+        if(!wantconfkeys.includes(originalkey)) {
+            differences.customconf.remove.push(originalkey);
+            count++;
+        } else if(values.customconf[originalkey] !== wantconf[originalkey]) {
+            differences.customconf.modify.push({key: originalkey, newvalue: wantconf[originalkey]});
+            count++;
+        }
+    }
+
+    for(let wantkey of wantconfkeys) {
+        if(!originalconfkeys.includes(wantkey)) {
+            differences.customconf.add.push({key: wantkey, value: wantconf[wantkey]});
+            count++;
+        }
+    }
+
     return {differences, count};
 }
 
@@ -586,4 +733,4 @@ function confirmSave() {
     });
 }
 
-window.project_manage = {init, addEnv, addDomain, deleteRow, confirm, confirmSave};
+window.project_manage = {init, addEnv, addDomain, addCustomConf, deleteRow, confirm, confirmSave, onRowInput, setRowTypeFromButton};

@@ -1,0 +1,34 @@
+.rowtype-buttons {
+    position: absolute;
+    right: 104px;
+    top: 8px;
+    font-size: 14px;
+    color: grey;
+    z-index: 10;
+    cursor: pointer;
+    user-select: none;
+    font-family: "Consolas";
+}
+
+.row[data-rowtype="str_default"] .rowtype-buttons {
+    display: none;
+}
+
+.row[data-rowtype="str_forced"] input, .row[data-rowtype="num_forced"] input {
+    padding-right: 50px;
+}
+
+.row[data-rowtype="str_forced"] .rowtype-num {
+    display: none;
+}
+
+.row[data-rowtype="num_forced"] .rowtype-str {
+    display: none;
+}
+
+.confirm-rc-small {
+    font-size: 13px;
+    font-family: "Consolas";
+    margin-left: 8px;
+    color: grey;
+}

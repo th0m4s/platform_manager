@@ -116,6 +116,8 @@ function installDatabase() {
                 projects.string("name", 32).notNullable().unique().index();
                 projects.integer("ownerid", 10).notNullable().unsigned();
                 projects.text("userenv").notNullable().defaultTo("{}");
+                projects.text("customconf").notNullable().defaultTo("{}");
+                projects.string("customconf_key", 16).nullable().defaultTo(null);
                 projects.text("type");
                 projects.integer("version").notNullable().defaultTo(0);
                 projects.text("plugins").notNullable().defaultTo("{}");
@@ -394,6 +396,13 @@ function userChangingMail(userId) {
     });
 }
 
+function getCustomConfFromKey(key, variable) {
+    return knex("projects").whereNotNull("customconf_key").andWhere("customconf_key", key).select("customconf").then((response) => {
+        if(response.length == 0) return null;
+        return JSON.parse(response[0].customconf)[variable];
+    });
+}
+
 const SCOPES = {ADMIN: 1, SYSTEM: 9, DOCKER: 20, USER: 99};
 /**
  * Checks if a integer user scope is valid against a scope level.
@@ -428,4 +437,5 @@ module.exports.revokeKey = revokeKey;
 module.exports.projectAllowHttps = projectAllowHttps;
 module.exports.domainAllowHttps = domainAllowHttps;
 module.exports.userChangingMail = userChangingMail;
+module.exports.getCustomConfFromKey = getCustomConfFromKey;
 module.exports.checkScope = checkScope;

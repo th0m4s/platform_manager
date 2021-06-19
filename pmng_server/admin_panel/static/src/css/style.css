@@ -2,7 +2,7 @@
     cursor: default !important;
 }
 
-.env-row:last-child .button-add-env-line, .domain-row:last-child .button-add-domain-line {
+.env-row:last-child .button-add-env-line, .customconf-row:last-child .button-add-customconf-line, .domain-row:last-child .button-add-domain-line {
     display: block !important;
 }
 
@@ -81,7 +81,6 @@
 .passwords-row.only-row button {
     display: none;
 }
-
 
 .subprocess-tooltip .tooltip-inner {
     max-width: 23vw !important;
