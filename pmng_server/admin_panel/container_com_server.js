@@ -11,7 +11,6 @@ async function listenRootCom() {
 
     try {
         await pfs.access(comSocketFile);
-        console.log("can access root com");
         await pfs.unlink(comSocketFile);
     } catch(_) { }
 
@@ -44,7 +43,6 @@ async function listenUserCom() {
 
     try {
         await pfs.access(comSocketFile);
-        console.log("can access user com");
         await pfs.unlink(comSocketFile);
     } catch(_) { }
 
