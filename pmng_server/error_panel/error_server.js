@@ -23,7 +23,8 @@ app.get("/", (req, res, next) => {
 
 const errorPage = path.join(__dirname, "static/port_error.html");
 app.all("*", (req, res) => {
-    res.status(404).sendFile(errorPage);
+    if(req.headers["accept"].includes("application/json")) res.status(404).json({error: true, code: 404, message: "Cannot connect to the final website!"});
+    else res.status(404).sendFile(errorPage);
 });
 
 function start() {

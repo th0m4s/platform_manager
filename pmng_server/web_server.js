@@ -420,12 +420,20 @@ async function upgradeRequest(req, socket, head) {
 let errorPageCache = "";
 httpProxyServer.on("error", function (err, req, res) {
     try {
-        res.writeHead(502, {
-            "Content-Type": "text/html"
-        });
-    
-        if(errorPageCache == "") res.end("<p>Could not connect to server: " + err + "</p>");
-        else res.end(errorPageCache.replace("error_message", err));
+        if(req.headers["accept"].includes("application/json")) {
+            res.writeHead(502, {
+                "Content-Type": "application/json"
+            });
+
+            res.end(JSON.stringify({error: true, code: 502, message: "Cannot connect to the website!", detais: err}));
+        } else {
+            res.writeHead(502, {
+                "Content-Type": "text/html"
+            });
+        
+            if(errorPageCache == "") res.end("<p>Could not connect to server: " + err + "</p>");
+            else res.end(errorPageCache.replace("error_message", err));
+        }
     } catch(error) {
         // already an error, fail silently
     }
