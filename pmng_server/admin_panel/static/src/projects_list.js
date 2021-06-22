@@ -1,4 +1,5 @@
 let socket = undefined, loaded = 0;
+let specialStates = {};
 
 function init() {
     //utils.showInfiniteLoading("Loading projects...");
@@ -12,12 +13,17 @@ function init() {
             console.log("Socket authenticated.");
             socket.emit("setup");
 
-            requestOwned(requestLimit).always(() => {
-                requestCollab(requestLimit).always(() => {
-                    //utils.hideLoading();
+            let doneCount = 0, done = () => {
+                doneCount++;
+
+                if(doneCount == 2) {
+                    // utils.hideLoading();
                     window.showMain();
-                });
-            });
+                }
+            };
+
+            requestOwned(requestLimit).always(done);
+            requestCollab(requestLimit).always(done);
         });
         socket.on("unauthorized", function(err) {
             //utils.hideLoading();
@@ -34,10 +40,12 @@ function init() {
             let project = message.project;
             switch(message.action) {
                 case "start":
+                    specialStates[project] = "none";
                     setCanRestart(project, true);
                     setProjectState(project, "dark", "stop", "Stop", false, "running");
                     break;
                 case "stop":
+                    specialStates[project] = "none";
                     setCanRestart(project, false);
                     setProjectState(project, "success", "play", "Start", false, "stopped");
                     break;
@@ -91,6 +99,28 @@ function init() {
                         }
                     }
                     break;
+                case "special_state":
+                    let newSpecialState = message.state;
+                    if(newSpecialState == "clear_special_state") {
+                        if(specialStates[project] != "none") {
+                            let actualRunningState = $("#line-project-" + project).attr("data-state");
+                            if(actualRunningState == "running") {
+                                setCanRestart(project, true);
+                                setProjectState(project, "dark", "stop", "Stop", false, "running");
+                            } else if(actualRunningState == "stopped") {
+                                setCanRestart(project, false);
+                                setProjectState(project, "success", "play", "Start", false, "stopped");
+                            } else setProjectWarning(project);
+                        } // else special state was already cleared by start or stop
+                    } else if(newSpecialState == "starting") {
+                        setCanRestart(project, false);
+                        setProjectState(project, "info", "sync fa-spin", "Start"/*ing..."*/, true, "stopped"); // current state is the invert of the destination state
+                    } else if(newSpecialState == "stopping") {
+                        setCanRestart(project, false);
+                        setProjectState(project, "info", "sync fa-spin", "Stop"/*ping..."*/, true, "running");
+                    }
+
+                    specialStates[project] = newSpecialState;
             }
         });
     });
@@ -195,24 +225,35 @@ function checkStates(projects) {
         if(response.error) {
             projects.forEach((projectname) => {
                 setProjectWarning(projectname);
+                specialStates[projectname] = "none"; // why not unknown?
             });
 
             console.warn(response.message);
             $.notify({message: "Unable to check states, please reload the page or open the console for details."}, {type: "danger"});
         } else {
             for(let [projectname, state] of Object.entries(response.results)) {
-                if(state) {
-                    setCanRestart(projectname, true);
-                    setProjectState(projectname, "dark", "stop", "Stop", false, "running");
-                } else {
+                specialStates[projectname] = state.special;
+                if(state.special == "none") {
+                    if(state.running) {
+                        setCanRestart(projectname, true);
+                        setProjectState(projectname, "dark", "stop", "Stop", false, "running");
+                    } else {
+                        setCanRestart(projectname, false);
+                        setProjectState(projectname, "success", "play", "Start", false, "stopped");
+                    }
+                } else if(state.special == "starting") {
                     setCanRestart(projectname, false);
-                    setProjectState(projectname, "success", "play", "Start", false, "stopped");
-                }
+                    setProjectState(projectname, "info", "sync fa-spin", "Start"/*ing..."*/, true, "stopped"); // current state is the invert of the destination state
+                } else if(state.special == "stopping") {
+                    setCanRestart(projectname, false);
+                    setProjectState(projectname, "info", "sync fa-spin", "Stop"/*ping..."*/, true, "running");
+                } else setProjectWarning(projectname);
             }
         }
     }).fail((xhr, status, error) => {
         projects.forEach((projectname) => {
             setProjectWarning(projectname);
+            specialStates[projectname] = "none";
         });
 
         console.warn(error);

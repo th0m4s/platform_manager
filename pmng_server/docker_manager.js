@@ -81,7 +81,8 @@ async function isContainerRunning(containerReference) {
 /**
  * Tests if multiple projects are running inside their own Docker container.
  * @param {string[]} projects An array of projects names to test.
- * @returns {Promise<Object>} A promise resolved with an object including each project as a property. *true* if the project is running, *false* otherwise.
+ * @returns {Promise<Object>} A promise resolved with an object including each project as an object with two properties.
+ * *running* as a boolean, *true* if the project is running, *false* otherwise, and *special* that can be "none", "starting" or "stopping".
  */
 function areProjectContainersRunning(projects) {
     return docker.container.list().then((containers) => {
@@ -95,10 +96,10 @@ function areProjectContainersRunning(projects) {
         let results = {};
         projects.forEach((project) => {
             let containerName = getProjectMainContainer(project);
+            results[project] = {running: false, special: startingProjects.includes(project) ? "starting" : (stoppingProjects.includes(project) ? "stopping" : "none")};
+
             if(byName[containerName] !== undefined) {
-                results[project] = byName[containerName].data.State == "running";
-            } else {
-                results[project] = false;
+                results[project].running = byName[containerName].data.State == "running";
             }
         });
 
@@ -207,11 +208,7 @@ async function maininstance() {
                 });
                 break;
             case "startProject":
-                startProject(projectname).then(() => {
-                    clearStarting(projectname).then(() => respond({error: false, message: "Project started."}));
-                }).catch((error) => {
-                    clearStarting(projectname).then(() => respond({error: true, message: error}));
-                });
+                startProject(projectname).then(() => respond({error: false, message: "Project started."})).catch((error) => respond({error: true, message: error}));
                 break;
             case "getPort":
                 if(portMappings.hasOwnProperty(projectname)) respond({error: false, port: portMappings[projectname]});
@@ -266,11 +263,7 @@ async function maininstance() {
                                     results.forEach((result) => {
                                         if(!alreadyRunning.includes(result.name)) {
                                             logger.info("Autostarting " + result.name + "...");
-                                            prom.push(startProject(result.name).then(() => {
-                                                return result.name;
-                                            }).catch((reason) => {
-                                                throw {project: result.name, message: reason};
-                                            }));
+                                            prom.push(startProject(result.name));
                                         }
                                     });
 
@@ -279,11 +272,9 @@ async function maininstance() {
                                             let successes = 0;
                                             states.forEach((state) => {
                                                 if(state.status == "fulfilled") {
-                                                    clearStarting(state.value);
                                                     successes++;
                                                 } else {
-                                                    clearStarting(state.reason.project);
-                                                    logger.warn("Error during autostart: " + state.reason.message);
+                                                    logger.warn("Error during autostart: " + state.reason);
                                                 }
                                             });
 
@@ -326,6 +317,8 @@ function stopProject(projectname, force = false) {
         if(!result) return Promise.reject("Cannot stop a stopped project.");
         stoppingProjects.push(projectname);
         logger.tag("DOCKER", "Stopping project " + projectname + "...", force ? "(" + JSON.stringify(forceData) + ")" : undefined);
+        intercom.send("projectsevents", {event: "stopping", project: projectname});
+
         return docker.container.list({filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
             let prom = [];
             containers.forEach((container) => {
@@ -367,6 +360,7 @@ function stopProject(projectname, force = false) {
             });
         }).catch((error) => {
             logger.tagWarn("DOCKER", "Cannot stop project " + projectname + ":", error);
+            intercom.send("projectsevents", {event: "clear_special_state", project: project});
             throw error;
         });
     });
@@ -445,6 +439,7 @@ function startProject(projectname) {
         startingProjects.push(projectname);
 
         logger.tag("DOCKER", "Starting project " + projectname + "...");
+        intercom.send("projectsevents", {event: "starting", project: projectname});
 
         try {
             let project = await project_manager.getProject(projectname, true);
@@ -662,10 +657,21 @@ function startProject(projectname) {
             } catch(error) {}
         } catch(error) {
             logger.tagWarn("DOCKER", "Cannot start project " + projectname + ":", error);
+
+            try {
+                await clearStarting(projectname);
+            } catch(clearError) {
+                logger.tagWarn("DOCKER", "Cannot clear starting project " + projectname + " after start error:", clearError);
+            }
+
             throw error;
         }
     }).then(() => {
         logger.tag("DOCKER", "Project " + projectname + " started.");
+
+        return clearStarting(projectname).catch((clearError) => {
+            logger.tagWarn("DOCKER", "Cannot clear starting project " + projectname + " after successful start:", clearError);
+        });
     });
 }
 
@@ -882,7 +888,12 @@ async function ensureImageExists(name, dockerfile, {latest = false, adminLogs = 
  * @returns {Promise} A promise resolved when all the start resources are cleared.
  */
 function clearStarting(projectname) {
-    startingProjects.splice(startingProjects.indexOf(projectname), 1);
+    let index = startingProjects.indexOf(projectname);
+    if(index >= 0) {
+        startingProjects.splice(index, 1);
+        intercom.send("projectsevents", {event: "clear_special_state", project: projectname});
+    }
+
     let prom = []
     /*let buildPath = project_manager.getProjectBuild(projectname);
     pfs.access(buildPath).then(() => {

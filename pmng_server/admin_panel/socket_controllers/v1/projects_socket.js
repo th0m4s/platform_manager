@@ -37,6 +37,12 @@ function initializeNamespace(namespace) {
             case "update_collab":
                 namespace.to("user_" + eventMessage.collaboratorId).emit("project_action", {action: "update_collab", project, collabmode: eventMessage.mode});
                 break;
+            case "clear_special_state":
+            case "stopping":
+            case "starting":
+                // here project is only the name
+                namespace.to("project_" + project).emit("project_action", {action: "special_state", state: eventMessage.event, project});
+                break;
         }
     });
 
