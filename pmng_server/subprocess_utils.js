@@ -1,6 +1,8 @@
-const logger = require("./platform_logger").logger();
+const pmng = require("../pmng_lib");
 const child_process = require("child_process");
-const intercom = require("./intercom/intercom_client").connect();
+
+const logger = new pmng.Logger();
+const intercom = new pmng.Intercom.Client();
 
 /**
  * @callback OnExited
@@ -8,9 +10,74 @@ const intercom = require("./intercom/intercom_client").connect();
  * @param {string} signal The exit signal of the process.
  */
 
-/**
- * @typedef {{getProcess: function, restart: function, isRunning: Function<boolean>}} Subfork
- */
+class Subfork {
+    id = undefined;
+    #file = undefined;
+
+    #subp = undefined;
+    #shouldRestart = true;
+    #restarting = false;
+
+    #onForking = () => {};
+    #onExited = (code, signal) => {};
+    #onRestart = () => {};
+
+    constructor(file, id, onForking, onExited, onRestart) {
+        this.#file = file;
+        this.id = id;
+        this.onForking = onForking;
+        this.#onExited = onExited;
+        this.#onRestart = onRestart;
+
+        startProcess(false);
+
+        intercom.subscribe(["req_pid"], this.#sendPid);
+        intercom.subscribe(["subprocess:" + id], (message, respond) => {
+            let command = message.command;
+            switch(command) {
+                case "restart":
+                    restart();
+                    respond({error: false, message: "Restart signal sent. Wait and check for isRunning if necessary."});
+                    break;
+                case "isRunning":
+                    respond({error: false, running: this.isRunning()});
+                    break;
+            }
+        });
+    }
+
+    getProcess() {
+        return this.#subp;
+    }
+
+    restart() {
+        this.#restarting = true;
+        this.#onRestart();
+        this.#subp.kill(); // restart process by killing it (on exit will be called)
+    }
+
+    isRunning() {
+        return this.#subp != undefined && this.#subp.exitCode === null;
+    }
+
+    #sendPid() {
+        intercom.send("pid", {pid: this.#subp.pid, id: this.id});
+    }
+
+    #startProcess(restart, code, signal) {
+        if(restart && !this.#restarting) this.#onExited(code, signal);
+        this.#restarting = false;
+
+        this.#onForking();
+        this.#subp = child_process.fork(this.#file);
+        this.sendPid();
+
+        this.#subp.addListener("exit", (code, signal) => {
+            if(this.#shouldRestart) this.#startProcess(true, code, signal);
+            else this.#subp = undefined;
+        });
+    }
+}
 
 /**
  * Creates intercom handler for a process that doesn't belong to a file with custom restart and isRunning methods.
@@ -43,54 +110,7 @@ function fakeFork(id, isRunning, restart) {
  * @returns {Subfork} An object representing the running process and util functions.
  */
 function fork(file, id, onForking, onExited, onRestart) {
-    let subp, shouldRestart = true, restarting = false;
-
-    let sendPid = () => {
-        intercom.send("pid", {pid: subp.pid, id});
-    }
-
-    intercom.subscribe(["req_pid"], sendPid);
-
-    let startProcess = (restart, code, signal) => {
-        if(restart && !restarting) onExited(code, signal);
-        restarting = false;
-
-        onForking();
-        subp = child_process.fork(file);
-        sendPid();
-
-        subp.addListener("exit", (code, signal) => {
-            if(shouldRestart) startProcess(true, code, signal);
-            else subp = undefined;
-        });
-    }
-
-    startProcess(false);
-
-    let restart = () => {
-        restarting = true;
-        onRestart();
-        subp.kill(); // restart process by killing it (on exit will be called)
-    }
-
-    let isRunning = () => {
-        return subp != undefined && subp.exitCode === null;
-    }
-
-    intercom.subscribe(["subprocess:" + id], (message, respond) => {
-        let command = message.command;
-        switch(command) {
-            case "restart":
-                restart();
-                respond({error: false, message: "Restart signal sent. Wait and check for isRunning if necessary."});
-                break;
-            case "isRunning":
-                respond({error: false, running: isRunning()});
-                break;
-        }
-    });
-
-    return {getProcess: () => subp, restart, isRunning};
+    return new Subfork(file, id, onForking, onExited, onRestart);
 }
 
 /**
@@ -136,7 +156,4 @@ function responder() {
 }
 
 
-module.exports.fork = fork;
-module.exports.forkNamed = forkNamed;
-module.exports.fakeFork = fakeFork;
-module.exports.responder = responder;
+module.exports = {fork, forkNamed, fakeFork, responder};

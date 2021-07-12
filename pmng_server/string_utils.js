@@ -62,6 +62,7 @@ const numberRegex = /^[\d.]+$/;
  * Stricly parses a positive float number from a string representation (parseFloat allows letters arround number, validParseFloat not).
  * @param {string} value The string representation of the value to test.
  * @returns {number} The stricly parsed float value if the input is in the correct form, *NaN* otherwise.
+ * @deprecated Use the *Number()* constructor that is using the same behaviour.
  */
 function validParseFloat(value) {
     return numberRegex.test(value) ? parseFloat(value) : NaN;
@@ -112,9 +113,4 @@ function keepConfigLines(text, keepLines, removeLines = []) {
     return newLines.join("\n");
 }
 
-module.exports.generatePassword = generatePassword;
-module.exports.formatBytes = formatBytes;
-module.exports.validParseFloat = validParseFloat;
-module.exports.parseBytesSize = parseBytesSize;
-module.exports.replaceArgs = replaceArgs;
-module.exports.keepConfigLines = keepConfigLines;
+module.exports = {generatePassword, formatBytes, validParseFloat, parseBytesSize, replaceArgs, keepConfigLines};

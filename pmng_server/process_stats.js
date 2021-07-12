@@ -60,5 +60,4 @@ function pidId(id) {
 }
 
 
-module.exports.stats = stats;
-module.exports.pidId = pidId;
+module.exports = {pidId, stats};
