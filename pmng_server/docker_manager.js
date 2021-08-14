@@ -781,6 +781,8 @@ async function requestPort(projectname) {
             } return true;
         });
 
+        if(wantPort > lastPort) return 0;
+
         try {
             if(await checkPortFree(wantPort)) found = true;
             else {
@@ -792,8 +794,6 @@ async function requestPort(projectname) {
             if(errors >= 3) throw e;
         }
     }
-
-    if(wantPort > lastPort) return 0;
 
     intercom.send("portBroadcast", {command: "addPort", project: projectname, port: wantPort});
 
