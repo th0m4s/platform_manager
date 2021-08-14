@@ -1,6 +1,6 @@
 const logger = require("./platform_logger").logger();
-const dns = require("native-dns"), dns_server = dns.createServer();
-const dns_consts = require('native-dns-packet').consts;
+const dns = require("native-node-dns"), dns_server = dns.createServer();
+const dns_consts = require("native-node-dns-packet").consts;
 const regex_utils = require("./regex_utils");
 const project_manager = require("./project_manager");
 const database_server = require("./database_server");

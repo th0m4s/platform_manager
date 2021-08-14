@@ -4,7 +4,7 @@ const database_server = require("../database_server");
 const regex_utils = require("../regex_utils");
 const intercom = require("../intercom/intercom_client").connect();
 const Plugin = require("./lib_plugin");
-const dns = require("native-dns");
+const dns = require("native-node-dns");
 
 async function checkService(service, projectname) {
     if(service.includes(" ") || service.length == 0) throw "Invalid service name.";

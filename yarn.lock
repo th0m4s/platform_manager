@@ -4063,10 +4063,15 @@ ip@^1.1.5:
   resolved "https://registry.yarnpkg.com/ip/-/ip-1.1.5.tgz#bdded70114290828c0a039e72ef25f5aaec4354a"
   integrity sha1-vd7XARQpCCjAoDnnLvJfWq7ENUo=
 
-ipaddr.js@1.9.1, "ipaddr.js@>= 0.1.1":
+ipaddr.js@1.9.1:
   version "1.9.1"
   resolved "https://registry.yarnpkg.com/ipaddr.js/-/ipaddr.js-1.9.1.tgz#bff38543eeb8984825079ff3a2a8e6cbd46781b3"
   integrity sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==
+
+"ipaddr.js@>= 0.1.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/ipaddr.js/-/ipaddr.js-2.0.1.tgz#eca256a7a877e917aeb368b0a7497ddf42ef81c0"
+  integrity sha512-1qTgH9NG+IIJ4yfKs2e6Pp1bZg8wbDbKHT21HrLIeYBTRLgMYKnMTPAuI3Lcs61nfx5h1xlXnbJtH1kX5/d/ng==
 
 ipaddr.js@~0.1.3:
   version "0.1.9"
@@ -5418,29 +5423,30 @@ nanomatch@^1.2.9:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
-native-dns-cache@~0.0.2:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/native-dns-cache/-/native-dns-cache-0.0.2.tgz#ce0998f7fdf6c7990970a33190624b0e98ee959b"
-  integrity sha1-zgmY9/32x5kJcKMxkGJLDpjulZs=
+native-node-dns-cache@>=0.0.3:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/native-node-dns-cache/-/native-node-dns-cache-0.0.5.tgz#cbb500777a140bc2d1898d206f79978a8edb9ee0"
+  integrity sha512-cQZLl4DhYKgggoA8ZBZWkUIHhurW54ByLdaQHKGbW4JsLXJBfxvN0Jh0BMhyJXnRUjho9UV7M+NKd+uqArun3g==
   dependencies:
     binaryheap ">= 0.0.3"
-    native-dns-packet ">= 0.0.1"
+    native-node-dns-packet ">= 0.1.2"
 
-"native-dns-packet@>= 0.0.1", native-dns-packet@~0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/native-dns-packet/-/native-dns-packet-0.1.1.tgz#97da90570b8438a00194701ce24d011fd3cc109a"
-  integrity sha1-l9qQVwuEOKABlHAc4k0BH9PMEJo=
+"native-node-dns-packet@>= 0.1.2", native-node-dns-packet@>=0.1.3, native-node-dns-packet@^0.1.5:
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/native-node-dns-packet/-/native-node-dns-packet-0.1.5.tgz#033e3d09764270f74825491de6a096aea15db14d"
+  integrity sha512-XEE/pCAsWsh6vkQBjVxBJKz7NvDgZmTUpNDPZ0DTQ8OLCFseRuqtPYSDXEH6rNKAvBblN2nSS/1fhdlo9iJAeA==
   dependencies:
     buffercursor ">= 0.0.12"
     ipaddr.js ">= 0.1.1"
 
-"native-dns@https://github.com/tjfontaine/node-dns":
-  version "0.7.0"
-  resolved "https://github.com/tjfontaine/node-dns#f3938f786e887d8894b3bf3354d3421e42068aae"
+native-node-dns@^0.7.6:
+  version "0.7.6"
+  resolved "https://registry.yarnpkg.com/native-node-dns/-/native-node-dns-0.7.6.tgz#73300f48c4e4ff1510be6038cdbb6e27c2fe3ebe"
+  integrity sha512-1ySui/Uhcpg5B6wdSn2JdTkNMjPUwR/gWmrpwzhbjQUxJb+++wnH9N2KhFLMu3Fx3uhzqXvZlZLfn4odQO4nAA==
   dependencies:
     ipaddr.js "~0.1.3"
-    native-dns-cache "~0.0.2"
-    native-dns-packet "~0.1.1"
+    native-node-dns-cache ">=0.0.3"
+    native-node-dns-packet ">=0.1.3"
 
 natural-compare@^1.4.0:
   version "1.4.0"
