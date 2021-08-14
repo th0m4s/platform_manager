@@ -3,7 +3,7 @@ const cron = require("node-cron");
 const exitHook = require("async-exit-hook");
 const pfs = require("fs").promises;
 const path = require("path");
-const dns = require("dns"); // TODO: why not native-node-dns npm package?
+const dns = require("native-node-dns");
 const historyDir = path.resolve(path.dirname(require("../../../platform_logger").LOG_FILE), "processes");
 
 let minuteHistory = {};
@@ -148,7 +148,7 @@ function initializeNamespace(namespace) {
                 let {command, host, token} = message;
                 if(["set", "remove"].includes(command)) intercom.send("dnsChallenges", {command, host, token});
                 else if(command == "check") {
-                    dns.resolveTxt(message.host, (error, results) => {
+                    dns.resolve(message.host, "TXT", "8.8.8.8", (error, results) => {
                         socket.emit("dns_challenges_checked", {error, results: results.map(x => x.join(" ")), uniqueResponseId: message.uniqueResponseId, cid: message.cid});
                     });
                 }
