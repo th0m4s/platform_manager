@@ -6,7 +6,7 @@ Plaform Manager *aka. PMNG* is a NodeJS program to manage dockerized projects on
 
 This project requires a Unix-based operating system (Windows and MacOS are not supported) running NodeJS `v15.0.0` or above and Yarn.
 
-The only officially support platform is Ubuntu, but any other should work including Debian.
+The only officially supported platform is Ubuntu, but any other should work including Debian.
 
 This program also requires a MariaDB server and Docker (these can run on another device). They can be installed using the following command on Debian and its derivatives:
 ```bash
