@@ -4,7 +4,7 @@
   "description": "Manages docker applications on a single server.",
   "main": "platform_manager.js",
   "author": "Thomas LEDOS",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "engines": {
     "node": ">=12.9.0"
   },
