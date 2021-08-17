@@ -1,6 +1,7 @@
 const Greenlock = require("greenlock");
 const path = require("path");
 const intercom = require("../intercom/intercom_client").connect();
+const regex_utils = require("../regex_utils");
 const runtime_cache_delay = 300000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const logger = require("../platform_logger").logger();
 const tls = require("tls");
@@ -35,6 +36,10 @@ function init() {
 
     let localDomain = process.env.ROOT_DOMAIN;
     add(localDomain, true);
+
+    for(let domain of regex_utils.OTHER_DOMAINS) {
+        add(domain, true);
+    }
 
     intercom.subscribe(["greenlock"], (message) => {
         let command = message.command, domain = message.domain, full_dns = message.full_dns;

@@ -19,7 +19,16 @@ function start() {
             regex_utils.testCustom(serverName).then((project) => {
                 let serverFile = serverName;
                 if(project == null) {
-                    serverFile = process.env.ROOT_DOMAIN;
+                    let otherFound = false;
+                    for(let domain of regex_utils.OTHER_DOMAINS) {
+                        if(serverName.endsWith(domain)) {
+                            otherFound = true;
+                            serverFile = domain;
+                            break;
+                        }
+                    }
+
+                    if(!otherFound) serverFile = process.env.ROOT_DOMAIN;
                 } else {
                     if(serverFile.startsWith("www.")) serverFile = serverFile.substring(4);
                     // should be done for each subdomaines
