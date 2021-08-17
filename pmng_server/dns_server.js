@@ -22,6 +22,8 @@ let customHooks = [];
 
 const A_ENABLED = process.env.HOST_A.toLowerCase() != "disabled";
 const AAAA_ENABLED = process.env.HOST_AAAA.toLowerCase() != "disabled";
+const ROOT_DOMAIN = process.env.ROOT_DOMAIN;
+const OTHER_DOMAINS = process.env.OTHER_DOMAINS?.split(",") ?? [];
 
 dns_server.on("request", async function(request, response) {
     let question = request.question[0];
@@ -29,6 +31,22 @@ dns_server.on("request", async function(request, response) {
     let questionType = dns_consts.QTYPE_TO_NAME[question.type];
     
     switch(questionType) {
+        case "NS":
+            if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName)) {
+                response.answer.push(dns.NS({
+                    name: requestedName,
+                    data: "ns1." + ROOT_DOMAIN,
+                    ttl: 3600
+                }));
+
+                response.answer.push(dns.NS({
+                    name: requestedName,
+                    data: "ns2." + ROOT_DOMAIN,
+                    ttl: 3600
+                }));
+            }
+            break;
+
         case "TXT":
             if(challenges.hasOwnProperty(requestedName)) {
                 for(let txtRecord of challenges[requestedName]) {
@@ -52,14 +70,14 @@ dns_server.on("request", async function(request, response) {
             response.answer.push(dns.MX({
                 name: requestedName,
                 ttl: 900,
-                exchange: "mail." + process.env.ROOT_DOMAIN,
+                exchange: "mail." + ROOT_DOMAIN,
                 priority: 10
             }));
 
             response.answer.push(dns.MX({
                 name: requestedName,
                 ttl: 86400, // 24*3600 = a day
-                exchange: process.env.ROOT_DOMAIN,
+                exchange: ROOT_DOMAIN,
                 priority: 100
             }));
 
@@ -70,7 +88,7 @@ dns_server.on("request", async function(request, response) {
         case "A":
             if(!A_ENABLED && !AAAA_ENABLED) break;
 
-            if(requestedName == process.env.ROOT_DOMAIN) {
+            if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName)) {
                 response.answer.push(getResponse(requestedName, questionType));
             } else {
                 let special = regex_utils.testSpecial(requestedName);
