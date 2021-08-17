@@ -192,7 +192,7 @@ async function start() {
     admin.use("/panel", panelRouter.getRouter(headerLinks));
     
     admin.all("/", function(req, res) {
-        res.redirect("/panel");
+        res.redirect("/panel/login", 301);
     });
 
     let server = admin.listen(8080, () => {

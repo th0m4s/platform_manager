@@ -345,9 +345,11 @@ async function webServe(req, res) {
 
     if(CONNECTIONS_LOG) connectionsLogger(req, res);
 
+    let domain = (req.headers.host ?? "").trimLeft().split(":")[0];
+
     connCount++;
     if(req.method == "GET" && regex_utils.isACMEChallenge(req.url)) {
-        let domain = req.headers.host, challenges = httpChallenges[domain];
+        let challenges = httpChallenges[domain];
         if(challenges != undefined) {
             let token = req.url.split("/")[3], challenge = challenges[token];
             if(challenge == undefined) res.end("wrong challenge"); // TODO: why not just proxy as if challenges didnt exist?
@@ -357,20 +359,28 @@ async function webServe(req, res) {
         }
     }
     
-    let portDetails = await getPortDetails((req.headers.host || "").trimLeft().split(":")[0]), port = portDetails.port;
-    if(!portDetails.isSpecial) {
-        let projectname = portDetails.project;
-        if(pluginsPerProject[projectname] == undefined) await loadPluginsForProject(projectname);
-        for(let [pluginname, pluginconfig] of (pluginsPerProject[projectname] ?? [])) {
-            let interceptor = getPluginInterceptors(pluginname);
-            if(interceptor !== false) {
-                await interceptor.requestInterceptor(projectname, pluginconfig, req, portDetails, res);
-                if(res.writableEnded) break; // plugin stopped the response, so we stop here
+    let modifiedDomain = regex_utils.getModifiedFromOtherDomains(domain), different = modifiedDomain != domain;
+    let portDetails = await getPortDetails(modifiedDomain), port = portDetails.port;
+    
+    if(different && (portDetails.isSpecial || req.headers["content-length"] != undefined) && req.headers?.connection.toLowerCase() != "upgrade") {
+        res.writeHead(301, {
+            Location: (req.socket.encrypted === true ? "https://" : "http://") + modifiedDomain + req.url
+        }).end();
+    } else {
+        if(!portDetails.isSpecial) {
+            let projectname = portDetails.project;
+            if(pluginsPerProject[projectname] == undefined) await loadPluginsForProject(projectname);
+            for(let [pluginname, pluginconfig] of (pluginsPerProject[projectname] ?? [])) {
+                let interceptor = getPluginInterceptors(pluginname);
+                if(interceptor !== false) {
+                    await interceptor.requestInterceptor(projectname, pluginconfig, req, portDetails, res);
+                    if(res.writableEnded) break; // plugin stopped the response, so we stop here
+                }
             }
         }
+    
+        if(!res.writableEnded) httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port}});
     }
-
-    if(!res.writableEnded) httpProxyServer.web(req, res, {xfwd: true, target: {host: "127.0.0.1", port}});
 }
 
 // TODO: check memory usage for large responses

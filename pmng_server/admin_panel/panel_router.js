@@ -146,7 +146,7 @@ function getRouter(headerLinks) {
         });
 
         router.get("/", function(req, res) {
-            res.redirect("/panel/login");
+            res.redirect("/panel/login", 301);
         });
 
         router.all("/error/:category/:error", (req, res) => {

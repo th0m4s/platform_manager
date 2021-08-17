@@ -1,3 +1,6 @@
+const ROOT_DOMAIN = process.env.ROOT_DOMAIN;
+const OTHER_DOMAINS = (process.env.OTHER_DOMAINS?.trim().length > 0 ? process.env.OTHER_DOMAINS.split(",") : null) ?? [];
+
 const project_regex = new RegExp("^(?<project>[a-z-0-9]{4,32})\\\." + process.env.ROOT_DOMAIN.replace(/\./g, "\\.") + "$");
 const special_regex = new RegExp("^(?<special>www|admin|git|mail|ns(1|2)|ftp)\\\." + process.env.ROOT_DOMAIN.replace(/\./g, "\\.") + "$");
 // same values as in forbidden_names in projects_api
@@ -5,6 +8,20 @@ const special_regex = new RegExp("^(?<special>www|admin|git|mail|ns(1|2)|ftp)\\\
 const plugin_regex = new RegExp("^plugin_(?<plugin>[a-z-0-9]{4,32}).js$");
 const storageDisk_regex = new RegExp("^(?<project>[a-z-0-9]{4,32}).img$");
 const project_manager = require("./project_manager");
+
+function getModifiedFromOtherDomains(requested) {
+    if(requested == null) return requested;
+
+    let modified = requested;
+    for(let domain of OTHER_DOMAINS) {
+        if(modified.endsWith(domain)) {
+            modified = modified.substring(0, modified.length - domain.length) + ROOT_DOMAIN;
+            break;
+        }
+    }
+
+    return modified;
+}
 
 /**
  * Checks if the domain is a special domain for the platform.
@@ -95,6 +112,8 @@ function isACMEChallenge(url) {
     return url.startsWith("/.well-known/acme-challenge/");
 }
 
+module.exports.OTHER_DOMAINS = OTHER_DOMAINS;
+module.exports.getModifiedFromOtherDomains = getModifiedFromOtherDomains;
 module.exports.testSpecial = testSpecial;
 module.exports.testProject = testProject;
 module.exports.testProjectOrCustom = testProjectOrCustom;

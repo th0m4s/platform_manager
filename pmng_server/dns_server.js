@@ -23,7 +23,7 @@ let customHooks = [];
 const A_ENABLED = process.env.HOST_A.toLowerCase() != "disabled";
 const AAAA_ENABLED = process.env.HOST_AAAA.toLowerCase() != "disabled";
 const ROOT_DOMAIN = process.env.ROOT_DOMAIN;
-const OTHER_DOMAINS = (process.env.OTHER_DOMAINS?.trim().length > 0 ? process.env.OTHER_DOMAINS.split(",") : null) ?? [];
+const OTHER_DOMAINS = regex_utils.OTHER_DOMAINS;
 
 dns_server.on("request", async function(request, response) {
     let question = request.question[0];
@@ -91,14 +91,7 @@ dns_server.on("request", async function(request, response) {
             if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName)) {
                 response.answer.push(getResponse(requestedName, questionType));
             } else {
-                let modifiedRequested = requestedName;
-                for(let domain of OTHER_DOMAINS) {
-                    if(modifiedRequested.endsWith(domain)) {
-                        modifiedRequested = modifiedRequested.substring(0, modifiedRequested.length - domain.length) + ROOT_DOMAIN;
-                        break;
-                    }
-                }
-
+                let modifiedRequested = regex_utils.getModifiedFromOtherDomains(requestedName);
                 let special = regex_utils.testSpecial(modifiedRequested);
                 if(special !== null) {
                     if(special.toLowerCase() != "ftp" || questionType == process.env.FTP_HOST_TYPE) response.answer.push(getResponse(requestedName, questionType));
@@ -228,7 +221,7 @@ function master() {
 }
 
 if(require.main === module) start();
-// else we were require'd by the platform_manager to start the master
+// else we were require'd to start the master
 
 
 module.exports.master = master;
