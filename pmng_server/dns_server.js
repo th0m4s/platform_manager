@@ -32,7 +32,7 @@ dns_server.on("request", async function(request, response) {
     
     switch(questionType) {
         case "NS":
-            if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName)) {
+            if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName) || await regex_utils.testCustom(requestedName) != null) {
                 response.answer.push(dns.NS({
                     name: requestedName,
                     data: "ns1." + ROOT_DOMAIN,
