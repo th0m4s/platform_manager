@@ -91,7 +91,15 @@ dns_server.on("request", async function(request, response) {
             if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName)) {
                 response.answer.push(getResponse(requestedName, questionType));
             } else {
-                let special = regex_utils.testSpecial(requestedName);
+                let modifiedRequested = requestedName;
+                for(let domain of OTHER_DOMAINS) {
+                    if(modifiedRequested.endsWith(domain)) {
+                        modifiedRequested = modifiedRequested.substring(0, modifiedRequested.length - domain.length) + ROOT_DOMAIN;
+                        break;
+                    }
+                }
+
+                let special = regex_utils.testSpecial(modifiedRequested);
                 if(special !== null) {
                     if(special.toLowerCase() != "ftp" || questionType == process.env.FTP_HOST_TYPE) response.answer.push(getResponse(requestedName, questionType));
                 } else {
@@ -100,7 +108,7 @@ dns_server.on("request", async function(request, response) {
                     }
         
                     if(isInstalled === true) {
-                        let project = regex_utils.testProject(requestedName);
+                        let project = regex_utils.testProject(modifiedRequested);
                         if(project != null) {        
                             try {
                                 await project_manager.projectExists(project);
