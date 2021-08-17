@@ -216,6 +216,8 @@ function start() {
                                             return docker_manager.utils.execCommand(container.exec, command, logReceived, buffer, user, wd);
                                         };
 
+                                        let getBuildHostDirectory = () => projectCodeFolder;
+
                                         let readFile = (filename) => {
                                             filename = path.resolve(projectCodeFolder, filename);
                                             if(!filename.startsWith(projectCodeFolder)) throw "Cannot access file outside of project.";
@@ -243,7 +245,7 @@ function start() {
                                             nextProtected = protection;
                                         }
 
-                                        let dockerUtils = {execCommand, readFile, exists, temporaryFile, writeFile, setNextProtected};
+                                        let dockerUtils = {execCommand, readFile, exists, temporaryFile, writeFile, setNextProtected, getBuildHostDirectory};
                                         if(!imageDetails.built) {
                                             // if image was not built, a new line was already written
                                             connection.write(SPACES + "Container started.\n");
