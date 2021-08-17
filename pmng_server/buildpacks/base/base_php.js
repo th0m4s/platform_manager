@@ -36,7 +36,7 @@ class BasePHPBuildpack extends Buildpack {
         if(projectData.create_public == true) {
             logger("Moving files to public directory...");
             let hostDirectory = utils.getBuildHostDirectory();
-            await copyDirectory(hostDirectory, path.join(hostDirectory, "public"));
+            await moveDirectory(hostDirectory, path.join(hostDirectory, "public"), true);
         }
 
         if(!utils.exists("d", "public"))
