@@ -1,6 +1,7 @@
 const database_server = require("../database_server");
 const docker_manager = require("../docker_manager");
 const string_utils = require("../string_utils");
+const regex_utils = require("../regex_utils");
 const Knex = require("knex");
 const path = require("path");
 const pfs = require("fs").promises;
@@ -12,6 +13,7 @@ const nodemailer = require("nodemailer");
 
 let _mailKnex = undefined;
 const MAIL_DBNAME = "mail_server";
+const ROOT_DOMAIN = process.env.ROOT_DOMAIN;
 function getMailDatabase(table) {
     if(_mailKnex == undefined) {
         let config = Object.assign({}, database_server.DB_CONFIG);
@@ -130,18 +132,18 @@ async function checkDomainIdUsers(domainId) {
         let projectNameResult = await database_server.database("domains").where("domain", domain).select("projectname");
         if(projectNameResult.length == 0) throw "Invalid domain bound to project (" + domain + ").";
         projectName = projectNameResult[0].projectname;
-    } else if(domain != process.env.ROOT_DOMAIN) projectName = domain.substring(0, domain.length-process.env.ROOT_DOMAIN.length-1);
+    } else if(domain != ROOT_DOMAIN) projectName = domain.substring(0, domain.length-ROOT_DOMAIN.length-1);
 
     let usersResults = await mailDb().where("domain_id", domainId).select("*"), selectKey = isSystem ? "email" : "source";
     let inserts = [], proms = [], requiredMails = ["abuse", "postmaster", "webmaster", "hostmaster"];
-    if(domain == process.env.ROOT_DOMAIN) requiredMails.push("pmng");
+    if(domain == ROOT_DOMAIN) requiredMails.push("pmng");
     for(let result of usersResults) {
         let name = result[selectKey].split("@")[0];
         if(requiredMails.includes(name)) {
             requiredMails.splice(requiredMails.indexOf(name), 1);
             let mailIsSystem = result.system.toLowerCase() == "true", updates = {};
             if(!mailIsSystem) updates.system = "true";
-            let reqMail = name + "@" + (projectName == "" ? "" : projectName + ".") + process.env.ROOT_DOMAIN;
+            let reqMail = name + "@" + (projectName == "" ? "" : projectName + ".") + ROOT_DOMAIN;
             if(!isSystem) {
                 if(result.destination != reqMail) updates.destination = reqMail;
             } else if(result.email != reqMail) {
@@ -153,7 +155,7 @@ async function checkDomainIdUsers(domainId) {
     }
 
     for(let remainingName of requiredMails) {
-        let mail = remainingName + "@" + (projectName == "" ? "" : projectName + ".") + process.env.ROOT_DOMAIN;
+        let mail = remainingName + "@" + (projectName == "" ? "" : projectName + ".") + ROOT_DOMAIN;
         let ssoPassword = string_utils.generatePassword(16, 24), ssoEncrypt = cryptPassword(ssoPassword);
         if(isSystem && remainingName == "pmng") inserts.push({system: "true", pwdset: "true", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId, projectName: undefined, sso_decrypt: ssoPassword, sso_encrypt: ssoEncrypt});
         else if(isSystem) inserts.push({system: "true", pwdset: "false", email: mail, password: cryptPassword(string_utils.generatePassword(16, 24)), domain_id: domainId, projectName: projectName == "" ? undefined : projectName, sso_decrypt: ssoPassword, sso_encrypt: ssoEncrypt});
@@ -184,13 +186,13 @@ function checkAndStart(maildirectory, shouldRestart) {
             let postfixDefaultDir = path.resolve(__dirname, "configurations", "postfix"), enableSSL = process.env.ENABLE_HTTPS.toLowerCase() == "true";
             // main.cf
             let postfixMainConfig = string_utils.keepConfigLines(await pfs.readFile(path.resolve(postfixDefaultDir, "main.defaults.cf"), "utf-8"), enableSSL ? ["tlsonly"] : ["notls"], enableSSL ? ["notls"] : ["tlsonly"]);
-            let pfMainArgs = {__ROOT_DOMAIN: process.env.ROOT_DOMAIN};
+            let pfMainArgs = {__ROOT_DOMAIN: ROOT_DOMAIN};
             if(enableSSL) {
                 pfMainArgs.__TLS_FULLCHAIN = "/var/spool/postfix/fullchain.pem";
                 pfMainArgs.__TLS_PRIVKEY = "/var/spool/postfix/privkey.pem";
 
-                Binds.push(path.join(__dirname, "../https/greenlock.d/live/" + process.env.ROOT_DOMAIN + "/fullchain.pem") + ":/var/spool/postfix/fullchain.pem:ro");
-                Binds.push(path.join(__dirname, "../https/greenlock.d/live/" + process.env.ROOT_DOMAIN + "/privkey.pem") + ":/var/spool/postfix/privkey.pem:ro");
+                Binds.push(path.join(__dirname, "../https/greenlock.d/live/" + ROOT_DOMAIN + "/fullchain.pem") + ":/var/spool/postfix/fullchain.pem:ro");
+                Binds.push(path.join(__dirname, "../https/greenlock.d/live/" + ROOT_DOMAIN + "/privkey.pem") + ":/var/spool/postfix/privkey.pem:ro");
             }
             postfixMainConfig = string_utils.replaceArgs(postfixMainConfig, pfMainArgs);
             let pfMainIncFile = path.resolve(postfixDefaultDir, "main.inc.cf");
@@ -266,15 +268,31 @@ function checkAndStart(maildirectory, shouldRestart) {
 
                 // check all virtual_domains
                 logger.tag("MAIL", "Checking virtual domains...");
-                await mailDomainsDb().where("name", process.env.ROOT_DOMAIN).select("*").then((result) => {
-                    if(result.length == 0) return mailDomainsDb().insert({name: process.env.ROOT_DOMAIN, system: "true"});
-                    else if(result[0].system != "true") return mailDomainsDb().where("name", process.env.ROOT_DOMAIN).update({system: "true"});
+                let allDomains = regex_utils.OTHER_DOMAINS.slice();
+                allDomains.push(ROOT_DOMAIN);
+                await mailDomainsDb().whereIn("name", allDomains).select("*").then((result) => {
+                    /*if(result.length == 0) return mailDomainsDb().insert({name: ROOT_DOMAIN, system: "true"});
+                    else if(result[0].system != "true") return mailDomainsDb().where("name", ROOT_DOMAIN).update({system: "true"});*/
+
+                    let waitDomains = [];
+
+                    for(let line of result) {
+                        if(line.system != "true") waitDomains.push(mailDomainsDb().where("name", line.name).update({system: "true"}));
+                        let domainIndex = allDomains.indexOf(line.name);
+                        if(domainIndex >= 0) allDomains.splice(domainIndex, 1); 
+                    }
+
+                    for(let domain of allDomains) {
+                        waitDomains.push(mailDomainsDb().insert({name: domain, system: "true"}));
+                    }
+
+                    return Promise.all(waitDomains);
                 });
 
                 let requiredDomains = {};
                 await database_server.database("projects").select(["name", "id"]).then((projects) => {
                     for(let project of projects)
-                        requiredDomains[project.name + "." + process.env.ROOT_DOMAIN] = {system: true, projectname: project.name, cdomainid: null};
+                        requiredDomains[project.name + "." + ROOT_DOMAIN] = {system: true, projectname: project.name, cdomainid: null};
                 });
 
                 // if full_dns == false, sending will work, but not receiving unless mx records are set correctly
@@ -289,7 +307,7 @@ function checkAndStart(maildirectory, shouldRestart) {
                     for(let {id, name, system, projectname, cdomainid} of domains) {
                         let requiredDomain = requiredDomains[name];
                         if(requiredDomain == undefined) {
-                            if(name != process.env.ROOT_DOMAIN) prom.push(mailDomainsDb().where("name", name).delete());
+                            if(name != ROOT_DOMAIN) prom.push(mailDomainsDb().where("name", name).delete());
                         } else {
                             system = system.toLowerCase() == "true";
                             let domUpdates = {};
@@ -339,7 +357,7 @@ function checkAndStart(maildirectory, shouldRestart) {
 
 function addProjectDomain(projectname) {
     let mailsDb = getMailDatabase();
-    return mailsDb("virtual_domains").insert({name: projectname + "." + process.env.ROOT_DOMAIN, projectname, cdomainid: null, system: "true"}).then(() => {
+    return mailsDb("virtual_domains").insert({name: projectname + "." + ROOT_DOMAIN, projectname, cdomainid: null, system: "true"}).then(() => {
         return mailsDb("virtual_domains").where("projectname", projectname).select("id");
     }).then((results) => {
         if(results.length != 1) throw "Invalid new project domain id.";
@@ -398,8 +416,8 @@ async function initialize(maildirectory) {
 }
 
 function sendClientMail(to, subject, template, locals = {}) {
-    let enableSec = process.env.ENABLE_HTTPS.toLowerCase() == "true", sender = "pmng@" + process.env.ROOT_DOMAIN;
-    locals = Object.assign({copyright: "<a href='http" + (enableSec ? "s" : "") + "://admin." + process.env.ROOT_DOMAIN + "/'>© 2020 Platform Manager</a>"}, locals);
+    let enableSec = process.env.ENABLE_HTTPS.toLowerCase() == "true", sender = "pmng@" + ROOT_DOMAIN;
+    locals = Object.assign({copyright: "<a href='http" + (enableSec ? "s" : "") + "://admin." + ROOT_DOMAIN + "/'>© 2020 Platform Manager</a>"}, locals);
     return pfs.readFile(path.resolve(__dirname, "templates", "dist", template + ".ejs"), "utf-8").then((templateContents) => {
         return ejs.render(templateContents, locals, {async: true});
     }).then((renderedTemplate) => {
@@ -412,7 +430,7 @@ function sendClientMail(to, subject, template, locals = {}) {
         return getMailDatabase("virtual_users").where("email", sender).select("sso_decrypt").then((result) => {return {ssoDec: result[0].sso_decrypt, renderedTemplate, renderedPlain}});
     }).then(({ssoDec, renderedTemplate, renderedPlain}) => {
         let transport = nodemailer.createTransport({
-            host: "mail." + process.env.ROOT_DOMAIN,
+            host: "mail." + ROOT_DOMAIN,
             port: enableSec ? 465 : 25,
             secure: enableSec,
             auth: {
