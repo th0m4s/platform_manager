@@ -362,7 +362,7 @@ async function webServe(req, res) {
     let modifiedDomain = regex_utils.getModifiedFromOtherDomains(domain), different = modifiedDomain != domain;
     let portDetails = await getPortDetails(modifiedDomain), port = portDetails.port;
     
-    if(different && (portDetails.isSpecial || req.headers["content-length"] != undefined) && req.headers?.connection.toLowerCase() != "upgrade") {
+    if(different && (portDetails.isSpecial || !(parseInt(req.headers["content-length"]) > 0)) && req.headers?.connection?.toLowerCase() != "upgrade") {
         res.writeHead(301, {
             Location: (req.socket.encrypted === true ? "https://" : "http://") + modifiedDomain + req.url
         }).end();
