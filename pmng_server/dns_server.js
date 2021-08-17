@@ -23,7 +23,7 @@ let customHooks = [];
 const A_ENABLED = process.env.HOST_A.toLowerCase() != "disabled";
 const AAAA_ENABLED = process.env.HOST_AAAA.toLowerCase() != "disabled";
 const ROOT_DOMAIN = process.env.ROOT_DOMAIN;
-const OTHER_DOMAINS = process.env.OTHER_DOMAINS?.split(",") ?? [];
+const OTHER_DOMAINS = (process.env.OTHER_DOMAINS?.trim().length > 0 ? process.env.OTHER_DOMAINS.split(",") : null) ?? [];
 
 dns_server.on("request", async function(request, response) {
     let question = request.question[0];
