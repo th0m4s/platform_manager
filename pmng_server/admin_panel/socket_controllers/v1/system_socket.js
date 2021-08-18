@@ -1,12 +1,16 @@
 const intercom = require("../../../intercom/intercom_client").connect();
+const os = require("os");
 const cron = require("node-cron");
 const exitHook = require("async-exit-hook");
+const child_process = require("child_process");
 const pfs = require("fs").promises;
 const path = require("path");
 const dns = require("native-node-dns");
 const historyDir = path.resolve(path.dirname(require("../../../platform_logger").LOG_FILE), "processes");
+const statsInterval = parseInt(process.env.STATS_INTERVAL);
 
-let minuteHistory = {};
+let hostUsageHistory = []; // this array is reversed, first is latest
+let minuteHistory = {}, oldMinuteHistory = {};
 let hourHistory = {};
 
 // should be placed in some sort of utils file
@@ -24,7 +28,7 @@ function median(values){
     return (values[half-1] + values[half]) / 2;
 }
 
-let memSave = ["rss", "heapTotal", "heapUsed"], cpuSave = ["total", "user", "sys"]; // total is not user+system, it's all host cpu usage
+let memSave = ["rss", "heapTotal", "heapUsed"], cpuSave = ["user", "sys"]; // total is not user+system, it's all host cpu usage
 function saveMinute() {
     let minute = new Date().getMinutes()-1;
     if(minute < 0) minute = 59;
@@ -38,11 +42,12 @@ function saveMinute() {
         }
 
         for(let type of cpuSave) {
-            let typeVal = values.map((x) => x.cpu[type]);
+            let typeVal = values.map((x) => x.cpu[type] / x.cpu.total);
             minMedMax[1].push([Math.min(...typeVal), median(typeVal), Math.max(...typeVal)]);
         }
 
         hourHistory[id][minute] = minMedMax;
+        oldMinuteHistory[id] = minuteHistory[id].slice();
         minuteHistory[id].length = 0;
     }
 }
@@ -93,6 +98,32 @@ async function saveFile() {
     }
 }
 
+// inspired from npm package os-utils (https://github.com/oscmejia/os-utils/blob/master/lib/osutils.js)
+function getDiskSpace() {
+    return new Promise((resolve, reject) => {
+        child_process.exec("df -k", function(error, stdout, stderr) {
+            if(error != null) {
+                reject({error, message: stderr});
+            } else {
+                let lines = stdout.split("\n");
+                let line = lines[1];
+            
+                lines = lines.filter((x) => x.trim().endsWith("/"));
+                if(lines.length > 0) line = lines[0];  	
+            
+                let str_disk_info = line.replace( /[\s\n\r]+/g, " ");
+                let disk_info = str_disk_info.split(" ");
+        
+                let total = Math.ceil(disk_info[1] * 1024);
+                let used = Math.ceil(disk_info[2] * 1024);
+                let free = Math.ceil(disk_info[3] * 1024);
+        
+                resolve({total, free, used});
+            }
+        });
+    });
+}
+
 let currentPIDs = {};
 let dnsChallenges = {};
 function initializeNamespace(namespace) {
@@ -104,16 +135,50 @@ function initializeNamespace(namespace) {
                 return;
             }
 
-            if(socket.hasAccess("SYSTEM")) {
+            if(message.type == "dashboard") {
+                // TODO: why system access not required?
+                // maybe to fill the dashboard of all users?
+
+                setup = true;
+                socket.join("dashboard_stats");
+
+                socket.emit("setup", {error: false, message: "Socket setup."});
+                socket.emit("stats_interval", {interval: statsInterval});
+
+                socket.emit("usage_history", hostUsageHistory);
+                socket.emit("system_info", {
+                    os: {
+                        version: os.version(),
+                        platform: os.platform(),
+                        release: os.release()
+                    },
+                    node: {
+                        version: process.version,
+                        arch: process.arch
+                    }
+                });
+
+                getDiskSpace().then(({total, used}) => {
+                    socket.emit("disk_space", {error: false, total, used});
+                }).catch(({message}) => {
+                    socket.emit("disk_space", {error: true, message});
+                });
+
+                socket.usageType = message.type;
+            } else if(socket.hasAccess("SYSTEM")) {
                 switch(message.type) {
                     case "processes":
                         setup = true;
                         socket.join("usage_" + message.proc);
-                        socket.join("cpu");
+                        socket.emit("stats_interval", {interval: statsInterval});
 
                         setImmediate(() => {
                             for(let entry of Object.entries(currentPIDs)) {
-                                socket.emit("pid", {pid: entry[0], id: entry[1]});
+                                let eid = entry[1];
+                                if(message.proc == "all" || message.proc == eid) {
+                                    socket.emit("pid", {pid: entry[0], id: eid});
+                                    socket.emit("usage_history", {id: eid, history: oldMinuteHistory[eid]});
+                                }
                             }
                         });
                         break;
@@ -166,6 +231,7 @@ function initializeNamespace(namespace) {
         namespace.to("usage_" + id).emit("pid", message);
 
         if(minuteHistory[id] == undefined) minuteHistory[id] = [];
+        if(oldMinuteHistory[id] == undefined) oldMinuteHistory[id] = [];
         if(hourHistory[id] == undefined) hourHistory[id] = {};
     });
 
@@ -177,6 +243,10 @@ function initializeNamespace(namespace) {
             namespace.to("usage_all").emit("usage", message);
             namespace.to("usage_" + id).emit("usage", message);
 
+            delete message.id;
+            delete message.pid;
+
+            oldMinuteHistory[id].push(message);
             minuteHistory[id].push(message);
         }
     });
@@ -206,6 +276,43 @@ function initializeNamespace(namespace) {
 
     cron.schedule("0 * * * *", saveFile);
     cron.schedule("* * * * *", saveMinute);
+
+    let maxHostHistory = 70*1000 / statsInterval;
+    setInterval(() => {
+        let cpus = os.cpus();
+    
+        let user = 0;
+        let nice = 0;
+        let sys = 0;
+        let idle = 0;
+        let irq = 0;
+        
+        for(let cpu of cpus){
+            user += cpu.times.user;
+            nice += cpu.times.nice;
+            sys += cpu.times.sys;
+            irq += cpu.times.irq;
+            idle += cpu.times.idle;
+        }
+
+        let used = user + nice + sys + irq;
+        let total = used + idle;
+
+        let freemem = os.freemem(), totalmem = os.totalmem();
+        let latestUsage = hostUsageHistory[0];
+
+        let currentHostCpu = {used: used - (latestUsage?.cpu.used ?? 0), total: total - (latestUsage?.cpu.total ?? 0)};
+        let currentHostMem = {total: totalmem, used: totalmem - freemem};
+
+        let currentUsage = {cpu: currentHostCpu, mem: currentHostMem};
+        hostUsageHistory.unshift(currentUsage);
+
+        if(hostUsageHistory.length > maxHostHistory) {
+            hostUsageHistory.splice(maxHostHistory);
+        }
+
+        namespace.to("dashboard_stats").emit("stats", currentUsage);
+    }, statsInterval);
 
     exitHook(async (callback) => {
         saveMinute();

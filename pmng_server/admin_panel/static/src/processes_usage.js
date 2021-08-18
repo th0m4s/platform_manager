@@ -1,9 +1,7 @@
-import './css/processes_usage.css';
+import "./css/processes_usage.css";
 
-let color = Chart.helpers.color;
 let chartColors = ["#3B6A9C", "#007BFF", "#86C0FF"];
-
-let socket = undefined, authenticated = false, lastSystemCpu;
+let socket = undefined, authenticated = false, statsInterval = 1000, startedTime;
 function init() {
     socket = io("/v1/system");
     window.socket = socket;
@@ -22,6 +20,10 @@ function init() {
             socket.emit("setup", {type: "processes", proc: "all"});
         });
 
+        socket.on("stats_interval", (message) => {
+            statsInterval = message.interval;
+        });
+
         socket.on("unauthorized", function(err) {
             $.notify({message: "Unable to authenticate to the socket. Please reload the page."}, {type: "danger"});
             console.error("Unauthorized from the socket", err);
@@ -32,36 +34,63 @@ function init() {
                 $.notify({message: "Unable to setup the socket. Please reload the page."}, {type: "danger"});
                 console.error("Socket setup error", message.message);
             } else {
+                startedTime = Date.now();
+
                 showCharts();
                 $("#toggle-visible-group").show();
             }
-        })
+        });
+
+        socket.on("usage_history", (message) => {
+            let memChart = charts.mem[message.id];
+            let cpuChart = charts.cpu[message.id];
+
+            let history = message.history;
+            let time = startedTime - history.length * statsInterval;
+            for(let data of history) {
+                time += statsInterval;
+
+                let mem = data.mem;
+                memChart.data.datasets[0].data.push({x: time, y: mem.rss});
+                memChart.data.datasets[1].data.push({x: time, y: mem.heapTotal});
+                memChart.data.datasets[2].data.push({x: time,  y: mem.heapUsed});
+
+                let cpu = data.cpu; // total is not process total, it's all host usage
+                let userPerc = Math.round(cpu.user / cpu.total * 1000)/10;
+                let sysPerc = Math.round(cpu.sys / cpu.total * 1000)/10;
+
+                cpuChart.data.datasets[0].data.push({x: time, y: userPerc + sysPerc});
+                cpuChart.data.datasets[1].data.push({x: time, y: userPerc});
+                cpuChart.data.datasets[2].data.push({x: time, y: sysPerc});
+            }
+
+            memChart.update({preservation: true});
+            cpuChart.update({preservation: true});
+        });
 
         socket.on("usage", (message) => {
             let x = Date.now();
 
             let memChart = charts.mem[message.id];
-            if(memChart != undefined) {
-                let mem = message.mem;
-                memChart.data.datasets[0].data.push({x, y: mem.rss});
-                memChart.data.datasets[1].data.push({x, y: mem.heapTotal});
-                memChart.data.datasets[2].data.push({x, y: mem.heapUsed});
+            let mem = message.mem;
 
-                memChart.update({preservation: true});
-            }
+            memChart.data.datasets[0].data.push({x, y: mem.rss});
+            memChart.data.datasets[1].data.push({x, y: mem.heapTotal});
+            memChart.data.datasets[2].data.push({x, y: mem.heapUsed});
+
+            memChart.update({preservation: true});
 
             let cpuChart = charts.cpu[message.id];
-            if(cpuChart != undefined) {
-                let cpu = message.cpu; // total is not process total, it's all host usage
-                let userPerc = Math.round(cpu.user / cpu.total * 1000)/10;
-                let sysPerc = Math.round(cpu.sys / cpu.total * 1000)/10;
+            let cpu = message.cpu; // total is not process total, it's all host usage
 
-                cpuChart.data.datasets[0].data.push({x, y: userPerc + sysPerc});
-                cpuChart.data.datasets[1].data.push({x, y: userPerc});
-                cpuChart.data.datasets[2].data.push({x, y: sysPerc});
+            let userPerc = Math.round(cpu.user / cpu.total * 1000)/10;
+            let sysPerc = Math.round(cpu.sys / cpu.total * 1000)/10;
 
-                cpuChart.update({preservation: true});
-            }
+            cpuChart.data.datasets[0].data.push({x, y: userPerc + sysPerc});
+            cpuChart.data.datasets[1].data.push({x, y: userPerc});
+            cpuChart.data.datasets[2].data.push({x, y: sysPerc});
+
+            cpuChart.update({preservation: true});
         });
 
         socket.on("pid", (message) => {
@@ -109,7 +138,7 @@ function showCharts() {
                                 type: "realtime",
                                 realtime: {
                                     duration: 60000,
-                                    delay: 2000,
+                                    delay: 3000,
                                     pause: false,
                                     ttl: undefined,
                                 },
@@ -149,7 +178,7 @@ function showCharts() {
                                 type: "realtime",
                                 realtime: {
                                     duration: 60000,
-                                    delay: 2000,
+                                    delay: 3000,
                                     pause: false,
                                     ttl: undefined,
                                 },

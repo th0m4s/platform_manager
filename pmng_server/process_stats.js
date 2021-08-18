@@ -9,7 +9,6 @@ const os = require("os");
  */
 function getCpu(previous) {
     let cpus = os.cpus();
-    let processCpu = process.cpuUsage(previous);
     
     let user = 0;
     let nice = 0;
@@ -25,11 +24,13 @@ function getCpu(previous) {
         idle += cpu.times.idle;
     }
     
+    // total is calculted here because each process can execute this as a different interval (if the main thread is occupied)
+    // and percentages need to be accurate. normally, total will always be the same for each process.
     let total = user + nice + sys + idle + irq;
     let newPrevious = process.cpuUsage();
     newPrevious.total = total;
 
-    return {current: {total: total - (previous == undefined ? 0 : previous.total), user: Math.floor(processCpu.user/1000), sys: Math.floor(processCpu.system/1000)}, previous: newPrevious};
+    return {current: {total: total - (previous == undefined ? 0 : previous.total), user: Math.floor((newPrevious.user-(previous?.user??0))/1000), sys: Math.floor((newPrevious.system-(previous?.system??0))/1000)}, previous: newPrevious};
 }
 
 /**
