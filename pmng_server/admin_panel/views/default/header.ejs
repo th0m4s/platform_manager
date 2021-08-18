@@ -23,6 +23,9 @@
         </ul>
         <ul class="navbar-nav ml-auto">
             <% if(allHeader) { %>
+                <li class="nav-item mr-5" style="display: none;" id="toggle-socket">
+                    <a class="nav-link" href="#" onclick="utils.toggleSocketPause(); return false;">Toggle socket <small>(<span id="toggle-socket-state"></span>)</small></a>
+                </li>
                 <li class="nav-item mr-2 <%= isActive('account', 'me') %>">
                     <a class="nav-link" href="/panel/users/me">Account</a>
                 </li>

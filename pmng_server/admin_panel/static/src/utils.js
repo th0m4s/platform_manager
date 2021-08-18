@@ -61,6 +61,29 @@ function useBackCookie() {
     Cookies.remove("listback");
 }
 
+function enableSocketPause() {
+    let socket = window.socket;
+
+    socket.on("connect", updateText);
+    socket.on("disconnect", updateText);
+
+    $("#toggle-socket").show();
+
+    function updateText() {
+        $("#toggle-socket-state").html(socket.connected ? "connected" : "paused");
+    }
+
+    updateText();
+
+    window.utils.toggleSocketPause = () => {
+        if(socket.connected) {
+            socket.disconnect();
+        } else {
+            socket.connect();
+        }
+    };
+}
+
 $(document).ready(() => {
     $("#modal-loading").on("shown.bs.modal", () => {
         if(!modalShown) hideLoading();
@@ -78,4 +101,4 @@ $(document).ready(() => {
 
 
 let string_utils = require("../../../string_utils");
-window.utils = {disableButton, showInfiniteLoading, hideLoading, generateAlert, enableButton, updateTagsInputWidth, addNotification, showCookieNotifications, updateTagsInputWidth, string: string_utils, setBackCookie, useBackCookie};
+window.utils = {disableButton, showInfiniteLoading, hideLoading, generateAlert, enableButton, updateTagsInputWidth, addNotification, showCookieNotifications, updateTagsInputWidth, string: string_utils, setBackCookie, useBackCookie, enableSocketPause};

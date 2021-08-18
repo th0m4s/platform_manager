@@ -9,6 +9,7 @@ function init() {
     window.socket = socket;
 
     socket.on("connect", function() {
+        utils.enableSocketPause();
         authenticated = false;
 
         console.log("Socket connected.");
@@ -34,7 +35,7 @@ function init() {
         socket.on("usage_history", (history) => {
             let time = Date.now() - statsInterval * history.length;
 
-            for(let data of history) {
+            for(let data of history.reverse()) {
                 time += statsInterval;
                 addData(parseInt(data.mem.used / data.mem.total * 1000) / 10, parseInt(data.cpu.used / data.cpu.total * 1000) / 10, time);
             }
@@ -162,17 +163,20 @@ function init() {
     });
 }
 
+let lastDrawnX = 0;
 function addData(mem, cpu, x = -1) {
     $("#info-mem").html(mem + "%");
     $("#info-cpu").html(cpu + "%");
 
     if(x < 0) x = Date.now();
+    if(x <= lastDrawnX) return;
+    lastDrawnX = x;
 
     memChart.data.datasets[0].data.push({x, y: mem});
-    memChart.update({preservation: true});
+    memChart.update();
 
     cpuChart.data.datasets[0].data.push({x, y: cpu});
-    cpuChart.update({preservation: true});
+    cpuChart.update();
 }
 
 

@@ -305,9 +305,8 @@ function initializeNamespace(namespace) {
         let currentHostMem = {total: totalmem, used: totalmem - freemem};
 
         let currentUsage = {cpu: currentHostCpu, mem: currentHostMem};
-        hostUsageHistory.unshift(currentUsage);
 
-        if(hostUsageHistory.length > maxHostHistory) {
+        if(hostUsageHistory.unshift(currentUsage) > maxHostHistory) {
             hostUsageHistory.splice(maxHostHistory);
         }
 

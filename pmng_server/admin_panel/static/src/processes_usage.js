@@ -7,6 +7,7 @@ function init() {
     window.socket = socket;
 
     socket.on("connect", function() {
+        utils.enableSocketPause();
         authenticated = false;
 
         console.log("Socket connected.");
@@ -49,6 +50,7 @@ function init() {
             let time = startedTime - history.length * statsInterval;
             for(let data of history) {
                 time += statsInterval;
+                if(!checkLastDrawnX(message.id, time)) continue;
 
                 let mem = data.mem;
                 memChart.data.datasets[0].data.push({x: time, y: mem.rss});
@@ -64,12 +66,13 @@ function init() {
                 cpuChart.data.datasets[2].data.push({x: time, y: sysPerc});
             }
 
-            memChart.update({preservation: true});
-            cpuChart.update({preservation: true});
+            memChart.update();
+            cpuChart.update();
         });
 
         socket.on("usage", (message) => {
             let x = Date.now();
+            if(!checkLastDrawnX(message.id, x)) return;
 
             let memChart = charts.mem[message.id];
             let mem = message.mem;
@@ -78,7 +81,7 @@ function init() {
             memChart.data.datasets[1].data.push({x, y: mem.heapTotal});
             memChart.data.datasets[2].data.push({x, y: mem.heapUsed});
 
-            memChart.update({preservation: true});
+            memChart.update();
 
             let cpuChart = charts.cpu[message.id];
             let cpu = message.cpu; // total is not process total, it's all host usage
@@ -90,7 +93,7 @@ function init() {
             cpuChart.data.datasets[1].data.push({x, y: userPerc});
             cpuChart.data.datasets[2].data.push({x, y: sysPerc});
 
-            cpuChart.update({preservation: true});
+            cpuChart.update();
         });
 
         socket.on("pid", (message) => {
@@ -106,6 +109,14 @@ function init() {
     $("#fullscreenGraph-modal").on("hidden.bs.modal", () => {
         restoreExitFullscreen();
     });
+}
+
+let lastDrawnX = {};
+function checkLastDrawnX(id, x) {
+    if(lastDrawnX[id] == undefined || lastDrawnX[id] < x) {
+        lastDrawnX[id] = x;
+        return true;
+    } else return false;
 }
 
 let charts = {mem: {}, cpu: {}}, chartsShown = false;
