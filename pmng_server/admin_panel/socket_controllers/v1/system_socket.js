@@ -277,7 +277,7 @@ function initializeNamespace(namespace) {
     cron.schedule("0 * * * *", saveFile);
     cron.schedule("* * * * *", saveMinute);
 
-    let maxHostHistory = 70*1000 / statsInterval;
+    let maxHostHistory = 70*1000 / statsInterval, lastCpuFullHost = {total: 0, used: 0};
     setInterval(() => {
         let cpus = os.cpus();
     
@@ -298,10 +298,10 @@ function initializeNamespace(namespace) {
         let used = user + nice + sys + irq;
         let total = used + idle;
 
-        let freemem = os.freemem(), totalmem = os.totalmem();
-        let latestUsage = hostUsageHistory[0];
+        let currentHostCpu = {used: used - lastCpuFullHost.used, total: total - lastCpuFullHost.total};
+        lastCpuFullHost = {total, used};
 
-        let currentHostCpu = {used: used - (latestUsage?.cpu.used ?? 0), total: total - (latestUsage?.cpu.total ?? 0)};
+        let freemem = os.freemem(), totalmem = os.totalmem();
         let currentHostMem = {total: totalmem, used: totalmem - freemem};
 
         let currentUsage = {cpu: currentHostCpu, mem: currentHostMem};
