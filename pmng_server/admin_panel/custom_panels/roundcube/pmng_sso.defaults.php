@@ -2,7 +2,7 @@
 
 class pmng_sso extends rcube_plugin
 {
-  public $task = 'login';
+  // public $task = 'login';
   public $login_url = "/panel/login/sso/webmail";
 
   function init()
@@ -13,8 +13,11 @@ class pmng_sso extends rcube_plugin
 
   function startup($args)
   {
-    if (empty($_SESSION['user_id']) && !empty($_GET['key']))
+    if (/*empty($_SESSION['user_id'])*/!empty($_GET["sso"]) && strtolower($_GET["sso"]) == "pmng" && !empty($_GET['key']))
+    {
+      $args['task'] = 'login';
       $args['action'] = 'login';
+    }
 
     return $args;
   }

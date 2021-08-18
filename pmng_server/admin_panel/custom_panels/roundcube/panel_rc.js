@@ -91,7 +91,7 @@ function checkAndStart(shouldRestart) {
     });
 }
 
-const panel_version = "17";
+const panel_version = "18";
 const forceRestart = process.env.NODE_ENV == "development";
 class WebmailPanel extends CustomPanel {
     static setHeaderLinks(headerLinks) {

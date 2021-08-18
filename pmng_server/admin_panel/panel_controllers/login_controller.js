@@ -25,7 +25,7 @@ router.get("/logout", async function(req, res) {
     res.redirect("/panel/login");
 });
 
-let SSO_TYPES = {"database": {url: "/databases/login.sso.php", name: "MySQL databases explorer"}, "webmail": {url: "/webmail/", name: "Platform Manager webmail"}};
+let SSO_TYPES = {"database": {url: "/databases/login.sso.php", name: "MySQL databases explorer"}, "webmail": {url: "/webmail/?sso=pmng", name: "Platform Manager webmail"}};
 router.post('/', bodyParser(), async (req, res, next) => {
     if(await database_server.isInstalled()) {
         let ssotype = req.body.sso;
