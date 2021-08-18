@@ -45,4 +45,4 @@ $config['htmleditor'] = 4;
 //  3 - on forward or reply to HTML message
 //  4 - always, except when replying to plain text message
 
-$config['logout_redirect_url'] = 'http'.(__enableSSL ? "s" : "").'://admin.__ROOT_DOMAIN/panel/dashboard';
+$config['logout_redirect_url'] = 'http'.(__enableSSL ? "s" : "").'://admin.__ROOT_DOMAIN/panel/mails/users';
