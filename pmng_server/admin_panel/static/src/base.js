@@ -10,12 +10,24 @@ window.Bloodhound = require("corejs-typeahead/dist/typeahead.bundle");
 $.ajaxSetup({ cache: true });
 
 $.notifyDefaults({
-    delay: 3000
+    delay: 3000,
+    offset: 15
 });
 
 $(document).ready(() => {
-    if(location.href.endsWith("/")) window.history.replaceState(null, "", location.href.substring(0, location.href.length-1));
+    if($(".pmng-navbar").length > 0) {
+        $.notifyDefaults({
+            offset: {
+                y: 71,
+                x: 15
+            }
+        });
+    }
+
+    showFlashNotifications();
     utils.showCookieNotifications();
+
+    if(location.href.endsWith("/")) window.history.replaceState(null, "", location.href.substring(0, location.href.length-1));
     $('[data-toggle="tooltip"]').tooltip();
 });
 

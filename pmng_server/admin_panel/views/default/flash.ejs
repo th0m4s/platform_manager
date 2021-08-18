@@ -1,23 +1,25 @@
 <script>
-<% let ms = getMessages() %><% if(ms.danger) { %>
-    <% ms.danger.forEach((m) => { %>
-        $.notify({message: "<%- m %>"}, {type: "danger"});
-    <% }); %>
-<% } %><% if(ms.error) { %>
-    <% ms.error.forEach((m) => { %>
-        $.notify({message: "<%- m %>"}, {type: "danger"});
-    <% }); %>
-<% } %><% if(ms.warn) { %>
-    <% ms.warn.forEach((m) => { %>
-        $.notify({message: "<%- m %>"}, {type: "warning"});
-    <% }); %>
-<% } %><% if(ms.info) { %>
-    <% ms.info.forEach((m) => { %>
-        $.notify({message: "<%- m %>"}, {type: "info"});
-    <% }); %>
-<% } %><% if(ms.success) { %>
-    <% ms.success.forEach((m) => { %>
-        $.notify({message: "<%- m %>"}, {type: "success"});
-    <% }); %>
-<% } %>
+const showFlashNotifications = () => {
+    <% let ms = getMessages() %><% if(ms.danger) { %>
+        <% ms.danger.forEach((m) => { %>
+            $.notify({message: "<%- m %>"}, {type: "danger"});
+        <% }); %>
+    <% } %><% if(ms.error) { %>
+        <% ms.error.forEach((m) => { %>
+            $.notify({message: "<%- m %>"}, {type: "danger"});
+        <% }); %>
+    <% } %><% if(ms.warn) { %>
+        <% ms.warn.forEach((m) => { %>
+            $.notify({message: "<%- m %>"}, {type: "warning"});
+        <% }); %>
+    <% } %><% if(ms.info) { %>
+        <% ms.info.forEach((m) => { %>
+            $.notify({message: "<%- m %>"}, {type: "info"});
+        <% }); %>
+    <% } %><% if(ms.success) { %>
+        <% ms.success.forEach((m) => { %>
+            $.notify({message: "<%- m %>"}, {type: "success"});
+        <% }); %>
+    <% } %>
+}
 </script>
