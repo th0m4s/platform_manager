@@ -511,6 +511,7 @@ function start() {
         });
 
         connection.on("close", (hadError) => {
+            connection.removeAllListeners();
             processExit();
         });
     });
