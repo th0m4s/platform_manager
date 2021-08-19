@@ -168,7 +168,7 @@ function confirmAdd() {
     let host = $("#addPopup-host").val().trim().toLowerCase();
     let token = $("#addPopup-token").val().trim();
 
-    if(host.length > 0 && token.length > 0) {
+    if(token.length > 0) {
         $("#addPopup").modal("hide");
         if(host.length > 0) host += "." + window.root_domain;
         else host = window.root_domain;
