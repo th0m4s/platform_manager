@@ -170,10 +170,12 @@ function confirmAdd() {
 
     if(host.length > 0 && token.length > 0) {
         $("#addPopup").modal("hide");
-        host += "." + window.root_domain;
+        if(host.length > 0) host += "." + window.root_domain;
+        else host = window.root_domain;
+
         socket.emit("dns_challenge_cmd", {command: "set", host, token});
     } else {
-        $.notify({message: "Invalid or empty fields."}, {type: "warning", z_index: 9999, placement: {from: "bottom", align: "center"}, animate: {enter: "animated fadeInUp", exit: "animated fadeOutDown"}});
+        $.notify({message: "Invalid fields or empty token."}, {type: "warning", z_index: 9999, placement: {from: "bottom", align: "center"}, animate: {enter: "animated fadeInUp", exit: "animated fadeOutDown"}});
     }
 }
 
