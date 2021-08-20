@@ -165,13 +165,16 @@ function openAddPopup() {
 }
 
 function confirmAdd() {
-    let host = $("#addPopup-host").val().trim().toLowerCase();
+    let hostInput = $("#addPopup-host");
+    let host = hostInput.val().trim().toLowerCase();
     let token = $("#addPopup-token").val().trim();
 
     if(token.length > 0) {
         $("#addPopup").modal("hide");
-        if(host.length > 0) host += "." + window.root_domain;
-        else host = window.root_domain;
+        if(hostInput.attr("data-mode") == "root") {
+            if(host.length > 0) host += "." + window.root_domain;
+            else host = window.root_domain;
+        }
 
         socket.emit("dns_challenge_cmd", {command: "set", host, token});
     } else {
@@ -212,4 +215,15 @@ function testChallenge(cid) {
     }
 }
 
-window.dns_challenges = {init, askRemove, confirmRemove, openAddPopup, confirmAdd, testChallenge};
+function toggleAddMode() {
+    let input = $("#addPopup-host");
+    if(input.attr("data-mode") == "root") {
+        input.attr("data-mode", "free");
+        $("#addPopup-root").hide();
+    } else {
+        input.attr("data-mode", "root");
+        $("#addPopup-root").show();
+    }
+}
+
+window.dns_challenges = {init, askRemove, confirmRemove, openAddPopup, confirmAdd, testChallenge, toggleAddMode};

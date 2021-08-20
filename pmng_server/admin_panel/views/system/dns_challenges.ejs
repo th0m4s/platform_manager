@@ -66,9 +66,9 @@
                     <div class="modal-body">
                         <label for="addPopup-host">TXT record host:</label>
                         <div class="input-group mb-3">
-                            <input type="text" class="form-control" id="addPopup-host">
-                            <div class="input-group-append">
-                                <span class="input-group-text">.<%- root_domain %></span>
+                            <input type="text" class="form-control" id="addPopup-host" data-mode="root">
+                            <div class="input-group-append" style="cursor: pointer;" onclick="dns_challenges.toggleAddMode();">
+                                <span class="input-group-text"><span id="addPopup-root">.<%- root_domain %>&nbsp;</span><i class="fas fa-info-circle" data-toggle="tooltip" title="Click to toggle between main zone and free mode"></i></span>
                             </div>
                         </div>
 
