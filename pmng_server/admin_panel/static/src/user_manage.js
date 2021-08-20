@@ -2,7 +2,7 @@ let saving = false;
 
 function init() {
     window.onbeforeunload = () => {
-        if(!saving && (!edit && getUserForm().completion >= 0 || Object.keys(getChanges()).length > 0)) {
+        if(!saving && (!edit && getUserForm().completion >= 0 || Object.keys(getChanges(true)).length > 0)) {
             return "You have unsaved changes on this page. Do you want to leave?";
             // some browser don't display this message
         }
@@ -22,7 +22,7 @@ function enableAllInputs() {
     $(".always-disabled").attr("disabled", "disabled").addClass("disabled");
 }
 
-function getUserForm() {
+function getUserForm(silent = false) {
     let userData = {}, completedFields = 0;
 
     userData.name = $("#input-username").val().trim();
@@ -40,7 +40,7 @@ function getUserForm() {
     userData.password = $("#input-password").val().trim();
     if((!edit && userData.password.length == 0) || $("#input-confirmpass").val().trim() != userData.password) {
         if(userData.password.length > 0) {
-            $.notify({message: "The passwords are not identical."}, {type: "warning"});
+            if(!silent) $.notify({message: "The passwords are not identical."}, {type: "warning"});
             completedFields--;
         }
         userData.password = "";
@@ -53,10 +53,10 @@ function getUserForm() {
     return {completion, userData};
 }
 
-function getChanges() {
+function getChanges(silent = false) {
     let differences = {};
 
-    let newUserData = getUserForm();
+    let newUserData = getUserForm(silent);
     if(newUserData.completion > 0) {
         newUserData = newUserData.userData;
 
