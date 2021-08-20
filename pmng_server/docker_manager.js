@@ -360,7 +360,7 @@ function stopProject(projectname, force = false) {
             });
         }).catch((error) => {
             logger.tagWarn("DOCKER", "Cannot stop project " + projectname + ":", error);
-            intercom.send("projectsevents", {event: "clear_special_state", project: project});
+            intercom.send("projectsevents", {event: "clear_special_state", project: projectname});
             throw error;
         });
     });
