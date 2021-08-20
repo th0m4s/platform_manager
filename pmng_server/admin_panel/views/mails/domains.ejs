@@ -10,20 +10,25 @@
         </script>
         <%- startPageScript("mails_domains") %>
         
-        <header>
-            <%- include("../default/header.ejs") %>
-        </header>
-        <%- include("../default/loading.ejs") %>
-        <div class="container-fluid" id="main-container">
-            <div class="row mt-3 mx-3">
-                <h2 class="w-100">Mail domains:</h2>
-                <p>Including project domains, custom domains from your projects, the projects you have the <i>full-access</i> collaboration mode on.</p>
-            </div>
-            <div class="row mt-1 mx-3">
-                <ul class="list-group mt-1 w-100" id="domains-list">
-
-                </ul>   
-                <p id="no-domains" class="ml-md-3 mt-md-2" style="display: none;">Looks like you don't have any mail domain yet... First create a project and come back here.</p>
+        <div id="page">
+            <header>
+                <%- include("../default/header.ejs") %>
+            </header>
+            
+            <div id="page-contents">
+                <%- include("../default/loading.ejs") %>
+                <div class="container-fluid" id="main-container">
+                    <div class="row mt-3 mx-3">
+                        <h2 class="w-100">Mail domains:</h2>
+                        <p>Including project domains, custom domains from your projects, the projects you have the <i>full-access</i> collaboration mode on.</p>
+                    </div>
+                    <div class="row mt-1 mx-3">
+                        <ul class="list-group mt-1 w-100" id="domains-list">
+        
+                        </ul>   
+                        <p id="no-domains" class="ml-md-3 mt-md-2" style="display: none;">Looks like you don't have any mail domain yet... First create a project and come back here.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </body>

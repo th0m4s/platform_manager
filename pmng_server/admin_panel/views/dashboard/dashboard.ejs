@@ -6,66 +6,72 @@
         <%- include("../default/flash.ejs") %>
         <%- include("../default/api.ejs") %>
         <%- startPageScript("dashboard", ["/static/js/moment.dist.js", "/static/js/chart.dist.js", "/socket.io/socket.io.js"]) %>
-        <header>
-            <%- include("../default/header.ejs") %>
-        </header>
-        <%- include("../default/loading.ejs") %>
-        <div class="container-fluid" id="main-container">
-            <div class="row mt-3 mx-3" id="cli-row">
-                <p>Download the pmng-cli here: <a download href="/static/pmng-cli_installer.js">pmng-cli_installer.js</a></p>
-            </div>
 
-            <div class="row mt-3 mx-3">
-                <div class="w-100">
-                    <h3 class="d-inline">System information:</h3>
-                    <div class="card w-100 mt-1">
-                        <ul class="list-group list-group-flush">
-                            <!--<li class="list-group-item">
-                                <b>Projects count (owned): </b><span id="info-project-count">Loading...</span>
-                            </li>-->
-                            <li class="list-group-item">
-                                <b>Host OS: </b><span id="info-os">Loading...</span>
-                            </li>
-                            <li class="list-group-item">
-                                <b>Node version: </b><span id="info-node-version">Loading...</span>
-                            </li>
-                            <li class="list-group-item">
-                                <b>Memory usage: </b><span id="info-mem">Loading...</span>
-                            </li>
-                            </li>
-                            <li class="list-group-item">
-                                <b>CPU usage: </b><span id="info-cpu">Loading...</span>
-                            </li>
-                            </li>
-                            <li class="list-group-item">
-                                <b>Disk usage: </b><span id="info-disk">Loading...</span>
-                                <div class="progress">
-                                    <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100" id="info-disk-bar"></div>
-                                </div>
-                            </li>
-                        </ul>
+        <div id="page">
+            <header>
+                <%- include("../default/header.ejs") %>
+            </header>
+            
+            <div id="page-contents">
+                <%- include("../default/loading.ejs") %>
+                <div class="container-fluid" id="main-container">
+                    <div class="row mt-3 mx-3" id="cli-row">
+                        <p>Download the pmng-cli here: <a download href="/static/pmng-cli_installer.js">pmng-cli_installer.js</a></p>
                     </div>
-                </div>
-            </div>
-
-            <div class="row mt-3 mx-3">
-                <div class="w-100">
-                    <h3 class="d-inline">Host usage:</h3>
-                    <p class="w-100 status-msg" id="graphs-status">Loading...</p>
-                </div>
-            </div>
-
-            <div class="row mt-2 mx-3">
-                <div class="col-lg-6 col-12 mb-3 chart-panel">
-                    <h5 class="subprocess-title" style="display: inline-block;">Memory usage:</h5>
-                    <div style="width: 100%;" class="row chart-row">
-                        <canvas id="mem-chart"></canvas>
+        
+                    <div class="row mt-3 mx-3">
+                        <div class="w-100">
+                            <h3 class="d-inline">System information:</h3>
+                            <div class="card w-100 mt-1">
+                                <ul class="list-group list-group-flush">
+                                    <!--<li class="list-group-item">
+                                        <b>Projects count (owned): </b><span id="info-project-count">Loading...</span>
+                                    </li>-->
+                                    <li class="list-group-item">
+                                        <b>Host OS: </b><span id="info-os">Loading...</span>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <b>Node version: </b><span id="info-node-version">Loading...</span>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <b>Memory usage: </b><span id="info-mem">Loading...</span>
+                                    </li>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <b>CPU usage: </b><span id="info-cpu">Loading...</span>
+                                    </li>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <b>Disk usage: </b><span id="info-disk">Loading...</span>
+                                        <div class="progress">
+                                            <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100" id="info-disk-bar"></div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-lg-6 col-12 mb-3 chart-panel">
-                    <h5 class="subprocess-title" style="display: inline-block;">CPU usage:</h5>
-                    <div style="width: 100%;" class="row chart-row">
-                        <canvas id="cpu-chart"></canvas>
+        
+                    <div class="row mt-3 mx-3">
+                        <div class="w-100">
+                            <h3 class="d-inline">Host usage:</h3>
+                            <p class="w-100 status-msg" id="graphs-status">Loading...</p>
+                        </div>
+                    </div>
+        
+                    <div class="row mt-2 mx-3">
+                        <div class="col-lg-6 col-12 mb-3 chart-panel">
+                            <h5 class="subprocess-title" style="display: inline-block;">Memory usage:</h5>
+                            <div style="width: 100%;" class="row chart-row">
+                                <canvas id="mem-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 col-12 mb-3 chart-panel">
+                            <h5 class="subprocess-title" style="display: inline-block;">CPU usage:</h5>
+                            <div style="width: 100%;" class="row chart-row">
+                                <canvas id="cpu-chart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

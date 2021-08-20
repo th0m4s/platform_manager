@@ -11,34 +11,39 @@
         </script>
         <%- startPageScript("mails_users") %>
         
-        <header>
-            <%- include("../default/header.ejs") %>
-        </header>
-        <%- include("../default/loading.ejs") %>
-        <div class="container-fluid" id="main-container">
-            <div class="row mt-3 mx-3 justify-content-between">
-                <h2 style="user-select: none;" onclick="mails_users.panelViewClicked('users')"><i class="fas fa-xs chevron chevron-users"></i> Mail users</h2>
-                <div><span class="users-only"><div class="custom-checkbox" style="display: inline; position: relative; top: 10px;"><input onchange="mails_users.toggleSystemUsers(this);" class="custom-control-input" type="checkbox" id="hide-system-users"><label class="custom-control-label" style="user-select: none;" for="hide-system-users">Hide system users (<span id="counter-users"></span>)</label></div></span><a href="/panel/mails/users/create" class="btn btn-primary btn-sm ml-3 mt-2"><i class="fas fa-user-plus"></i> Create a user</a></div>
-                <div class="users-only w-100">
-                    <p id="no-users" class="ml-md-3 mt-md-2" style="display: none;">Looks like you don't have any mail user yet...</p>
-                    <ul class="list-group mt-2 w-100" id="users-list">
-
-                    </ul>
-                    <div id="hidden-users" class="d-none">
-
+        <div id="page">
+            <header>
+                <%- include("../default/header.ejs") %>
+            </header>
+            
+            <div id="page-contents">
+                <%- include("../default/loading.ejs") %>
+                <div class="container-fluid" id="main-container">
+                    <div class="row mt-3 mx-3 justify-content-between">
+                        <h2 style="user-select: none;" onclick="mails_users.panelViewClicked('users')"><i class="fas fa-xs chevron chevron-users"></i> Mail users</h2>
+                        <div><span class="users-only"><div class="custom-checkbox" style="display: inline; position: relative; top: 10px;"><input onchange="mails_users.toggleSystemUsers(this);" class="custom-control-input" type="checkbox" id="hide-system-users"><label class="custom-control-label" style="user-select: none;" for="hide-system-users">Hide system users (<span id="counter-users"></span>)</label></div></span><a href="/panel/mails/users/create" class="btn btn-primary btn-sm ml-3 mt-2"><i class="fas fa-user-plus"></i> Create a user</a></div>
+                        <div class="users-only w-100">
+                            <p id="no-users" class="ml-md-3 mt-md-2" style="display: none;">Looks like you don't have any mail user yet...</p>
+                            <ul class="list-group mt-2 w-100" id="users-list">
+        
+                            </ul>
+                            <div id="hidden-users" class="d-none">
+        
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="row mt-4 mb-3 mx-3 justify-content-between">
-                <h2 style="user-select: none;" onclick="mails_users.panelViewClicked('aliases')"><i class="fas fa-xs chevron chevron-aliases"></i> Mail aliases</h2>
-                <div><span class="aliases-only"><div class="custom-checkbox" style="display: inline; position: relative; top: 10px;"><input onchange="mails_users.toggleSystemAliases(this);" class="custom-control-input" type="checkbox" id="hide-system-aliases"><label class="custom-control-label" style="user-select: none;" for="hide-system-aliases">Hide system aliases (<span id="counter-aliases"></span>)</label></div></span><a href="/panel/mails/aliases/create" class="btn btn-primary btn-sm ml-3 mt-2"><i class="fas fa-plus"></i> Create an alias</a></div>
-                <div class="aliases-only w-100">
-                    <p id="no-aliases" class="ml-md-3 mt-md-2" style="display: none;">Looks like you don't have any mail alias yet...</p>
-                    <ul class="list-group mt-2 w-100" id="aliases-list">
-
-                    </ul>
-                    <div id="hidden-aliases" class="d-none">
-
+                    <div class="row mt-4 mb-3 mx-3 justify-content-between">
+                        <h2 style="user-select: none;" onclick="mails_users.panelViewClicked('aliases')"><i class="fas fa-xs chevron chevron-aliases"></i> Mail aliases</h2>
+                        <div><span class="aliases-only"><div class="custom-checkbox" style="display: inline; position: relative; top: 10px;"><input onchange="mails_users.toggleSystemAliases(this);" class="custom-control-input" type="checkbox" id="hide-system-aliases"><label class="custom-control-label" style="user-select: none;" for="hide-system-aliases">Hide system aliases (<span id="counter-aliases"></span>)</label></div></span><a href="/panel/mails/aliases/create" class="btn btn-primary btn-sm ml-3 mt-2"><i class="fas fa-plus"></i> Create an alias</a></div>
+                        <div class="aliases-only w-100">
+                            <p id="no-aliases" class="ml-md-3 mt-md-2" style="display: none;">Looks like you don't have any mail alias yet...</p>
+                            <ul class="list-group mt-2 w-100" id="aliases-list">
+        
+                            </ul>
+                            <div id="hidden-aliases" class="d-none">
+        
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

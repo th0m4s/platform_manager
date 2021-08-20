@@ -10,26 +10,31 @@
         </script>
         <%- startPageScript("project_logs", ["/socket.io/socket.io.js", "/static/js/lib_download.dist.js"]) %>
         
-        <header>
-            <%- include("../default/header.ejs") %>
-        </header>
-        <%- include("../default/loading.ejs") %>
-        <div class="container-fluid" id="main-container">
-            <div class="row mt-3 mx-3" id="details-row">
-                <div class="w-100">
-                    <h3 class="d-inline">Project logs: <%- projectname %></h3>
-                    <div class="btn-group btn-group-sm float-right" role="group">
-                        <a href="../details/<%- projectname %>" class="my-1 btn btn-sm btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
-                        <button id="previous-logs-btn" onclick="project_logs.loadPreviousLogs()" disabled class="my-1 btn btn-sm btn-primary"><i class="fas fa-backward"></i> Load previous logs</button>
-                        <button id="download-logs-btn" onclick="project_logs.downloadAllLogs()" class="my-1 btn btn-sm btn-info"><i class="fas fa-file-download"></i> Download current logs</button>
+        <div id="page">
+            <header>
+                <%- include("../default/header.ejs") %>
+            </header>
+            
+            <div id="page-contents">
+                <%- include("../default/loading.ejs") %>
+                <div class="container-fluid" id="main-container">
+                    <div class="row mt-3 mx-3" id="details-row">
+                        <div class="w-100">
+                            <h3 class="d-inline">Project logs: <%- projectname %></h3>
+                            <div class="btn-group btn-group-sm float-right" role="group">
+                                <a href="../details/<%- projectname %>" class="my-1 btn btn-sm btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
+                                <button id="previous-logs-btn" onclick="project_logs.loadPreviousLogs()" disabled class="my-1 btn btn-sm btn-primary"><i class="fas fa-backward"></i> Load previous logs</button>
+                                <button id="download-logs-btn" onclick="project_logs.downloadAllLogs()" class="my-1 btn btn-sm btn-info"><i class="fas fa-file-download"></i> Download current logs</button>
+                            </div>
+                        </div>
                     </div>
+                    <div class="row mt-3 mx-3" id="logs-row">
+                        <div style="border-radius: 8px; background-color: #f7f7f9; width: 100%; padding: 1rem;" class="mb-4">
+                            <pre id="logs-samp" style="margin-bottom: 0;">Loading...</pre>
+                        </div>
+                    </div>  
                 </div>
             </div>
-            <div class="row mt-3 mx-3" id="logs-row">
-                <div style="border-radius: 8px; background-color: #f7f7f9; width: 100%; padding: 1rem;" class="mb-4">
-                    <pre id="logs-samp" style="margin-bottom: 0;">Loading...</pre>
-                </div>
-            </div>  
         </div>
     </body>
 </html>

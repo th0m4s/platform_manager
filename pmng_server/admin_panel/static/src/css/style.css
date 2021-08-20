@@ -1,3 +1,38 @@
+#page {
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+}
+
+#page-contents {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    margin: 0 3px;
+}
+
+#page-contents::-webkit-scrollbar-track {
+	border-radius: 4px;
+	background-color: white;
+    margin: 3px;
+}
+
+#page-contents::-webkit-scrollbar {
+	width: 6px;
+	background-color: white;
+}
+
+#page-contents::-webkit-scrollbar-thumb {
+	border-radius: 4px;
+	box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+	background-color: #555555;
+}
+
+.pmng-navbar {
+    z-index: 2;
+    box-shadow: 0 1px 4px #616060ad;
+}
+
 .btn:disabled {
     cursor: default !important;
 }

@@ -11,58 +11,63 @@
         </script>
         <%- startPageScript("mails_manageuser", ["/static/js/unixcrypt.dist.js"]) %>
         
-        <header>
-            <%- include("../default/header.ejs") %>
-        </header>
-        <%- include("../default/loading.ejs") %>
-        <div class="container-fluid" id="main-container">
-            <div class="row mt-3 mx-3" id="details-row">
-                <div class="w-100">
-                    <h3 class="d-inline"><%- getIfEdit("Edit a", "Create a new") %> mail user:</h3>
-                    <div class="btn-group btn-group-sm float-right" role="group">
-                        <a href="/panel/mails/users" class="my-1 btn btn-sm btn-secondary"><i class="fas fa-times"></i> Cancel</a>
-                        <button style="display: <%- getIfEdit('block', 'none'); %>;" onclick="mails_manageuser.resetSSOPassword()" class="my-1 btn btn-sm btn-info" id="reset-ssopassword"><i class="fas fa-undo-alt"></i> Reset SSO password</button>
-                    </div>
-                </div>
-                <form class="mt-3 w-100" onsubmit="return mails_manageuser.confirm();">
-                    <div class="row">
-                        <div class="col-md-9">
-                            <div class="form-group">
-                                <label for="input-username" class="mb-1">Email (username and domain):</label>
-                                <div class="input-group mb-3">
-                                    <input type="text" required class="form-control<%- getIfEdit(' always-disabled') %>" id="input-username" pattern="^[a-z0-9.-_]{2,50}$" <%- getIfEdit(" disabled",  "") %> placeholder="contact">
-                                    <div class="input-group-append input-group-prepend">
-                                        <span class="input-group-text">@</span>
+        <div id="page">
+            <header>
+                <%- include("../default/header.ejs") %>
+            </header>
+            
+            <div id="page-contents">
+                <%- include("../default/loading.ejs") %>
+                <div class="container-fluid" id="main-container">
+                    <div class="row mt-3 mx-3" id="details-row">
+                        <div class="w-100">
+                            <h3 class="d-inline"><%- getIfEdit("Edit a", "Create a new") %> mail user:</h3>
+                            <div class="btn-group btn-group-sm float-right" role="group">
+                                <a href="/panel/mails/users" class="my-1 btn btn-sm btn-secondary"><i class="fas fa-times"></i> Cancel</a>
+                                <button style="display: <%- getIfEdit('block', 'none'); %>;" onclick="mails_manageuser.resetSSOPassword()" class="my-1 btn btn-sm btn-info" id="reset-ssopassword"><i class="fas fa-undo-alt"></i> Reset SSO password</button>
+                            </div>
+                        </div>
+                        <form class="mt-3 w-100" onsubmit="return mails_manageuser.confirm();">
+                            <div class="row">
+                                <div class="col-md-9">
+                                    <div class="form-group">
+                                        <label for="input-username" class="mb-1">Email (username and domain):</label>
+                                        <div class="input-group mb-3">
+                                            <input type="text" required class="form-control<%- getIfEdit(' always-disabled') %>" id="input-username" pattern="^[a-z0-9.-_]{2,50}$" <%- getIfEdit(" disabled",  "") %> placeholder="contact">
+                                            <div class="input-group-append input-group-prepend">
+                                                <span class="input-group-text">@</span>
+                                            </div>
+                                            <select required class="form-control custom-select" id="input-domain" <%- getIfEdit(" disabled",  "") %>>
+                                            
+                                            </select>
+                                        </div>
                                     </div>
-                                    <select required class="form-control custom-select" id="input-domain" <%- getIfEdit(" disabled",  "") %>>
-                                    
-                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="input-quota" class="mb-1">Quota (in bytes - suffixes accepted):</label>
+                                        <input type="text" required class="form-control" value="<%- getIfEdit(getEditParam('quota'), "100M") %>" id="input-quota" placeholder="100M">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label for="input-quota" class="mb-1">Quota (in bytes - suffixes accepted):</label>
-                                <input type="text" required class="form-control" value="<%- getIfEdit(getEditParam('quota'), "100M") %>" id="input-quota" placeholder="100M">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="input-password" class="mb-1"><%- getIfEdit("New p", "P") %>assword:</label>
+                                        <input type="password" class="form-control" id="input-password" <%- getIfEdit("", "required ") %>minlength="8" placeholder="<%- getIfEdit("Leave empty to keep the current password", "User password") %> (min. length of 8 characters)">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="input-confirmpass" class="mb-1"><%- getIfEdit("New p", "P") %>assword confirmation:</label>
+                                        <input type="password" class="form-control" <%- getIfEdit("", "required ") %>minlength="8" id="input-confirmpass">
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                            <button type="submit" id="confirm-button" class="btn btn-primary btn-lg btn-block mt-2"><% if(isEdit()) { %>Save<% } else {%>Create<% } %> this address</button>
+                        </form>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="input-password" class="mb-1"><%- getIfEdit("New p", "P") %>assword:</label>
-                                <input type="password" class="form-control" id="input-password" <%- getIfEdit("", "required ") %>minlength="8" placeholder="<%- getIfEdit("Leave empty to keep the current password", "User password") %> (min. length of 8 characters)">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="input-confirmpass" class="mb-1"><%- getIfEdit("New p", "P") %>assword confirmation:</label>
-                                <input type="password" class="form-control" <%- getIfEdit("", "required ") %>minlength="8" id="input-confirmpass">
-                            </div>
-                        </div>
-                    </div>
-                    <button type="submit" id="confirm-button" class="btn btn-primary btn-lg btn-block mt-2"><% if(isEdit()) { %>Save<% } else {%>Create<% } %> this address</button>
-                </form>
+                </div>
             </div>
         </div>
 

@@ -7,33 +7,38 @@
         <%- include("../default/api.ejs") %>
         <%- startPageScript("projects_list", ["/socket.io/socket.io.js"]) %>
         
-        <header>
-            <%- include("../default/header.ejs") %>
-        </header>
-        <%- include("../default/loading.ejs") %>
-        <div class="container-fluid" id="main-container">
-            <div class="row mt-3 mx-3" id="owned-row">
-                <div class="w-100">
-                    <h3 class="d-inline">Owned projects:</h3>
-                    <a href="create" id="createProject-link" class="my-1 btn btn-sm btn-primary float-right<%- (canCreateProject ? '"' : ' disabled"') %> title="You cannot create more projects."><i class="fas fa-plus"></i> Create a new project</a>
+        <div id="page">
+            <header>
+                <%- include("../default/header.ejs") %>
+            </header>
+            
+            <div id="page-contents">
+                <%- include("../default/loading.ejs") %>
+                <div class="container-fluid" id="main-container">
+                    <div class="row mt-3 mx-3" id="owned-row">
+                        <div class="w-100">
+                            <h3 class="d-inline">Owned projects:</h3>
+                            <a href="create" id="createProject-link" class="my-1 btn btn-sm btn-primary float-right<%- (canCreateProject ? '"' : ' disabled"') %> title="You cannot create more projects."><i class="fas fa-plus"></i> Create a new project</a>
+                        </div>
+                        <p class="w-100" id="owned-status">Loading projects...</p>
+                        <div class="card w-100" style="display: none;" id="owned-card">
+                            <ul class="list-group list-group-flush" id="owned-list">
+                                
+                            </ul>
+                        </div>
+                        <button class="btn btn-sm btn-secondary mt-2 ml-2" id="owned-more" style="display: none;" onclick="utils.disableButton(this, 'Loading...'); projects_list.requestOwned()"></button>
+                    </div>
+                    <div class="row mt-4 mx-3" id="collabs-row">
+                        <h3 class="w-100">Projects as a collaborator:</h3>
+                        <p class="w-100" id="collab-status">Loading projects...</p>
+                        <div class="card w-100" style="display: none;" id="collab-card">
+                            <ul class="list-group list-group-flush" id="collab-list">
+                                
+                            </ul>
+                        </div>
+                        <button class="btn btn-sm btn-secondary d-none" id="collab-more">Load more projects</button>
+                    </div>
                 </div>
-                <p class="w-100" id="owned-status">Loading projects...</p>
-                <div class="card w-100" style="display: none;" id="owned-card">
-                    <ul class="list-group list-group-flush" id="owned-list">
-                        
-                    </ul>
-                </div>
-                <button class="btn btn-sm btn-secondary mt-2 ml-2" id="owned-more" style="display: none;" onclick="utils.disableButton(this, 'Loading...'); projects_list.requestOwned()"></button>
-            </div>
-            <div class="row mt-4 mx-3" id="collabs-row">
-                <h3 class="w-100">Projects as a collaborator:</h3>
-                <p class="w-100" id="collab-status">Loading projects...</p>
-                <div class="card w-100" style="display: none;" id="collab-card">
-                    <ul class="list-group list-group-flush" id="collab-list">
-                        
-                    </ul>
-                </div>
-                <button class="btn btn-sm btn-secondary d-none" id="collab-more">Load more projects</button>
             </div>
         </div>
 

@@ -12,70 +12,75 @@
         </script>
         <%- startPageScript("project_details") %>
         
-        <header>
-            <%- include("../default/header.ejs") %>
-        </header>
-        <%- include("../default/loading.ejs") %>
-        <div class="container-fluid" id="main-container">
-            <div class="row mt-3 mx-3" id="details-row">
-                <div class="w-100">
-                    <h3 class="d-inline">Project details: <%- project.name %><span id="owner-info"></span></h3>
-                    <div class="btn-group btn-group-sm float-right" role="group">
-                        <a href="/panel/projects/list" class="my-1 btn btn-sm btn-secondary back-button"><i class="fas fa-arrow-left"></i> Back</a>
-                        <a href="/panel/projects/logs/<%- project.name %>" class="my-1 btn btn-sm btn-primary"><i class="fas fa-history"></i> Project logs</a>
-                        <a href="/panel/projects/exec/<%- project.name %>" class="my-1 btn btn-sm btn-outline-secondary"><i class="fas fa-terminal"></i> Command shell</a>
-                        <button disabled id="toggle-forcepush-btn" onclick="project_details.toggleForcePush()" class="my-1 btn btn-sm btn-info" data-toggle="tooltip" data-placement="bottom" title="Allows or not pushes when an addon or a buildpack has protected the project"><i class="fas fa-check-double"></i> <span id="forcepush-text">Loading...</span></button>
+        <div id="page">
+            <header>
+                <%- include("../default/header.ejs") %>
+            </header>
+            
+            <div id="page-contents">
+                <%- include("../default/loading.ejs") %>
+                <div class="container-fluid" id="main-container">
+                    <div class="row mt-3 mx-3" id="details-row">
+                        <div class="w-100">
+                            <h3 class="d-inline">Project details: <%- project.name %><span id="owner-info"></span></h3>
+                            <div class="btn-group btn-group-sm float-right" role="group">
+                                <a href="/panel/projects/list" class="my-1 btn btn-sm btn-secondary back-button"><i class="fas fa-arrow-left"></i> Back</a>
+                                <a href="/panel/projects/logs/<%- project.name %>" class="my-1 btn btn-sm btn-primary"><i class="fas fa-history"></i> Project logs</a>
+                                <a href="/panel/projects/exec/<%- project.name %>" class="my-1 btn btn-sm btn-outline-secondary"><i class="fas fa-terminal"></i> Command shell</a>
+                                <button disabled id="toggle-forcepush-btn" onclick="project_details.toggleForcePush()" class="my-1 btn btn-sm btn-info" data-toggle="tooltip" data-placement="bottom" title="Allows or not pushes when an addon or a buildpack has protected the project"><i class="fas fa-check-double"></i> <span id="forcepush-text">Loading...</span></button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="row mt-3 mx-3" id="rgitinte-row">
-                <div class="w-100">
-                    <h4 class="d-inline">Git integrations:</h4>
-                    <span class="float-right">
-                        <button class="btn btn-sm btn-primary" id="rgitinte-add" style="display: none;" onclick="project_details.addGitInte()"><i class="fas fa-plus"></i> New git integration</button>
-                    </span>
-                </div>
-                <p class="w-100" id="rgitinte-status">Loading...</p>
-                <div class="card w-100 mt-1" style="display: none;" id="rgitinte-card">
-                    <ul class="list-group list-group-flush" id="rgitinte-list">
-                        
-                    </ul>
-                </div>
-            </div>
-
-            <div class="row mt-4 mx-3" id="collabs-row">
-                <div class="w-100">
-                    <h4 class="d-inline">Collaborators:</h4>
-                </div>
-                <p class="w-100" id="collabs-status">Loading...</p>
-                <div class="card w-100 mt-1" style="display: none;" id="collabs-card">
-                    <ul class="list-group list-group-flush" id="collabs-list">
-                        
-                    </ul>
-                </div>
-            </div>
-
-            <div class="row mt-4 mx-3" id="domains-row">
-                <div class="w-100">
-                    <h4 class="d-inline">Custom domains:</h4>
-                </div>
-                <p class="w-100" id="domains-status">Loading...</p>
-                <div class="card w-100 mt-1" style="display: none;" id="domains-card">
-                    <ul class="list-group list-group-flush" id="domains-list">
-                        
-                    </ul>
-                </div>
-            </div>
-
-            <div class="row mt-4 mx-3" id="plugins-row">
-                <div class="w-100">
-                    <h4 class="d-inline">Plugins usage:</h4>
-                </div>
-                <p class="w-100" id="plugins-status">Loading...</p>
-                <div class="card w-100 mt-1" style="display: none;" id="plugins-card">
-                    <ul class="list-group list-group-flush" id="plugins-list">
-                        
-                    </ul>
+                    <div class="row mt-3 mx-3" id="rgitinte-row">
+                        <div class="w-100">
+                            <h4 class="d-inline">Git integrations:</h4>
+                            <span class="float-right">
+                                <button class="btn btn-sm btn-primary" id="rgitinte-add" style="display: none;" onclick="project_details.addGitInte()"><i class="fas fa-plus"></i> New git integration</button>
+                            </span>
+                        </div>
+                        <p class="w-100" id="rgitinte-status">Loading...</p>
+                        <div class="card w-100 mt-1" style="display: none;" id="rgitinte-card">
+                            <ul class="list-group list-group-flush" id="rgitinte-list">
+                                
+                            </ul>
+                        </div>
+                    </div>
+        
+                    <div class="row mt-4 mx-3" id="collabs-row">
+                        <div class="w-100">
+                            <h4 class="d-inline">Collaborators:</h4>
+                        </div>
+                        <p class="w-100" id="collabs-status">Loading...</p>
+                        <div class="card w-100 mt-1" style="display: none;" id="collabs-card">
+                            <ul class="list-group list-group-flush" id="collabs-list">
+                                
+                            </ul>
+                        </div>
+                    </div>
+        
+                    <div class="row mt-4 mx-3" id="domains-row">
+                        <div class="w-100">
+                            <h4 class="d-inline">Custom domains:</h4>
+                        </div>
+                        <p class="w-100" id="domains-status">Loading...</p>
+                        <div class="card w-100 mt-1" style="display: none;" id="domains-card">
+                            <ul class="list-group list-group-flush" id="domains-list">
+                                
+                            </ul>
+                        </div>
+                    </div>
+        
+                    <div class="row mt-4 mx-3" id="plugins-row">
+                        <div class="w-100">
+                            <h4 class="d-inline">Plugins usage:</h4>
+                        </div>
+                        <p class="w-100" id="plugins-status">Loading...</p>
+                        <div class="card w-100 mt-1" style="display: none;" id="plugins-card">
+                            <ul class="list-group list-group-flush" id="plugins-list">
+                                
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

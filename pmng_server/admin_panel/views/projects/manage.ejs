@@ -11,78 +11,83 @@
         </script>
         <%- startPageScript("project_manage") %>
         
-        <header>
-            <%- include("../default/header.ejs") %>
-        </header>
-        <%- include("../default/loading.ejs") %>
-        <div class="container-fluid" id="main-container">
-            <div class="row mt-3 mx-3" id="details-row">
-                <div class="w-100">
-                    <h3 class="d-inline"><%- getIfEdit("Edit a", "Create a new") %> project:</h3>
-                    <a href="<%- getIfEdit('../') %>list" class="my-1 btn btn-sm btn-secondary float-right back-button"><i class="fas fa-times"></i> Cancel</a>
+        <div id="page">
+            <header>
+                <%- include("../default/header.ejs") %>
+            </header>
+            
+            <div id="page-contents">
+                <%- include("../default/loading.ejs") %>
+                <div class="container-fluid" id="main-container">
+                    <div class="row mt-3 mx-3" id="details-row">
+                        <div class="w-100">
+                            <h3 class="d-inline"><%- getIfEdit("Edit a", "Create a new") %> project:</h3>
+                            <a href="<%- getIfEdit('../') %>list" class="my-1 btn btn-sm btn-secondary float-right back-button"><i class="fas fa-times"></i> Cancel</a>
+                        </div>
+                        <form class="mt-3 w-100" onsubmit="return project_manage.confirm();">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="input-project-name" class="mb-1">Project name:</label>
+                                        <input type="text" required class="form-control<%- getIfEdit(' always-disabled') %>" id="input-project-name" pattern="[a-z-0-9]{4,32}" value="<%- getEditParam('name') %>" <%- getIfEdit(" disabled",  "") %> placeholder="Project name (4 to 32 chars. from a-z, 0-9 and special -)">
+                                        <% if(isEdit() == false) { %>
+                                            <small id="name-confirm" class="form-text text-muted">This name is definitive, you won't be able to change it later. Select it carefully.</small>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="input-plugins" class="mb-1">Plugins:</label>
+                                        <input type="text" data-role="tagsinput" class="form-control" id="input-plugins" placeholder="Start typing to select plugins">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col">
+                                    <div class="form-group">
+                                        <label for="input-collaborators" class="mb-1">Collaborators:</label>
+                                        <input type="text" class="form-control" id="input-collaborators" placeholder="Enter a collaborator and press Enter">
+                                        <small id="name-confirm" class="form-text text-muted">Collaborators will be added in view-only mode. Open Details to change permissions when the project is created.</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col">
+                                    <label class="mb-1 d-block w-100">Environment variables:</label>
+                                    <div class="form-group mb-0" id="env-list">
+                                            
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" id="button-add-env" onclick="project_manage.addEnv()"><i class="fas fa-plus"></i> Add an environment variable</button>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col">
+                                    <label class="mb-1 d-block w-100">Realtime configuration:</label>
+                                    <div class="form-group mb-0" id="customconf-list">
+                                            
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" id="button-add-env" onclick="project_manage.addCustomConf()"><i class="fas fa-plus"></i> Add a realtime variable</button>
+                                </div>
+                            </div>
+                            <div class="row mt-4">
+                                <div class="col">
+                                    <label class="mb-1 d-block w-100">Custom domains:</label>
+                                    <div class="form-group mb-0" id="domains-list">
+                                        
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-primary" id="button-add-domain" onclick="project_manage.addDomain()"><i class="fas fa-plus"></i> Add a custom domain</button>
+                                        <small id="domain-info" class="form-text text-muted ml-md-1 d-inline-block" style="margin-top: -15px; position: relative; top: 11px;">
+                                            If you've enabled full DNS custom domains, don't forget to use <i>ns1.<%- process.env.ROOT_DOMAIN %></i> and <i>ns2.<%- process.env.ROOT_DOMAIN %></i> as nameservers.
+                                            <br/>Full DNS management allows you to delegate the entire DNS zone to the Platform Manager. If you disable it, just create CNAME records to <i><%- process.env.ROOT_DOMAIN %></i> or A records to <i><%- process.env.HOST_A %></i>.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" id="confirm-button" class="btn btn-primary btn-lg btn-block mt-5"><% if(isEdit()) { %>Save<% } else {%>Create<% } %> this project</button>
+                        </form>
+                    </div>
                 </div>
-                <form class="mt-3 w-100" onsubmit="return project_manage.confirm();">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="input-project-name" class="mb-1">Project name:</label>
-                                <input type="text" required class="form-control<%- getIfEdit(' always-disabled') %>" id="input-project-name" pattern="[a-z-0-9]{4,32}" value="<%- getEditParam('name') %>" <%- getIfEdit(" disabled",  "") %> placeholder="Project name (4 to 32 chars. from a-z, 0-9 and special -)">
-                                <% if(isEdit() == false) { %>
-                                    <small id="name-confirm" class="form-text text-muted">This name is definitive, you won't be able to change it later. Select it carefully.</small>
-                                <% } %>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="input-plugins" class="mb-1">Plugins:</label>
-                                <input type="text" data-role="tagsinput" class="form-control" id="input-plugins" placeholder="Start typing to select plugins">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col">
-                            <div class="form-group">
-                                <label for="input-collaborators" class="mb-1">Collaborators:</label>
-                                <input type="text" class="form-control" id="input-collaborators" placeholder="Enter a collaborator and press Enter">
-                                <small id="name-confirm" class="form-text text-muted">Collaborators will be added in view-only mode. Open Details to change permissions when the project is created.</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col">
-                            <label class="mb-1 d-block w-100">Environment variables:</label>
-                            <div class="form-group mb-0" id="env-list">
-                                    
-                            </div>
-                            <button type="button" class="btn btn-sm btn-primary" id="button-add-env" onclick="project_manage.addEnv()"><i class="fas fa-plus"></i> Add an environment variable</button>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col">
-                            <label class="mb-1 d-block w-100">Realtime configuration:</label>
-                            <div class="form-group mb-0" id="customconf-list">
-                                    
-                            </div>
-                            <button type="button" class="btn btn-sm btn-primary" id="button-add-env" onclick="project_manage.addCustomConf()"><i class="fas fa-plus"></i> Add a realtime variable</button>
-                        </div>
-                    </div>
-                    <div class="row mt-4">
-                        <div class="col">
-                            <label class="mb-1 d-block w-100">Custom domains:</label>
-                            <div class="form-group mb-0" id="domains-list">
-                                
-                            </div>
-                            <div>
-                                <button type="button" class="btn btn-sm btn-primary" id="button-add-domain" onclick="project_manage.addDomain()"><i class="fas fa-plus"></i> Add a custom domain</button>
-                                <small id="domain-info" class="form-text text-muted ml-md-1 d-inline-block" style="margin-top: -15px; position: relative; top: 11px;">
-                                    If you've enabled full DNS custom domains, don't forget to use <i>ns1.<%- process.env.ROOT_DOMAIN %></i> and <i>ns2.<%- process.env.ROOT_DOMAIN %></i> as nameservers.
-                                    <br/>Full DNS management allows you to delegate the entire DNS zone to the Platform Manager. If you disable it, just create CNAME records to <i><%- process.env.ROOT_DOMAIN %></i> or A records to <i><%- process.env.HOST_A %></i>.
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="submit" id="confirm-button" class="btn btn-primary btn-lg btn-block mt-5"><% if(isEdit()) { %>Save<% } else {%>Create<% } %> this project</button>
-                </form>
             </div>
         </div>
 

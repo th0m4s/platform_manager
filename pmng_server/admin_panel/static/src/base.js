@@ -15,12 +15,9 @@ $.notifyDefaults({
 });
 
 $(document).ready(() => {
-    if($(".pmng-navbar").length > 0) {
+    if($("#page-contents").length > 0) {
         $.notifyDefaults({
-            offset: {
-                y: 71,
-                x: 15
-            }
+            element: "#page-contents"
         });
     }
 
