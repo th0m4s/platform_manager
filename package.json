@@ -17,8 +17,7 @@
     "build": "yarn run webpack:build",
     "run": "node platform_manager.js",
     "debug": "sudo node platform_manager.js",
-    "checkinstall": "node scripts/checkinstall.js",
-    "update": "node scripts/checkinstall.js --update"
+    "checkinstall": "node scripts/checkinstall.js"
   },
   "dependencies": {
     "@gitbeaker/node": "^25.4.0",

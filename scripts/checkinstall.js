@@ -4,14 +4,10 @@ const path = require("path");
 const privileges = require("../pmng_server/privileges");
 const child_process = require("child_process");
 
-const updating = process.argv.includes("--update");
-
 (async () => {
     if(process.getuid() != 0) {
         console.error("Please run this command as root or with:");
-        if(updating)
-            console.error("  sudo yarn run update");
-        else console.error("  sudo yarn run checkinstall");
+        console.error("  sudo yarn run checkinstall");
         console.error();
 
         process.exit(1);
@@ -20,16 +16,10 @@ const updating = process.argv.includes("--update");
     require("dotenv").config();
     process.env.HOME = process.env.PROC_HOME;
 
-    console.log("PLATFORM MANAGER " + (updating ? "UPDATE" : "INSTALL") + " SCRIPT");
+    console.log("PLATFORM MANAGER INSTALL SCRIPT");
 
     const cwd = process.cwd();
     const userDroppingOptions = privileges.droppingOptions(false);
-
-    if(updating) {
-        console.log("  - Pulling files...");
-        child_process.execSync("git pull", {cwd, ...privileges.droppingOptions(true), stdio: "inherit"});
-        console.log();
-    }
 
     console.log("  - Checking directory ower...");
     chownr.sync(cwd, ...userDroppingOptions);
