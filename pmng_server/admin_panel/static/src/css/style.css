@@ -8,7 +8,8 @@
     flex: 1;
     overflow-y: auto;
     position: relative;
-    margin: 0 3px 45px;
+    margin: 0 3px 40px;
+    padding-bottom: 10px;
 }
 
 #footer {
