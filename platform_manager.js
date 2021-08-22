@@ -18,11 +18,9 @@ if(process.getuid() > 0) {
 
     // logger preparation requires env variables
     await logger_tools.prepare();
-    const logger = logger_tools.logger();
+    const logger = logger_tools.logger(true);
 
     logger.info("PLATFORM MANAGER IS STARTING!");
-
-    let subprocess_util = require("./pmng_server/subprocess_util");
 
     let PRODUCTION = true;
     if(process.env.NODE_ENV != undefined || process.env.NODE_ENV == "development") {
@@ -31,8 +29,16 @@ if(process.getuid() > 0) {
     } else logger.info("Running in production.");
     logger.isDebug = !PRODUCTION;
 
+    // reading git info
+    await require("./git_versioning").readGitInfo(true);
+
     logger.info("Starting intercom server...");
     await require("./pmng_server/intercom/intercom_server").start();
+
+    // enabling stats after intercom started
+    logger.enableStats();
+
+    let subprocess_util = require("./pmng_server/subprocess_util");
 
     // start process stats
     require("./pmng_server/process_stats").pidId("main_process");

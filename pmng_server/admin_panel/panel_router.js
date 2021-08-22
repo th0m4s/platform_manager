@@ -1,6 +1,7 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../database_server");
 const login_utils = require("./login_utils");
+const locals_pmng = {version: {tag: process.env.PMNG_GIT_TAG, commit: process.env.PMNG_GIT_COMMIT, commitShort: process.env.PMNG_GIT_COMMIT.substring(0, 7)}};
 
 const session = require("express-session");
 const KnexSessionStore = require("connect-session-knex")(session);
@@ -107,6 +108,7 @@ function getRouter(headerLinks) {
 
             req.setPage = function(r, title, active, sub) { r.locals.page = {title: title, active: active || "none", sub: sub || "none"}; }
             res.locals.site = {title: "Platform Manager"};
+            res.locals.pmng = locals_pmng;
             res.locals.user = req.user;
             res.locals.headerLinks = headerLinks;
             res.locals.allHeader = true;

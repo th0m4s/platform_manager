@@ -114,9 +114,10 @@ let _logger = undefined;
  * Returns a logger object used by any thread to write to the console and the platform log file.
  * 
  * Only one logger object is available per thread to limit filesystem usage.
+ * @param {boolean} disableStats Set to *true* to disable intercom stats (useful if intercom is not started yet).
  * @returns {nodeLogger.Logger} A logger object.
  */
-function logger() {
+function logger(disableStats = false) {
     // logger stored outside to only open file once per thread
     if(_logger == undefined) {
         _logger = nodeLogger.createSimpleLogger({
@@ -144,7 +145,13 @@ function logger() {
             _logger.error("An unhandled rejection occured:\n" + (reason.stack ?? reason.toString()));
         });
 
-        require("./process_stats").stats();
+        let _enableStats = () => require("./process_stats").stats();
+
+        if(!disableStats) _enableStats();
+        else _logger.enableStats = () => {
+            _logger.enableStats = undefined;
+            _enableStats();
+        }
     }
 
     return _logger;
