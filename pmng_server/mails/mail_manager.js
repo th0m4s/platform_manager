@@ -9,6 +9,7 @@ const mdb = require('knex-mariadb');
 const logger = require("../platform_logger").logger();
 const unixcrypt = require("unixcrypt");
 const ejs = require("ejs");
+const fs_utils = require("../fs_utils");
 const nodemailer = require("nodemailer");
 
 let _mailKnex = undefined;
@@ -165,15 +166,36 @@ async function checkDomainIdUsers(domainId) {
     return Promise.all(proms.concat(mailDb().insert(inserts)));
 }
 
-const server_version = "22"; // |   like panel_pma to restart container when config is changed
+const server_version = "23"; // |   like panel_pma to restart container when config is changed
 const forceRestart = process.env.NODE_ENV == "development";
 function checkAndStart(maildirectory, shouldRestart) {
     return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=server", "pmng.server=mails"]}}).then(async (containers) => {
         if(containers.length == 0 || shouldRestart || containers[0].data.Labels["pmng.serverversion"] != server_version) {
-            if(containers.length > 0) await containers[0].stop();
+            if(containers.length > 0) {
+                await containers[0].stop();
+            }
             await docker_manager.ensureImageExists("pmng/server-mail", "file:" + path.resolve(__dirname, "..", "docker_images", "mails", "alpine-mailer"), {latest: true, adminLogs: true});
 
-            let Binds = [maildirectory + ":/var/mail/vhosts"];
+            // convert historical save folder
+            let vhostsDirectory = path.resolve(maildirectory, "vhosts");
+            let pfSpool = path.resolve(maildirectory, "postfixSpool");
+            let shouldConvert = true;
+            try {
+                await pfs.access(vhostsDirectory);
+                shouldConvert = false;
+            } catch(not_found) { }
+
+            if(shouldConvert) {
+                logger.tag("MAIL", "Converting save folder...");
+
+                await fs_utils.moveDirectory(maildirectory, vhostsDirectory, [], ["vhosts"]);
+                logger.tag("MAIL", "Copied vhosts files to new directory.");
+
+                await pfs.mkdir(pfSpool);
+                logger.tag("MAIL", "Created postfix spool directory...");
+            }
+
+            let Binds = [vhostsDirectory + ":/var/mail/vhosts", pfSpool + ":/var/spool/postfix"];
 
             // SQL MAIL USER
             let mailSqlUser = "mailuser", mailSqlPassword = string_utils.generatePassword(16, 24);
@@ -262,7 +284,7 @@ function checkAndStart(maildirectory, shouldRestart) {
             }).then((container) => {
                 return container.start();
             }).then(async () => {
-                logger.info("Mail server container started.");
+                logger.tag("MAIL", "Mail server container started.");
                 let mailDb = getMailDatabase(), mailDomainsDb = () => mailDb("virtual_domains");
                 // mailDomainsDb is a function because each request needs a different object
 
