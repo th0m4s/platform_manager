@@ -1,33 +1,6 @@
-const pfs = require("fs").promises;
 const path = require("path");
-const rmfr = require("rmfr");
-const child_process = require("child_process");
+const fs_utils = require("../../fs_utils");
 const Buildpack = require("../lib_pack");
-const forbidden_no_public_root_files = [".pmng.json"];
-
-async function moveDirectory(source, dest, root = false) {
-    try {
-        await pfs.mkdir(dest);
-    } catch(e) {
-        if(e.code != "EEXIST") throw e;
-    }
-
-    let subs = await Promise.all((await pfs.readdir(source)).map((x) => pfs.stat(path.join(source, x)).then((stat) => {
-        return [x, stat];
-    })));
-
-    let current = [];
-    for(let [name, stat] of subs) {
-
-        if(stat.isDirectory() && (!root || name != "public")) {
-            current.push(moveDirectory(path.join(source, name), path.join(dest, name)));
-        } else if(stat.isFile() && (!root || !forbidden_no_public_root_files.includes(name))) {
-            current.push(pfs.rename(path.join(source, name), path.join(dest, name)));
-        }
-    }
-
-    return Promise.all(current);
-}
 
 class BasePHPBuildpack extends Buildpack {
     static async build(projectName, projectData, utils, logger, hasAddons) {
@@ -36,7 +9,7 @@ class BasePHPBuildpack extends Buildpack {
         if(projectData.create_public == true) {
             logger("Moving files to public directory...");
             let hostDirectory = utils.getBuildHostDirectory();
-            await moveDirectory(hostDirectory, path.join(hostDirectory, "public"), true);
+            await fs_utils.moveDirectory(hostDirectory, path.join(hostDirectory, "public"), [], [".pmng.json", "public"]);
         }
 
         if(!utils.exists("d", "public"))
