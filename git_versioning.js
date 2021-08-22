@@ -21,7 +21,7 @@ module.exports.readGitInfo = (disableReject = false) => {
                             resolve();
                         } else {
                             child_process.exec("git describe --tags", (tagError, tagStdout, tagStderr) => {
-                                process.env.PMNG_GIT_TAG = tagError == null ? tagStdout.trim() : "unknown";
+                                process.env.PMNG_GIT_TAG = tagError == null ? tagStdout.trim().split("-")[0] : "unknown";
                                 resolve();
                             });
                         }

@@ -1,7 +1,9 @@
 <footer id="footer">
     <div class="container">
         <span class="text-muted">&copy; Platform Manager 2020-2021 &mdash; 
-            <a href="https://github.com/th0m4s/platform_manager/releases/tag/<%- pmng.version.tag %>" target="_blank"><%- pmng.version.tag %></a> 
-            (commit <a href="https://github.com/th0m4s/platform_manager/commit/<%- pmng.version.commit %>" target="_blank"><%- pmng.version.commitShort %></a>)</span>
+            <% if(pmng.version.tag != "unknown") { %>
+                <a href="https://github.com/th0m4s/platform_manager/releases/tag/<%- pmng.version.tag %>" target="_blank"><%- pmng.version.tag %></a>
+            <% } else { %>unknown<% } %>
+             (commit <a href="https://github.com/th0m4s/platform_manager/commit/<%- pmng.version.commit %>" target="_blank"><%- pmng.version.commitShort %></a>)</span>
     </div>
 </footer>
