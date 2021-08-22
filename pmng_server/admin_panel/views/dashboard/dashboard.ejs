@@ -15,6 +15,16 @@
             <div id="page-contents">
                 <%- include("../default/loading.ejs") %>
                 <div class="container-fluid" id="main-container">
+                    <% if(update !== false) { %>
+                        <div class="card mt-4 mx-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Platform Manager update available!</h5>
+                                An update for Platform Manager was found on GitHub: <span class="ml-2"><%- pmng.version.tag %> → <%- update.version %></span><br/>
+                                <a href="<%- update.link %>" target="_blank">Click here</a> to access the release page or run <code>git pull</code> from your Platform Manager directory.
+                            </div>
+                        </div>
+                    <% } %>
+
                     <div class="row mt-3 mx-3" id="cli-row">
                         <p>Download the pmng-cli here: <a download href="/static/pmng-cli_installer.js">pmng-cli_installer.js</a></p>
                     </div>

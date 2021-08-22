@@ -2,10 +2,14 @@ const express = require('express'), router = express.Router();
 const database_server = require("../database_server");
 const login_utils = require("./login_utils");
 const locals_pmng = {version: {tag: process.env.PMNG_GIT_TAG, commit: process.env.PMNG_GIT_COMMIT, commitShort: process.env.PMNG_GIT_COMMIT.substring(0, 7)}};
+const node_cron = require("node-cron");
+const axios = require("axios");
+const compare_versions = require("compare-versions");
+const logger = require("../platform_logger").logger();
 
 const session = require("express-session");
 const KnexSessionStore = require("connect-session-knex")(session);
-const flash = require('express-flash-messages');
+const flash = require("express-flash-messages");
 
 const store = new KnexSessionStore({
     knex: database_server.database,
@@ -13,6 +17,8 @@ const store = new KnexSessionStore({
 });
 
 const passport = require('passport'), PassportLocalStrategy = require('passport-local').Strategy;
+
+let availableUpdate = false;
 
 let errorCategories = {"default": {"unknown": {title: "Unknown error", message: "An unknown occured and was redirecting to this page.", link: undefined}}};
 /**
@@ -31,9 +37,32 @@ function addErrorPage(category, error, title, message, link) {
     }
 }
 
+// TODO: use axios everywhere (and replace bent)
+async function checkForUpdates() {
+    try {
+        let releases = (await axios.get("https://api.github.com/repos/th0m4s/platform_manager/releases", {responseType: "json"})).data;
+        releases = releases.filter(x => !x.prerelease && !x.draft);
+        if(releases.length == 0) availableUpdate = false;
+        else {
+            let current = process.env.PMNG_GIT_TAG;
+            let latestData = releases[0];
+            if(!current.startsWith("v") || compare_versions.compare(latestData.tag_name, current, ">")) {
+                availableUpdate = {version: latestData.tag_name, link: latestData.html_url};
+            } else availableUpdate = false;
+        }
+    } catch(error) {
+        logger.warn("Cannot check for updates! " + error.toString());
+        availableUpdate = false;
+    }
+}
+
 let routerReady = false;
 function getRouter(headerLinks) {
     if(!routerReady) {
+        // setup updates cron task
+        node_cron.schedule("0 * * * *", checkForUpdates);
+        checkForUpdates();
+
         router.use(flash());
         router.use(session({
             secret: process.env.SESSION_SECRET,
@@ -114,6 +143,8 @@ function getRouter(headerLinks) {
             res.locals.allHeader = true;
             req.setAllHeader = (allHeader) => { res.locals.allHeader = allHeader; }
             
+            res.locals.update = (req.user != null && database_server.checkScope(req.user.scope, "SYSTEM")) ? availableUpdate : false;
+
             res.locals.isActive = function(page, sub) {
                 sub = sub || "*";
                 return this.page.active == page && (this.page.sub == sub || sub == "*") ? "active" : "";
