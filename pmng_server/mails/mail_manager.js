@@ -9,7 +9,7 @@ const mdb = require('knex-mariadb');
 const logger = require("../platform_logger").logger();
 const unixcrypt = require("unixcrypt");
 const ejs = require("ejs");
-const fs_utils = require("../fs_utils");
+const intercom = require("../intercom/intercom_client").connect();
 const nodemailer = require("nodemailer");
 
 let _mailKnex = undefined;
@@ -187,17 +187,13 @@ function checkAndStart(maildirectory, shouldRestart) {
 
             if(shouldConvert) {
                 logger.tag("MAIL", "Converting save folder...");
-
-                await fs_utils.moveDirectory(maildirectory, vhostsDirectory, [], ["vhosts"]);
-                logger.tag("MAIL", "Copied vhosts files to new directory.");
-
-                await pfs.mkdir(pfSpool);
-                logger.tag("MAIL", "Created postfix spool directory...");
+                await intercom.sendPromise("rootProcessor", {command: "mailManager", action: "convert", paths: {maildirectory, vhostsDirectory, pfSpool}});
+                logger.tag("MAIL", "Mail folder converted.");
             }
 
             let Binds = [vhostsDirectory + ":/var/mail/vhosts", pfSpool + ":/var/spool/postfix"];
-
             // SQL MAIL USER
+
             let mailSqlUser = "mailuser", mailSqlPassword = string_utils.generatePassword(16, 24);
             await database_server.database.raw("GRANT SELECT ON `" + MAIL_DBNAME + "`.* TO '" + mailSqlUser + "'@'%' IDENTIFIED BY '" + mailSqlPassword + "';");
             let sqlHosts = (process.env.DB_MODE == "socket" ? "unix:/var/spool/postfix/var/run/mysqld/mysqld.sock" : (process.env.DB_HOST + (parseInt(process.env.DB_PORT) != 3306 ? ":" + process.env.DB_PORT : "")));

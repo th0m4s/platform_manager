@@ -1,6 +1,8 @@
 const child_process = require("child_process");
 const intercom = require("./intercom/intercom_client").connect();
 const path = require("path");
+const pfs = require("fs").promises;
+const fs_utils = require("./fs_utils");
 const logger = require("./platform_logger").logger();
 
 intercom.subscribe(["rootProcessor"], (message, respond) => {
@@ -8,11 +10,43 @@ intercom.subscribe(["rootProcessor"], (message, respond) => {
         case "storagePlugin":
             processStorage(message, respond);
             break;
+        case "mailManager":
+            processMail(message, respond);
+            break;
         default:
             respond({error: true, message: "Unknown root command."});
             break;
     }
 });
+
+/**
+ * Process an intercom message specifically crafted with an action from the mail manager.
+ * @param {Object} message The original intercom message with storage specific parameters.
+ * @param {(response: object) => void} respond The intercom respond callback.
+ */
+async function processMail(message, respond) {
+    let paths = message.paths, action = message.action;
+
+    switch(action) {
+        case "convert":
+            try {
+                await fs_utils.moveDirectory(paths.maildirectory, paths.vhostsDirectory, [], ["vhosts"]);
+                logger.tag("MAIL", "Copied vhosts files to new directory.");
+
+                try {
+                    await pfs.mkdir(paths.pfSpool);
+                    logger.tag("MAIL", "Created postfix spool directory...");
+                } catch(error) {
+                    if(error.code != "EEXIST") throw error;
+                }
+
+                respond({error: false, message: "Converted!"});
+            } catch(error) {
+                respond({error: true, message: error});
+            }
+            break;
+    }
+}
 
 /**
  * Process an intercom message specifically crafted with a permanent storage action.

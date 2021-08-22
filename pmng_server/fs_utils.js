@@ -1,4 +1,5 @@
 const pfs = require("fs").promises;
+const path = require("path");
 
 async function moveDirectory(source, dest, forbidden_names = [], forbidden_root_names = []) {
     try {
@@ -14,7 +15,7 @@ async function moveDirectory(source, dest, forbidden_names = [], forbidden_root_
     let current = [];
     for(let [name, stat] of subs) {
 
-        if(!forbidden_files.includes(name) && !forbidden_root_files.includes(name)) {
+        if(!forbidden_names.includes(name) && !forbidden_root_names.includes(name)) {
             if(stat.isDirectory()) {
                 current.push(moveDirectory(path.join(source, name), path.join(dest, name), forbidden_names));
             } else if(stat.isFile()) {
