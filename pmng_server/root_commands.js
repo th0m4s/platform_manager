@@ -80,4 +80,4 @@ function processStorage(message, respond) {
     }
 }
 
-logger.info("Root commands processor fork started.");
+logger.tag("ROOT", "Root commands processor fork started.");

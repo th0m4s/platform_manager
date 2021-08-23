@@ -25,14 +25,14 @@ if(process.getuid() > 0) {
     let PRODUCTION = true;
     if(process.env.NODE_ENV != undefined || process.env.NODE_ENV == "development") {
         PRODUCTION = false;
-        logger.info("Running in development.");
-    } else logger.info("Running in production.");
+        logger.tag("MAIN", "Running in development.");
+    } else logger.tag("MAIN", "Running in production.");
     logger.isDebug = !PRODUCTION;
 
     // reading git info
     await require("./git_versioning").readGitInfo(true);
 
-    logger.info("Starting intercom server...");
+    logger.tag("MAIN", "Starting intercom server...");
     await require("./pmng_server/intercom/intercom_server").start();
 
     // enabling stats after intercom started
@@ -57,7 +57,7 @@ if(process.getuid() > 0) {
     subprocess_util.forkNamed("./pmng_server/ftp_server/ftp_server", "ftp_server", "FTP server");
 
     // docker is started and running, so start scripts that require docker
-    logger.info("Starting all web servers...");
+    logger.tag("MAIN", "Starting all web servers...");
     require("./pmng_server/web_server").start();
 
     subprocess_util.forkNamed("./pmng_server/local_server/local_main", "local_server", "local server");

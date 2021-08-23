@@ -102,11 +102,11 @@ function fork(file, id, onForking, onExited, onRestart) {
  */
 function forkNamed(file, id, name) {
     return fork(file, id, () => {
-        logger.info("Forking " + name + "...");
+        logger.tag("SUBP", "Forking " + name + " (" + id + ")...");
     }, (code, signal) => {
-        logger.info("Process of " + name + " exited unexpectedly (" + code + ").");
+        logger.tag("SUBP", "Process of " + name + " (" + id + ") exited unexpectedly (" + code + ").");
     }, () => {
-        logger.info("Process of " + name + " is being restarted.");
+        logger.tag("SUBP", "Process of " + name + " (" + id + ") is being restarted.");
     });
 }
 

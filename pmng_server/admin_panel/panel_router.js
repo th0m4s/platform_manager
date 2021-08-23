@@ -40,7 +40,7 @@ function addErrorPage(category, error, title, message, link) {
 // TODO: use axios everywhere (and replace bent)
 async function checkForUpdates() {
     try {
-        let releases = (await axios.get("https://api.github.com/repos/th0m4s/platform_manager/releases", {responseType: "json"})).data;
+        let releases = (await axios.get("https://api.github.com/repos/th0m4s/platform_manager/releases", {responseType: "json", headers: {"User-Agent": "platform_manager/" + process.env.PMNG_GIT_COMMIT}})).data;
         releases = releases.filter(x => !x.prerelease && !x.draft);
         if(releases.length == 0) availableUpdate = false;
         else {
@@ -51,7 +51,7 @@ async function checkForUpdates() {
             } else availableUpdate = false;
         }
     } catch(error) {
-        logger.warn("Cannot check for updates! " + error.toString());
+        logger.tagWarn("WEB", "Cannot check for updates! " + error.toString());
         availableUpdate = false;
     }
 }

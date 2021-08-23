@@ -99,10 +99,10 @@ function checkAndStart(shouldRestart) {
             }).then((container) => {
                 return container.start();
             }).then(() => {
-                logger.info("phpMyAdmin custom admin panel started.");
+                logger.tag("WEB", "phpMyAdmin custom admin panel started.");
                 return true;
             }).catch((error) => {
-                logger.error("Cannot start PMA panel: " + error);
+                logger.tagError("WEB", "Cannot start PMA panel: " + error);
                 return false;
             });
         } else return true; // already started

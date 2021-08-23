@@ -67,7 +67,7 @@ function start() {
     privileges.drop();
 
     server.listen(8081, () => {
-        logger.info("Git server started.");
+        logger.tag("GIT", "Git server started.");
     });
 }
 

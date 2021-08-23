@@ -39,7 +39,7 @@ function start() {
             }).then((context) => {
                 cb(null, context);
             }).catch((error) => {
-                logger.error("Cannot create secure context for domain " + serverName + ":" + error);
+                logger.tagError("HTTPS CLUSTER", "Cannot create secure context for domain " + serverName + ":" + error);
                 cb(error);
             });
         }

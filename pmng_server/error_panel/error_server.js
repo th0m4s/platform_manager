@@ -31,7 +31,7 @@ function start() {
     privileges.drop();
 
     app.listen(8099, () => {
-        logger.info("Error server started.");
+        logger.tag("WEB", "Error server started.");
     });
 }
 

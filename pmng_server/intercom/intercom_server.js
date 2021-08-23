@@ -29,7 +29,7 @@ function start() {
 
     return new Promise((resolve) => {
         server.listen(8043, "127.0.0.1", () => {
-            logger.info("Intercom server started.");
+            logger.tag("INTERCOM", "Intercom server started.");
             resolve();
         });
     });

@@ -517,7 +517,7 @@ function start() {
     });
 
     server.listen(8042, "127.0.0.1", () => {
-        logger.info("Local net server started.");
+        logger.tag("LNET", "Local net server started.");
     });
 }
 

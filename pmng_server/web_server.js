@@ -37,7 +37,7 @@ function start() {
 
     // launching 2 processes to handle both HTTP and HTTPS public requests
     // each process will be the master of a cluster of web servers
-    logger.info("Separating public servers into forks:");
+    logger.tag("WEB", "Separating public servers into forks:");
 
     subprocess_util.forkNamed("./pmng_server/public_web/http_public_server", "http_public_server", "public http master server");
 

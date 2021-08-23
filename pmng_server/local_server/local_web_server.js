@@ -18,7 +18,7 @@ function checkReqSource(req, res, next) {
 
 localWeb.get("/restart/:subprocess", checkReqSource, async (req, res) => {
     let subpId = req.params.subprocess;
-    logger.info("Local web server received restart request for " + subpId + ".");
+    logger.tag("LWEB", "Local web server received restart request for " + subpId + ".");
 
     let respPromise = intercom.sendPromise("subprocesses", {id: subpId, command: "restart"});
 
@@ -41,7 +41,7 @@ localWeb.get("/restart/:subprocess", checkReqSource, async (req, res) => {
 
 function start() {
     localWeb.listen(8041, "127.0.0.1", () => {
-        logger.info("Local web server started.");
+        logger.tag("LWEB", "Local web server started.");
     });
 }
 

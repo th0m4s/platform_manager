@@ -120,12 +120,12 @@ async function maininstance() {
             break;
         } catch(error) {
             if(!messageSent) {
-                logger.info("Docker not running. Waiting for initialization....");
+                logger.tag("DOCKER", "Docker not running. Waiting for initialization....");
                 messageSent = true;
             }
 
             if(delayWaited >= delayNeeded) {
-                logger.warn("Docker not running. Cannot continue.");
+                logger.tagError("DOCKER", "Docker not running. Cannot continue.");
                 // removing pid file as we are still with root permissions
                 await pfs.unlink("/var/run/pmng.pid");
                 treekill(process.pid); // kill subprocesses (like intercom - others are not started)
@@ -190,7 +190,7 @@ async function maininstance() {
             Promise.allSettled(prom).then((states) => {
                 states.forEach((state) => {
                     if(state.status != "fulfilled") {
-                        logger.warn("Cannot start global plugin " + state.reason.pluginname + ": " + state.reason.error);
+                        logger.tagWarn("DOCKER", "Cannot start global plugin " + state.reason.pluginname + ": " + state.reason.error);
                     }
                 });
             });
@@ -217,11 +217,11 @@ async function maininstance() {
                 respond(portMappings);
                 break;
             case "analyzeRunning":
-                logger.info("Searching for running docker containers...");
+                logger.tag("DOCKER", "Searching for running docker containers...");
                 docker.container.list({filters: {label: ["pmng.containertype=project"]}}).then((containers) => {
                     let alreadyRunning = [];
                     if(containers.length > 0) {
-                        logger.info("Indexing " + containers.length + " container(s).");
+                        logger.tag("DOCKER", "Indexing " + containers.length + " container(s).");
 
                         containers.forEach((container) => {
                             let projectname = container.data.Labels["pmng.projectname"];
@@ -235,10 +235,10 @@ async function maininstance() {
                             });
 
                             if(port == -1) {
-                                logger.warn(projectname + "container doesn't have a public port. Stopping it.");
+                                logger.tagWarn("DOCKER", projectname + "container doesn't have a public port. Stopping it.");
                                 container.stop();
                             } else {
-                                logger.info("Binding " + projectname + " to port " + port);
+                                logger.tag("DOCKER", "Binding " + projectname + " to port " + port);
                                 attachLogs(projectname, container).then(() => {
                                     alreadyRunning.push(projectname);
 
@@ -246,23 +246,23 @@ async function maininstance() {
                                     addPort(projectname, port);
                                 }).catch((error) => {
                                     // something's wrong, stop the container
-                                    logger.warn(projectname + " cannot be attached and will be stopped: " + error);
+                                    logger.tagWarn("DOCKER", projectname + " cannot be attached and will be stopped: " + error);
                                     stopProject(projectname, {forceReason: "cannot_attach_logs"});
                                 });
                             }
                         });
-                    } else logger.info("No containers running.");
+                    } else logger.tag("DOCKER", "No containers running.");
 
                     database_server.isInstalled().then((result) => {
                         if(result) {
-                            logger.info("Searching for autostart containers...");
+                            logger.tag("DOCKER", "Searching for autostart containers...");
                             database_server.database("projects").where("autostart", "true").select("*").then((results) => {
-                                if(results == null || results.length == 0) logger.info("No autostart container found.");
+                                if(results == null || results.length == 0) logger.tag("DOCKER", "No autostart container found.");
                                 else {
                                     let prom = [];
                                     results.forEach((result) => {
                                         if(!alreadyRunning.includes(result.name)) {
-                                            logger.info("Autostarting " + result.name + "...");
+                                            logger.tag("DOCKER", "Autostarting " + result.name + "...");
                                             prom.push(startProject(result.name));
                                         }
                                     });
@@ -274,13 +274,13 @@ async function maininstance() {
                                                 if(state.status == "fulfilled") {
                                                     successes++;
                                                 } else {
-                                                    logger.warn("Error during autostart: " + state.reason);
+                                                    logger.tagWarn("DOCKER", "Error during autostart: " + state.reason);
                                                 }
                                             });
 
-                                            if(successes > 0) logger.info("Successfully autostarted " + successes + " container(s).");
+                                            if(successes > 0) logger.tag("DOCKER", "Successfully autostarted " + successes + " container(s).");
                                         });
-                                    } else logger.info("No container to autostart (can already be up and running).");
+                                    } else logger.tag("DOCKER", "No container to autostart (can already be up and running).");
                                 }
                             });
                         }
@@ -412,7 +412,7 @@ function attachLogs(projectname, container) {
             if(stoppingProjects.includes(projectname)) {
                 stoppingProjects.splice(stoppingProjects.indexOf(projectname), 1);
             } else {
-                logger.warn("Container of project " + projectname + " was closed without stopping project.");
+                logger.tagWarn("DOCKER", "Container of project " + projectname + " was closed without stopping project.");
                 stopProject(projectname, {forceReason: "container_closed"}).then(() => { // maybe use finally
                     stoppingProjects.splice(stoppingProjects.indexOf(projectname), 1);
                 });

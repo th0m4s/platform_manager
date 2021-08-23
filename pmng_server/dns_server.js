@@ -155,7 +155,7 @@ function start() {
     require("./process_stats").pidId("dns_server");
 
     dns_server.serve(parseInt(process.env.DNS_PORT), "0.0.0.0", () => {
-        logger.info("DNS server started.");
+        logger.tag("DNS", "DNS server started.");
         privileges.drop();
     });
 
@@ -206,17 +206,17 @@ async function subscribeIntercom(isMaster) {
         customHooks = resp.customHooks;
         challenges = resp.challenges;
 
-        logger.info("DNS child received hooks and challenges from master.");
+        logger.tag("DNS", "DNS child received hooks and challenges from master.");
     }
 
     intercom.send("hookStarted", {hook: "dns"});
 }
 
 function master() {
-    logger.info("Starting DNS master manager...");
+    logger.tag("DNS", "Starting DNS master manager...");
     subscribeIntercom(true);
 
-    logger.info("Forking DNS server...");
+    logger.tag("DNS", "Forking DNS server...");
     subprocess_util.forkNamed("./pmng_server/dns_server", "dns_server", "local dns_server"); // path is relative to platform_manager.js
 }
 

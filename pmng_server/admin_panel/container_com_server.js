@@ -19,9 +19,9 @@ async function listenRootCom() {
         resolve = _resolve;
     });
 
-    logger.info("Starting root container com server...");
+    logger.tag("COM ROOT", "Starting root container com server...");
     rootCom.listen(comSocketFile, () => {
-        logger.info("Root container com server started.");
+        logger.tag("COM ROOT", "Root container com server started.");
         resolve();
     });
 
@@ -51,9 +51,9 @@ async function listenUserCom() {
         resolve = _resolve;
     });
 
-    logger.info("Starting user container com server...");
+    logger.tag("COM USER", "Starting user container com server...");
     userCom.listen(comSocketFile, () => {
-        logger.info("User container com server started.");
+        logger.tag("COM USER", "User container com server started.");
         resolve();
     });
 

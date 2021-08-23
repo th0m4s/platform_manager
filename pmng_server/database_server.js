@@ -212,7 +212,7 @@ function installDatabase() {
             })
         ]).then(() => {
             return true;
-        }).catch((e) => { logger.error(e); return false; }); 
+        }).catch((e) => { logger.tagError("DB", "Cannot setup databases! " + e); return false; }); 
     })
 }
 
@@ -329,7 +329,7 @@ function comparePassword(userId, password) {
         if(lines.length != 1) return false;
         return bcrypt.compare(password, lines[0].password);
     }).catch((e) => {
-        logger.warn(e);
+        logger.tagWarn("DB", "Cannot compare passwords: " + e);
         return false;
     });
 }

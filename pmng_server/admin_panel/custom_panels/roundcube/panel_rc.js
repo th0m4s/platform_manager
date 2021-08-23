@@ -81,10 +81,10 @@ function checkAndStart(shouldRestart) {
             }).then((container) => {
                 return container.start();
             }).then(() => {
-                logger.info("Roundcube custom admin panel started.");
+                logger.tag("WEB", "Roundcube custom admin panel started.");
                 return true;
             }).catch((error) => {
-                logger.error("Cannot start RC panel: " + error);
+                logger.tagError("WEB", "Cannot start RC panel: " + error);
                 return false;
             });
         } else return true; // already started

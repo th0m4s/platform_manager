@@ -304,7 +304,7 @@ router.post("/install/user", bodyParser(), async function(req, res) {
             req.flash("success", "User created. Please login.");
             res.redirect("/panel/login");
         } catch(e) {
-            logger.warn(e);
+            logger.tagError("WEB", "Cannot add admin user: " + e);
 
             req.flash("danger", "Unable to create admin user.");
             res.redirect("/panel/login/install/user");
@@ -316,14 +316,14 @@ router.post("/install/user", bodyParser(), async function(req, res) {
 });
 
 router.get("/install/confirm", async function(req, res) {
-    logger.info("WEB Installing database...");
+    logger.tag("INSTALL", "Installing database...");
     if(await database_server.installDatabase()) {
-        logger.info("Database installed.");
+        logger.tag("INSTALL", "Database installed.");
         req.flash("success", "Database successfully installed.");
 
         res.redirect("/panel/login/install/user");
     } else {
-        logger.error("Unable to install database.");
+        logger.tagError("INSTALL", "Unable to install database.");
         req.flash("danger", "Unable to install database. See logs for details.");
 
         res.redirect("/panel/login/install/database");

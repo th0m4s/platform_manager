@@ -196,7 +196,7 @@ async function start() {
     });
 
     let server = admin.listen(8080, () => {
-        logger.info("Admin server started.");
+        logger.tag("WEB", "Admin server started.");
     });
 
     let io = require('socket.io')(server);

@@ -44,10 +44,10 @@ async function start() {
     if(process.env["HOST_" + ftpHostType].toLowerCase() != "disabled") {
         ftpServer.listen().then(() => {
             privileges.drop();
-            logger.info("FTP server started.");
+            logger.tag("FTP", "FTP server started.");
         });
     } else {
-        logger.warn("Cannot start FTP server. Listen mode " + ftpHostType + " is disabled.");
+        logger.tagWarn("FTP", "Cannot start FTP server. Listen mode " + ftpHostType + " is disabled.");
     }
 }
 
