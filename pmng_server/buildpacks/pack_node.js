@@ -6,7 +6,7 @@ const logger = require("../platform_logger").logger();
 const Buildpack = require("./lib_pack");
 
 const NODE_SERVER = "https://unofficial-builds.nodejs.org/download/release";
-const SUPPORTED_PREFIXES = ["v10", "v12", "v14", "v15"];
+const SUPPORTED_PREFIXES = ["v12", "v14", "v16"];
 class NodeBuildpack extends Buildpack {
     static async build(projectName, projectData, utils, logger, hasAddons) {
         let pkg = {};
@@ -15,7 +15,7 @@ class NodeBuildpack extends Buildpack {
         let nodeVersion = (await utils.execCommand("node --version")).out.trim();
         if(!SUPPORTED_PREFIXES.some((prefix) => { return nodeVersion.startsWith(prefix); })) {
             logger("WARNING: You are currently using Node " + nodeVersion + ", which is no longer officially supported!");
-            logger("Please switch ASAP to the LTS version (v12), the maintained version (v10) or the latest one (v14).\n");
+            logger("Please switch ASAP to the maintenance LTS version (v12), to the latest LTS version (v14) or to the current one (v16).\n");
         } else logger("Building using Node " + nodeVersion + ".");
 
         if(projectData.version == "latest" && !hasAddons) {
