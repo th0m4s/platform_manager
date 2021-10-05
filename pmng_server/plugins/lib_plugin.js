@@ -6,7 +6,7 @@ class Plugin {
     }
 
     static async projectContainerCreated(projectname, containerconfig, networkname, plugincontainername, pluginconfig) { }
-    static async stopProjectPlugin(projectname, pluginconfig, networkname) { }
+    static async stopProjectPlugin(projectname, pluginconfig, networkname) { } // plugins containers are automatically stopped if they specify the pmng.projectname label
 
     static isProjectBased() { return true; }
     static async installPlugin(projectname, pluginconfig) { }

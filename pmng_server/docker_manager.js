@@ -304,66 +304,78 @@ async function maininstance() {
     logger.tag("DOCKER", "Docker Manager initialized!");
 }
 
+function ensureContainersDontExist(filters, ignoreDeployment = true) {
+    return docker.container.list({all: true, filters}).then((containers) => {
+        let prom = [];
+        containers.forEach((container) => {
+            if(ignoreDeployment || container.data.Labels["pmng.containertype"] != "deployment") {
+                prom.push(container[container.data.State?.toLowerCase() == "exited" ? "delete" : "stop"]().catch((err) => {
+                    return Promise.reject("Cannot stop/delete (state: " + container.data.State + ") container " + container.data.Names[0] + ": " + err);
+                }));
+            }
+        });
+
+        return Promise.all(prom);
+    });
+}
+
 /**
  * Only for main thread. Stops a project and clears all the associated resources (plugins containers and network).
  * @param {string} projectname The project name to stop.
  * @param {boolean} force If set to *true*, forces the stop even if the prechecks failed.
  * @returns {Promise} A promise resolved when the project is stopped and all the the associated plugins containers and network are removed.
  */
-function stopProject(projectname, force = false) {
+async function stopProject(projectname, force = false) {
     let forceData = force !== false ? force : undefined;
     force = force !== false;
-    return (force ? Promise.resolve(true) : isProjectContainerRunning(projectname)).then((result) => {
-        if(!result) return Promise.reject("Cannot stop a stopped project.");
-        stoppingProjects.push(projectname);
-        logger.tag("DOCKER", "Stopping project " + projectname + "...", force ? "(" + JSON.stringify(forceData) + ")" : undefined);
-        intercom.send("projectsevents", {event: "stopping", project: projectname});
 
-        return docker.container.list({filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
-            let prom = [];
-            containers.forEach((container) => {
-                // check if deployment instead of listing only plugins because must stop main container
-                if(container.data.Labels["pmng.containertype"] != "deployment") {
-                    prom.push(container[container.data.State?.toLowerCase() == "exited" ? "delete" : "stop"]().catch((err) => {
-                        return Promise.reject("Error during prestart clean. Cannot stop/delete (" + container.data.State + ") " + container.data.Names[0] + ": " + err);
-                    }));
-                }
-            });
+    let currentlyRunning = false;
+    if(!force) {
+        currentlyRunning = await isProjectContainerRunning(projectname);
+    }
 
-            // updating database
-            let dbProm = database_server.database("projects").where("name", projectname).update({autostart: "false", customconf_key: null});
+    if(currentlyRunning)
+        throw "Cannot stop a non-running project.";
 
-            removePort(projectname);
+    stoppingProjects.push(projectname);
+    logger.tag("DOCKER", "Stopping project " + projectname + "...", force ? "(" + JSON.stringify(forceData) + ")" : undefined);
+    intercom.send("projectsevents", {event: "stopping", project: projectname});
 
-            let projectNetworkName = getProjectNetworkName(projectname);
+    try {
+        await ensureContainersDontExist({label: ["pmng.projectname=" + projectname]})
 
-            // project and per-project plugins stopped, executing plugin callbacks
-            return project_manager.getProject(projectname).then((project) => {
-                let pluginsProm = [];
-                for(let [pluginName, pluginConfig] of Object.entries(project.plugins)) {
-                    pluginsProm.push(plugins_manager.getPlugin(pluginName).stopProjectPlugin(projectname, pluginConfig, projectNetworkName));
-                }
+        // updating database
+        let dbProm = database_server.database("projects").where("name", projectname).update({autostart: "false", customconf_key: null});
 
-                return Promise.all(pluginsProm);
-            }).then(() => {
-                return Promise.all([Promise.all(prom).then(() => {
-                    // when all containers are removed
-                    // ... remove project network
-                    return docker.network.list({filters: {name: [projectNetworkName]}}).then((networks) => {
-                        return networks[0].remove().catch((err) => {
-                            if(!force) return Promise.reject("Cannot remove network for project " + projectname + ": " + err);
-                        });
-                    });
-                }), dbProm])
-            }).then(() => {
-                logger.tag("DOCKER", "Project " + projectname + " stopped.");
-            });
-        }).catch((error) => {
-            logger.tagWarn("DOCKER", "Cannot stop project " + projectname + ":", error);
-            intercom.send("projectsevents", {event: "clear_special_state", project: projectname});
-            throw error;
-        });
-    });
+        removePort(projectname);
+
+        let projectNetworkName = getProjectNetworkName(projectname);
+        let project = await project_manager.getProject(projectname);
+
+        let promises = [dbProm];
+        for(let [pluginName, pluginConfig] of Object.entries(project.plugins)) {
+            // project-based plugin containers are automatically stopped by ensureContainersDontExist if they specified the pmng.projectname label
+            promises.push(plugins_manager.getPlugin(pluginName).stopProjectPlugin(projectname, pluginConfig, projectNetworkName));
+        }
+
+        await Promise.all(promises);
+
+        // remove project network
+        let networks = await docker.network.list({filters: {name: [projectNetworkName]}});
+        if(networks.length > 0) {
+            try {
+                await networks[0].remove();
+            } catch(error) {
+                if(!force) throw "Cannot remove network: " + error;
+            }
+        }
+
+        logger.tag("DOCKER", "Project " + projectname + " stopped.");
+    } catch(error) {
+        logger.tagWarn("DOCKER", "Cannot stop project " + projectname + ":", error);
+        intercom.send("projectsevents", {event: "clear_special_state", project: projectname});
+        throw error;
+    }
 }
 
 const LOGFILE_NAME = "project.log";
@@ -444,21 +456,8 @@ function startProject(projectname) {
         try {
             let project = await project_manager.getProject(projectname, true);
 
-            // clear remaining secondary project containers (like plugins)
-            // TODO: make this clear in a separate function (because same clear in stopProject)
-            await docker.container.list({all: true, filters: {label: ["pmng.projectname=" + projectname/*, "pmng.containertype=plugin"*/]}}).then((containers) => {
-                let prom = [];
-                containers.forEach((container) => {
-                    // like for stopProject, don't delete deployment
-                    if(container.data.Labels["pmng.containertype"] != "deployment") {
-                        prom.push(container[container.data.State?.toLowerCase() == "exited" ? "delete" : "stop"]().catch((err) => {
-                            return Promise.reject("Error during prestart clean. Cannot stop/delete (" + container.data.State + ") " + container.data.Names[0] + ": " + err);
-                        }));
-                    }
-                });
-
-                return Promise.all(prom);
-            });
+            // this also cleasr remaining secondary project containers (like plugins, if they specified the pmng.projectname label)
+            await ensureContainersDontExist({label: ["pmng.projectname=" + projectname]});
 
             // check build
             let buildPath = project_manager.getProjectBuild(projectname);
@@ -1076,4 +1075,5 @@ module.exports.getProjectDeployingContainer = getProjectDeployingContainer;
 module.exports.registerEvents = registerEvents;
 module.exports.sortContainer = sortContainer;
 module.exports.checkPortFree = checkPortFree;
+module.exports.ensureContainersDontExist = ensureContainersDontExist;
 module.exports.maininstance = maininstance;
