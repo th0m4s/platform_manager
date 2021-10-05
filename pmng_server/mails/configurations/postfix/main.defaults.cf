@@ -38,11 +38,12 @@ smtpd_recipient_restrictions =
         reject_unlisted_recipient,
         reject_unauth_destination
 smtpd_sender_restrictions =
-        reject_authenticated_sender_login_mismatch,
+#        reject_authenticated_sender_login_mismatch,
         permit_mynetworks,
         permit_sasl_authenticated,
-        reject_non_fqdn_sender,
-        reject_unknown_sender_domain
+        reject # deny all others
+#        reject_non_fqdn_sender,
+#        reject_unknown_sender_domain
 smtpd_relay_restrictions =
         permit_mynetworks,
         permit_sasl_authenticated,
