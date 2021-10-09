@@ -2,6 +2,7 @@ const database_server = require("../database_server");
 const docker_manager = require("../docker_manager");
 const string_utils = require("../string_utils");
 const regex_utils = require("../regex_utils");
+const subprocess_util = require("../subprocess_util");
 const Knex = require("knex");
 const path = require("path");
 const pfs = require("fs").promises;
@@ -166,14 +167,18 @@ async function checkDomainIdUsers(domainId) {
     return Promise.all(proms.concat(mailDb().insert(inserts)));
 }
 
+function getMailContainer() {
+    return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=server", "pmng.server=mails"]}}).then((containers) => {
+        return containers?.[0] ?? null;
+    });
+}
+
 const server_version = "24"; // |   like panel_pma to restart container when config is changed
 const forceRestart = process.env.NODE_ENV == "development";
 function checkAndStart(maildirectory, shouldRestart) {
-    return docker_manager.docker.container.list({filters: {label: ["pmng.containertype=server", "pmng.server=mails"]}}).then(async (containers) => {
-        if(containers.length == 0 || shouldRestart || containers[0].data.Labels["pmng.serverversion"] != server_version) {
-            if(containers.length > 0) {
-                await containers[0].stop();
-            }
+    return getMailContainer().then(async (container) => {
+        if(container == null || shouldRestart || container.data.Labels["pmng.serverversion"] != server_version) {
+            await container?.stop();
             await docker_manager.ensureImageExists("pmng/server-mail", "file:" + path.resolve(__dirname, "..", "docker_images", "mails", "alpine-mailer"), {latest: true, adminLogs: true});
 
             // convert historical save folder
@@ -430,6 +435,15 @@ async function initialize(maildirectory) {
     });
 
     if(!(await isMailInstalled())) await installMailDatabase();
+
+    subprocess_util.fakeFork("mails_server", () => {
+        return getMailContainer().then((container) => {
+            return container != null;
+        });
+    }, async () => {
+        await checkAndStart(mailDirectory, true);
+    });
+
     return checkAndStart(maildirectory, forceRestart);
 }
 
