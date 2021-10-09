@@ -75,15 +75,16 @@ class NodeBuildpack extends Buildpack {
 
         let foundVersion = undefined;
         if(requestedVersion != "latest") {
-            if(!requestedVersion.endsWith(".")) {
-                if(requestedVersion.startsWith("v")) requestedVersion = requestedVersion.substring(1);
-                for(let version of nodeVersions) {
-                    if(version.startsWith(requestedVersion)) {
-                        foundVersion = version;
-                        break;
-                    }
+            if(!requestedVersion.endsWith(".") && requestedVersion.split(".").length >= 3)
+                requestedVersion += ".";
+            
+            if(requestedVersion.startsWith("v")) requestedVersion = requestedVersion.substring(1);
+            for(let version of nodeVersions) {
+                if(version.startsWith(requestedVersion)) {
+                    foundVersion = version;
+                    break;
                 }
-            }            
+            }
         } else foundVersion = nodeVersions[0];
 
         if(foundVersion == undefined) return super.imageDetails();
@@ -125,13 +126,15 @@ async function getNodeVersions() {
         let bentVersionList = bent(NODE_SERVER);
         let bentVersionResponse;
         try {
-            bentVersionResponse = await bentVersionList("/");
+            bentVersionResponse = await bentVersionList("/index.json");
         } catch(error) {
             throw "Cannot list NodeJS versions: " + error;
         }
 
         let versionsPage = await bentVersionResponse.text();
-        _nodeVersions = [...versionsPage.matchAll(/href="v(?<v>[\d.]+)\/"/g)].map((x) => x.groups.v).sort((a, b) => {
+        _nodeVersions = JSON.parse(versionsPage).filter((x) => x.files.includes("linux-x64-musl")).map((x) => x.version.substring(1));
+        
+        _nodeVersions.sort((a, b) => {
             let partsA = a.split(".").map((x) => parseInt(x));
             let partsB = b.split(".").map((x) => parseInt(x));
 
