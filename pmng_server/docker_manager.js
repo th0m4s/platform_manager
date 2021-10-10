@@ -4,6 +4,7 @@ const intercom = require("./intercom/intercom_client").connect();
 const fs = require("fs"), pfs = fs.promises;
 const rmfr = require("rmfr");
 const tar = require("tar");
+const StreamValues = require("stream-json/streamers/StreamValues");
 const tar_stream = require("tar-stream"),  tar_fs = require('tar-fs');;
 const path = require("path");
 const logger = require("./platform_logger").logger();
@@ -305,12 +306,16 @@ async function maininstance() {
 }
 
 function ensureContainersDontExist(filters, ignoreDeployment = true) {
+    if(Array.isArray(filters)) {
+        return Promise.all(filters.map((x) => ensureContainersDontExist(x, ignoreDeployment)));
+    }
+
     return docker.container.list({all: true, filters}).then((containers) => {
         let prom = [];
         containers.forEach((container) => {
             if(ignoreDeployment || container.data.Labels["pmng.containertype"] != "deployment") {
                 prom.push(container[container.data.State?.toLowerCase() == "exited" ? "delete" : "stop"]().catch((err) => {
-                    return Promise.reject("Cannot stop/delete (state: " + container.data.State + ") container " + container.data.Names[0] + ": " + err);
+                    if(err.statusCode != 404) return Promise.reject("Cannot stop/delete (state: " + container.data.State + ") container " + container.data.Names[0] + ": " + err);
                 }));
             }
         });
@@ -329,20 +334,28 @@ async function stopProject(projectname, force = false) {
     let forceData = force !== false ? force : undefined;
     force = force !== false;
 
-    let currentlyRunning = false;
+    let currentlyRunning = true;
     if(!force) {
         currentlyRunning = await isProjectContainerRunning(projectname);
     }
 
-    if(currentlyRunning)
+    if(!currentlyRunning)
         throw "Cannot stop a non-running project.";
 
     stoppingProjects.push(projectname);
     logger.tag("DOCKER", "Stopping project " + projectname + "...", force ? "(" + JSON.stringify(forceData) + ")" : undefined);
-    intercom.send("projectsevents", {event: "stopping", project: projectname});
+    
+    let forceResolve = () => {};
+
+    if(force) { // if force, don't wait for the check but send special state if project is really running
+        Promise.race([isProjectContainerRunning(projectname),
+            new Promise((_resolve) => {
+                forceResolve = _resolve;
+            })]).then((_running) => _running && intercom.send("projectsevents", {event: "stopping", project: projectname}));   
+    }
 
     try {
-        await ensureContainersDontExist({label: ["pmng.projectname=" + projectname]})
+        await ensureContainersDontExist([{label: ["pmng.projectname=" + projectname]}, {name: [getProjectMainContainer(projectname)]}]);
 
         // updating database
         let dbProm = database_server.database("projects").where("name", projectname).update({autostart: "false", customconf_key: null});
@@ -375,6 +388,8 @@ async function stopProject(projectname, force = false) {
         logger.tagWarn("DOCKER", "Cannot stop project " + projectname + ":", error);
         intercom.send("projectsevents", {event: "clear_special_state", project: projectname});
         throw error;
+    } finally {
+        forceResolve(false); // don't send the special state if force is true
     }
 }
 
@@ -457,7 +472,7 @@ function startProject(projectname) {
             let project = await project_manager.getProject(projectname, true);
 
             // this also cleasr remaining secondary project containers (like plugins, if they specified the pmng.projectname label)
-            await ensureContainersDontExist({label: ["pmng.projectname=" + projectname]});
+            await ensureContainersDontExist([{label: ["pmng.projectname=" + projectname]}, {name: [getProjectMainContainer(projectname)]}]);
 
             // check build
             let buildPath = project_manager.getProjectBuild(projectname);
@@ -857,18 +872,16 @@ async function ensureImageExists(name, dockerfile, {latest = false, adminLogs = 
     }
 
     if(adminLogs) logger.tag("DOCKER", (pullImage ? "Pulling" : "Building") + " image " + name + "...");
-    let buildStream = await (pullImage ? docker.image.create({}, {fromImage: nameParts[0], tag: nameParts[1]}) : docker.image.build(tarPack, {t: name}));
+    let buildStream = (await (pullImage ? docker.image.create({}, {fromImage: nameParts[0], tag: nameParts[1]}) : docker.image.build(tarPack, {t: name}))).pipe(StreamValues.withParser());
     await new Promise((resolve, reject) => {
         buildStream.on("data", (d) => {
-            let lines = d.toString().trim().split("\n");
-            for(let line of lines) {
-                let data = JSON.parse(line.trim());
-                if(data.stream && buildLogs) console.log(data.stream.trim());
-                if(data.errorDetail)
-                    reject(data.errorDetail.message);
-            }
+            let data = d.value;
+
+            if(data.stream && buildLogs) console.log(data.stream.trim());
+            if(data.errorDetail)
+                reject("Error during image " + (pullImage ? "pulling" : "building") + ": " + data.errorDetail.message);
         });
-        buildStream.on("error", reject);
+        buildStream.on("error", (e) => reject("Cannot " + (pullImage ? "pull" : "build") + " image: " + e));
         buildStream.on("end", resolve);
     });
     
