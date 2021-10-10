@@ -133,7 +133,6 @@ async function getNodeVersions() {
 
         let versionsPage = await bentVersionResponse.text();
         _nodeVersions = JSON.parse(versionsPage).filter((x) => x.files.includes("linux-x64-musl")).map((x) => x.version.substring(1));
-        
         _nodeVersions.sort((a, b) => {
             let partsA = a.split(".").map((x) => parseInt(x));
             let partsB = b.split(".").map((x) => parseInt(x));
