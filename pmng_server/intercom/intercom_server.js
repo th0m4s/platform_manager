@@ -27,6 +27,15 @@ function start() {
         });
     });
 
+    server.on("error", (error) => {
+        logger.tagError("INTERCOM", "Intercom server encountered an error: " + error);
+    });
+
+    server.on("close", () => {
+        logger.tagError("INTERCOM", "Intercom server closed, restarting new server instance...");
+        start();
+    });
+
     return new Promise((resolve) => {
         server.listen(8043, "127.0.0.1", () => {
             logger.tag("INTERCOM", "Intercom server started.");

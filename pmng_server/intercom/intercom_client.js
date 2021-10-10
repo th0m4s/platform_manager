@@ -1,4 +1,5 @@
 const net = require("net");
+const logger = require("../platform_logger").logger();
 
 /**
  * @typedef {{subscribe: (subjects: string[], callback: (message: object, respond: (response: object) => void) => void) => boolean,
@@ -27,6 +28,10 @@ function connect() {
                     processCommand(conn, command, value, subs, waitingResp);
                 } else rcvBuffer += c;
             }
+        });
+
+        conn.on("error", (error) => {
+            logger.tagError("ITC_CLIENT", "Intercom client encountered an error on " + process.argv[1].split("/").pop() + ": " + error);
         });
 
         return conn;
