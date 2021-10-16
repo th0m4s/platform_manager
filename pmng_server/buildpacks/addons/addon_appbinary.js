@@ -101,7 +101,7 @@ class AppBinary extends BuildAddon {
                         throw "Cannot install .NET: " + installExec.err;
 
                     logger("Installing dotnet-script...");
-                    let dotnetScriptExec = await utils.execCommand("/usr/share/dotnet/dotnet tool install -g dotnet-script", undefined, false, "root", dotnetTempDir);
+                    let dotnetScriptExec = await utils.execCommand("/usr/share/dotnet/dotnet tool install -g dotnet-script", undefined, false, "project", dotnetTempDir);
                     if(dotnetScriptExec.code != 0)
                         throw "Cannot install dotnet-script: " + dotnetScriptExec.err;
                     break;
