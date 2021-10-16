@@ -22,7 +22,6 @@ RUN set -ex; \
     curl -fsSL -o roundcube.tar.gz $URL; \
     curl -fsSL -o roundcube.tar.gz.asc $URL.asc; \
     gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys "$GPGKEY" \
-        || gpg --batch --keyserver ipv4.pool.sks-keyservers.net --recv-keys "$GPGKEY" \
         || gpg --batch --keyserver keys.gnupg.net --recv-keys "$GPGKEY" \
         || gpg --batch --keyserver pgp.mit.edu --recv-keys "$GPGKEY" \
         || gpg --batch --keyserver keyserver.pgp.com --recv-keys "$GPGKEY"; \
