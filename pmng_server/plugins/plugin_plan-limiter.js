@@ -35,6 +35,13 @@ function checkStorage(storageInput, projectname) {
     });
 }
 
+function checkCpus(cpus, projectname) {
+    cpus = parseFloat(cpus);
+    if(isNaN(cpus)) return Promise.reject("CPUS should be a number.");
+    if(cpus > 0 && cpus <= 1) return Promise.resolve(cpus);
+    else return Promise.reject("CPUS should be included inside ]0;1]");
+}
+
 async function configSaved(projectname, newconfig, oldconfig) {
     if(newconfig.storage != oldconfig.storage) {
         let project = await project_manager.getProject(projectname);
@@ -55,13 +62,14 @@ class PlanLimiterPlugin extends Plugin {
     }
 
     static getDefaultConfig() {
-        return {memory: 0, storage: 0};
+        return {memory: 0, storage: 0, cpus: 0.5};
     }
 
     static getConfigForm() {
         return [
             {config: "memory", text: "Memory size", small: "Sets a specific memory amount for the project in megabytes. It cannot be below 4M and cannot be over your account limits. Enter 0 to use your maximum allowed memory size.", placeholder: "Enter a memory amount or 0 to disable this limit", type: "number", localCheck: checkMemory, remoteCheck: "/checkMemory/"},
-            {config: "storage", text: "Storage size", small: "Sets a specific storage size for the <i>persistent-storage</i> plugin in bytes. Only works if the plugin is enabled on this project. Can use size prefixes.", placeholder: "Enter a storage size or 0 to disable this limit", type: "text", localCheck: checkStorage, remoteCheck: "/checkStorage/"}
+            {config: "storage", text: "Storage size", small: "Sets a specific storage size for the <i>persistent-storage</i> plugin in bytes. Only works if the plugin is enabled on this project. Can use size prefixes.", placeholder: "Enter a storage size or 0 to disable this limit", type: "text", localCheck: checkStorage, remoteCheck: "/checkStorage/"},
+            {config: "cpus", text: "CPU count", small: "Sets the number of allocated CPUs for this project. 0.5 means 50% of a CPU, 1.5 means 1 CPU and 50% of a second one...", placeholder: "Enter a number of CPU cores to allocate (defaults to 0.5)", type: "text", localCheck: checkCpus, remoteCheck: "/checkCpus/"}
         ];
     }
 
@@ -81,6 +89,15 @@ class PlanLimiterPlugin extends Plugin {
                 res.json({valid: true, message: "Valid storage size."});
             }).catch((error) => {
                 res.json({valid: false, message: "Invalid storage size: " + error});
+            });
+        });
+
+        router.get("/checkCpus/:projectname/:storage?", (req, res) => {
+            let storage = req.params.storage || "";
+            checkCpus(storage, req.params.projectname).then(() => {
+                res.json({valid: true, message: "Valid CPU count."});
+            }).catch((error) => {
+                res.json({valid: false, message: "Invalid CPU count: " + error});
             });
         });
     
@@ -107,6 +124,10 @@ class PlanLimiterPlugin extends Plugin {
             if(config.storage > 0) {
                 enabled = true;
                 texts.push("Storage limited to " + string_utils.formatBytes(config.storage, 1) + ".");
+            }
+            if(config.cpus > 0) {
+                enabled = true;
+                texts.push("CPU count set to " + config.cpus + ".");   
             }
 
             return {type: "custom_text", text: !enabled ? "Plugin disabled." : texts.join(" ")};

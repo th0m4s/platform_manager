@@ -608,8 +608,7 @@ function startProject(projectname) {
                     PortBindings: portBindings,
                     AutoRemove: true,
                     NetworkMode: networkName,
-                    Binds: [process.env.CONTAINERUTILS_MOUNT_PATH + ":/var/mount_utils"],
-                    Memory: (await plans_manager.userMaxMemory(project.ownerid))*1024*1024 // if no limit (0), it will be multiplied but stay at 0 which indicates unlimited
+                    Binds: [process.env.CONTAINERUTILS_MOUNT_PATH + ":/var/mount_utils"]
                 },
                 NetworkingConfig: {
                     EndpointsConfig: {
@@ -619,6 +618,17 @@ function startProject(projectname) {
                     }
                 }
             };
+
+            let planlimiter_data = await plugins_manager.getConfig("plan-limiter", projectname);
+            if(planlimiter_data != undefined) {
+                containerConfig.HostConfig.Memory = planlimiter_data.memory*1024*1024; // if no limit (0), it will be multiplied but stay at 0 which indicates unlimited
+
+                if(planlimiter_data.cpus > 0) {
+                    let baseTime = 100000;
+                    containerConfig.HostConfig.CpuPeriod = baseTime;
+                    containerConfig.HostConfig.CpuQuota = baseTime*planlimiter_data.cpus;
+                }
+            }
 
             // plugins can set options will be used by startProject that doesn't fit within containerconfig
             let setupFlags = {removeEntries: []};
