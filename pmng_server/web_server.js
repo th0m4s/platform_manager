@@ -49,7 +49,8 @@ function start() {
 
     subprocess_util.forkNamed("./pmng_server/admin_panel/admin_server", "admin_web_server", "admin web server");
 
-    subprocess_util.forkNamed("./pmng_server/public_web/secondary_servers", "secondary_web_servers", "secondary web servers");
+    // NOTE: this also includes the FTP server to reduce the number of node processes
+    subprocess_util.forkNamed("./pmng_server/secondary_servers/secondary_servers", "secondary_servers", "secondary servers");
     // subprocess_util.forkNamed("./pmng_server/git_server", "git_web_server", "git web server");
     // subprocess_util.forkNamed("./pmng_server/error_panel/error_server", "error_web_server", "error web server");
 
@@ -62,8 +63,8 @@ function start() {
  * Must be called by each public subprocess server.
  */
 async function prepareSocketError() {
-    let style = (await pfs.readFile(path.join(__dirname, "./error_panel/static/style.css"))).toString();
-    errorPageCache = (await pfs.readFile(path.join(__dirname, "./error_panel/static/socket_error.html"))).toString();
+    let style = (await pfs.readFile(path.join(__dirname, "./secondary_servers/error_panel/static/style.css"))).toString();
+    errorPageCache = (await pfs.readFile(path.join(__dirname, "./secondary_servers/error_panel/static/socket_error.html"))).toString();
     errorPageCache = errorPageCache.replace("style_cache", style);
 }
 

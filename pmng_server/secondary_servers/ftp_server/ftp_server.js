@@ -1,10 +1,10 @@
 const FtpSrv = require('ftp-srv');
-const logger = require("../platform_logger").logger();
-const privileges = require("../privileges");
-const database_server = require("../database_server");
+const logger = require("../../platform_logger").logger();
+const privileges = require("../../privileges");
+const database_server = require("../../database_server");
 const FTPfs = require("./ftp_fs");
 const blackhole = require("bunyan-blackhole");
-const greenlock_manager = require("../https/greenlock_manager");
+const greenlock_manager = require("../../https/greenlock_manager");
 
 const ftpHostType = process.env.FTP_HOST_TYPE;
 const ftpListenAddr = process.env["HOST_" + ftpHostType];
@@ -42,7 +42,7 @@ async function start() {
     });
 
     if(process.env["HOST_" + ftpHostType].toLowerCase() != "disabled") {
-        ftpServer.listen().then(() => {
+        return ftpServer.listen().then(() => {
             privileges.drop();
             logger.tag("FTP", "FTP server started.");
         });
@@ -51,4 +51,7 @@ async function start() {
     }
 }
 
-start();
+if(require.main === module) main();
+
+
+module.exports.start = start;

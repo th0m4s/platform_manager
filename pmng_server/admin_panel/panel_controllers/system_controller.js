@@ -65,9 +65,9 @@ let subprocesses = {
         text: "Handles pages displayed to the users if they request an unkown project/panel.",
         check: 1
     },*/
-    "secondary_web_servers": {
-        name: "Secondary web servers",
-        text: "Hosts both the Git webserver and error pages when connecting to a stopped/unknown project.",
+    "secondary_servers": {
+        name: "Secondary servers",
+        text: "Hosts the Git webserver, error pages when connecting to a stopped/unknown project and the FTP server used to manage persisent-storage.",
         check: 1
     },
     "http_public_server": {

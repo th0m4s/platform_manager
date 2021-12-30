@@ -1,5 +1,5 @@
 const { FileSystem } = require("ftp-srv"), ftpErrors = require("ftp-srv/src/errors");
-const project_manager = require("../project_manager");
+const project_manager = require("../../project_manager");
 const path = require("path");
 
 class FTPfs extends FileSystem {

@@ -56,7 +56,8 @@ if(process.getuid() > 0) {
     // even if both next scripts don't require docker, docker is a requirement for the program (no need to start these if docker is not running)
     require("./pmng_server/dns_server").master();
 
-    subprocess_util.forkNamed("./pmng_server/ftp_server/ftp_server", "ftp_server", "FTP server");
+    // FTP server is now a part of the secondary web servers
+    // subprocess_util.forkNamed("./pmng_server/ftp_server/ftp_server", "ftp_server", "FTP server");
 
     // docker is started and running, so start scripts that require docker
     logger.tag("MAIN", "Starting all web servers...");
