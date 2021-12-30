@@ -55,7 +55,7 @@ let subprocesses = {
         text: "The Roundcube panel (running in a Docker container) running a webmail.",
         check: 2
     },
-    "git_web_server": {
+    /*"git_web_server": {
         name: "Git server",
         text: "Binds git to an HTTP server for remote usage.",
         check: 1
@@ -63,6 +63,11 @@ let subprocesses = {
     "error_web_server": {
         name: "Error server",
         text: "Handles pages displayed to the users if they request an unkown project/panel.",
+        check: 1
+    },*/
+    "secondary_web_servers": {
+        name: "Secondary web servers",
+        text: "Hosts both the Git webserver and error pages when connecting to a stopped/unknown project.",
         check: 1
     },
     "http_public_server": {
@@ -84,6 +89,9 @@ router.get("/subprocesses", (req, res) => {
 
     if(process.env.ENABLE_HTTPS.toLowerCase() != "true")
         res.locals.hide.push("https_public_server");
+
+    if(process.env.ROOT_COMMANDS_FROM_MAIN?.toLowerCase() == "true")
+        res.locals.hide.push("root_commands");
 
     if(process.env.DB_MODE != "socket")
         res.locals.hide.push("rc_panel");

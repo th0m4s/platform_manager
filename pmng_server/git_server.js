@@ -64,11 +64,15 @@ function unauthorized(res) {
  * Starts the git web subserver. It creates a link between an http server and a git server.
  */
 function start() {
-    privileges.drop();
-
     server.listen(8081, () => {
         logger.tag("GIT", "Git server started.");
     });
 }
 
-start();
+if(require.main === module) {
+    privileges.drop();
+    start();
+}
+
+
+module.exports.start = start;

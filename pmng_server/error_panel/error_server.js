@@ -28,12 +28,16 @@ app.all("*", (req, res) => {
 });
 
 function start() {
-    privileges.drop();
-
     app.listen(8099, () => {
         logger.tag("WEB", "Error server started.");
     });
 }
 
 
-start();
+if(require.main === module) {
+    privileges.drop();
+    start();
+}
+
+
+module.exports.start = start;

@@ -48,8 +48,10 @@ function start() {
     // privileges are not dropped from main process, but in all subprocesses
 
     subprocess_util.forkNamed("./pmng_server/admin_panel/admin_server", "admin_web_server", "admin web server");
-    subprocess_util.forkNamed("./pmng_server/git_server", "git_web_server", "git web server");
-    subprocess_util.forkNamed("./pmng_server/error_panel/error_server", "error_web_server", "error web server");
+
+    subprocess_util.forkNamed("./pmng_server/public_web/secondary_servers", "secondary_web_servers", "secondary web servers");
+    // subprocess_util.forkNamed("./pmng_server/git_server", "git_web_server", "git web server");
+    // subprocess_util.forkNamed("./pmng_server/error_panel/error_server", "error_web_server", "error web server");
 
     // globally stores current http challenges
     registerHttpChallenges(true);

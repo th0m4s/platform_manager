@@ -5,20 +5,6 @@ const pfs = require("fs").promises;
 const fs_utils = require("./fs_utils");
 const logger = require("./platform_logger").logger();
 
-intercom.subscribe(["rootProcessor"], (message, respond) => {
-    switch(message.command) {
-        case "storagePlugin":
-            processStorage(message, respond);
-            break;
-        case "mailManager":
-            processMail(message, respond);
-            break;
-        default:
-            respond({error: true, message: "Unknown root command."});
-            break;
-    }
-});
-
 /**
  * Process an intercom message specifically crafted with an action from the mail manager.
  * @param {Object} message The original intercom message with storage specific parameters.
@@ -80,4 +66,28 @@ function processStorage(message, respond) {
     }
 }
 
-logger.tag("ROOT", "Root commands processor fork started.");
+function start() {
+    intercom.subscribe(["rootProcessor"], (message, respond) => {
+        switch(message.command) {
+            case "storagePlugin":
+                processStorage(message, respond);
+                break;
+            case "mailManager":
+                processMail(message, respond);
+                break;
+            default:
+                respond({error: true, message: "Unknown root command."});
+                break;
+        }
+    });
+
+    if(require.main === module)
+        logger.tag("ROOT", "Root commands processor fork started.");
+    else logger.tag("ROOT", "Root commands processor started in main process.");
+}
+
+if(require.main === module) start();
+// else we were require'd to run root commands from the main process
+
+
+module.exports.start = start;

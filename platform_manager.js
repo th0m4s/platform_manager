@@ -46,7 +46,9 @@ if(process.getuid() > 0) {
     // starting subprocessed responder to centralize commands/timeouts
     subprocess_util.responder();
 
-    subprocess_util.forkNamed("./pmng_server/root_commands", "root_commands", "root commands processor");
+    if(process.env.ROOT_COMMANDS_FROM_MAIN.toLowerCase() == "true")
+        require("./pmng_server/root_commands").start();
+    else subprocess_util.forkNamed("./pmng_server/root_commands", "root_commands", "root commands processor");
 
     // indicating that docker main instance should be on this process
     await require("./pmng_server/docker_manager").maininstance();
@@ -61,7 +63,4 @@ if(process.getuid() > 0) {
     require("./pmng_server/web_server").start();
 
     subprocess_util.forkNamed("./pmng_server/local_server/local_main", "local_server", "local server");
- 
-    // all subprocesses (except root_commands and web cluster masters for port binding - platform_manager to restart stopped) should have dropped their privileges when started
-    // check using ps -aux
 })();
