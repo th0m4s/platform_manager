@@ -26,125 +26,130 @@ const ROOT_DOMAIN = process.env.ROOT_DOMAIN;
 const OTHER_DOMAINS = regex_utils.OTHER_DOMAINS;
 
 dns_server.on("request", async function(request, response) {
-    let question = request.question[0];
-    let requestedName = question.name.toLowerCase();
-    let questionType = dns_consts.QTYPE_TO_NAME[question.type];
-    
-    switch(questionType) {
-        case "NS":
-            if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName) || await regex_utils.testCustom(requestedName) != null) {
-                response.answer.push(dns.NS({
-                    name: requestedName,
-                    data: "ns1." + ROOT_DOMAIN,
-                    ttl: 3600
-                }));
-
-                response.answer.push(dns.NS({
-                    name: requestedName,
-                    data: "ns2." + ROOT_DOMAIN,
-                    ttl: 3600
-                }));
-            }
-            break;
-
-        case "TXT":
-            if(challenges.hasOwnProperty(requestedName)) {
-                for(let txtRecord of challenges[requestedName]) {
-                    response.answer.push(dns.TXT({
+    try {
+        let question = request.question[0];
+        let requestedName = question.name.toLowerCase();
+        let questionType = dns_consts.QTYPE_TO_NAME[question.type];
+        
+        switch(questionType) {
+            case "NS":
+                if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName) || await regex_utils.testCustom(requestedName) != null) {
+                    response.answer.push(dns.NS({
                         name: requestedName,
-                        data: [txtRecord],
-                        ttl: 300
+                        data: "ns1." + ROOT_DOMAIN,
+                        ttl: 3600
+                    }));
+
+                    response.answer.push(dns.NS({
+                        name: requestedName,
+                        data: "ns2." + ROOT_DOMAIN,
+                        ttl: 3600
                     }));
                 }
-            }
+                break;
 
-            response.answer.push(dns.TXT({
-                name: requestedName,
-                data: ["v=spf1" + (A_ENABLED ? " ip4:" + process.env.HOST_A : "") + (AAAA_ENABLED ? " ip6:" + process.env.HOST_AAAA : "") + " ~all"],
-                ttl: 900
-            }));
-
-            break;
-
-        case "MX":
-            response.answer.push(dns.MX({
-                name: requestedName,
-                ttl: 900,
-                exchange: "mail." + ROOT_DOMAIN,
-                priority: 10
-            }));
-
-            response.answer.push(dns.MX({
-                name: requestedName,
-                ttl: 86400, // 24*3600 = a day
-                exchange: ROOT_DOMAIN,
-                priority: 100
-            }));
-
-            break;
-
-        case "AAAA":
-            if(!AAAA_ENABLED) break;
-        case "A":
-            if(!A_ENABLED && !AAAA_ENABLED) break;
-
-            if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName)) {
-                response.answer.push(getResponse(requestedName, questionType));
-            } else {
-                let modifiedRequested = regex_utils.getModifiedFromOtherDomains(requestedName);
-                let special = regex_utils.testSpecial(modifiedRequested);
-                if(special !== null) {
-                    if(special.toLowerCase() != "ftp" || questionType == process.env.FTP_HOST_TYPE) response.answer.push(getResponse(requestedName, questionType));
-                } else {
-                    if(isInstalled !== true) {
-                        isInstalled = await database_server.isInstalled();
+            case "TXT":
+                if(challenges.hasOwnProperty(requestedName)) {
+                    for(let txtRecord of challenges[requestedName]) {
+                        response.answer.push(dns.TXT({
+                            name: requestedName,
+                            data: [txtRecord],
+                            ttl: 300
+                        }));
                     }
-        
-                    if(isInstalled === true) {
-                        let project = regex_utils.testProject(modifiedRequested);
-                        if(project != null) {        
-                            try {
-                                await project_manager.projectExists(project);
-                
+                }
+
+                response.answer.push(dns.TXT({
+                    name: requestedName,
+                    data: ["v=spf1" + (A_ENABLED ? " ip4:" + process.env.HOST_A : "") + (AAAA_ENABLED ? " ip6:" + process.env.HOST_AAAA : "") + " ~all"],
+                    ttl: 900
+                }));
+
+                break;
+
+            case "MX":
+                response.answer.push(dns.MX({
+                    name: requestedName,
+                    ttl: 900,
+                    exchange: "mail." + ROOT_DOMAIN,
+                    priority: 10
+                }));
+
+                response.answer.push(dns.MX({
+                    name: requestedName,
+                    ttl: 86400, // 24*3600 = a day
+                    exchange: ROOT_DOMAIN,
+                    priority: 100
+                }));
+
+                break;
+
+            case "AAAA":
+                if(!AAAA_ENABLED) break;
+            case "A":
+                if(!A_ENABLED && !AAAA_ENABLED) break;
+
+                if(requestedName == ROOT_DOMAIN || OTHER_DOMAINS.includes(requestedName)) {
+                    response.answer.push(getResponse(requestedName, questionType));
+                } else {
+                    let modifiedRequested = regex_utils.getModifiedFromOtherDomains(requestedName);
+                    let special = regex_utils.testSpecial(modifiedRequested);
+                    if(special !== null) {
+                        if(special.toLowerCase() != "ftp" || questionType == process.env.FTP_HOST_TYPE) response.answer.push(getResponse(requestedName, questionType));
+                    } else {
+                        if(isInstalled !== true) {
+                            isInstalled = await database_server.isInstalled();
+                        }
+            
+                        if(isInstalled === true) {
+                            let project = regex_utils.testProject(modifiedRequested);
+                            if(project != null) {        
+                                try {
+                                    await project_manager.projectExists(project);
+                    
+                                    response.answer.push(getResponse(requestedName, questionType));
+                                } catch(e) {
+                                    // doesnot exist
+                                }
+                            } else if((await regex_utils.testCustom(requestedName)) != null) {
                                 response.answer.push(getResponse(requestedName, questionType));
-                            } catch(e) {
-                                // doesnot exist
                             }
-                        } else if((await regex_utils.testCustom(requestedName)) != null) {
-                            response.answer.push(getResponse(requestedName, questionType));
                         }
                     }
                 }
-            }
 
-            break;
-    }
+                break;
+        }
 
-    // custom hooks if required
-    // TODO: rewrite challenges with dns hooks
-    for(let hook of customHooks) {
-        if(hook.enabled && (hook.types.length == 0 || hook.types.includes(questionType))) {
-            let newResponses = await Promise.race([
-                new Promise((resolve) => {
-                    setTimeout(() => resolve(false), 500);
-                }),
+        // custom hooks if required
+        // TODO: rewrite challenges with dns hooks
+        for(let hook of customHooks) {
+            if(hook.enabled && (hook.types.length == 0 || hook.types.includes(questionType))) {
+                let newResponses = await Promise.race([
+                    new Promise((resolve) => {
+                        setTimeout(() => resolve(false), 500);
+                    }),
 
-                intercom.sendPromise(hook.subject, Object.assign({dnsType: questionType, dnsName: requestedName}, hook.message))
-            ]);
+                    intercom.sendPromise(hook.subject, Object.assign({dnsType: questionType, dnsName: requestedName}, hook.message))
+                ]);
 
-            if(newResponses !== false) {
-                newResponses = newResponses || [];
-                for(let resp of newResponses) {
-                    response.answer.push(resp);
+                if(newResponses !== false) {
+                    newResponses = newResponses || [];
+                    for(let resp of newResponses) {
+                        response.answer.push(resp);
+                    }
+                } else {
+                    // too long, disable hook
+                    hook.enabled = false;
                 }
-            } else {
-                // too long, disable hook
-                hook.enabled = false;
             }
         }
+    } catch(error) {
+        logger.tagError("DNS", "DNS request processor encountered an error:" + error);
+    } finally {
+        // at least try to send the (maybe empty?) response
+        response?.send();
     }
-
-    response.send();
 });
 
 /**
