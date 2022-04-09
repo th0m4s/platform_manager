@@ -3,7 +3,7 @@ const os = require("os");
 const cron = require("node-cron");
 const exitHook = require("async-exit-hook");
 const child_process = require("child_process");
-const pfs = require("fs").promises;
+const fs = require("fs"), pfs = fs.promises;
 const path = require("path");
 const dns = require("native-node-dns");
 const historyDir = path.resolve(path.dirname(require("../../../platform_logger").LOG_FILE), "processes");
@@ -301,8 +301,14 @@ function initializeNamespace(namespace) {
         let currentHostCpu = {used: used - lastCpuFullHost.used, total: total - lastCpuFullHost.total};
         lastCpuFullHost = {total, used};
 
-        let freemem = os.freemem(), totalmem = os.totalmem();
-        let currentHostMem = {total: totalmem, used: totalmem - freemem};
+        //let freemem = os.freemem(), totalmem = os.totalmem()
+        
+        let meminfo = fs.readFileSync("/proc/meminfo", "utf8");
+        let availablemem = 1024 * Number(/MemAvailable:[ ]+(\d+)/.exec(meminfo)[1]);
+        let totalmem = 1024 * Number(/MemTotal:[ ]+(\d+)/.exec(meminfo)[1]);
+        let freemem = 1024 * Number(/MemFree:[ ]+(\d+)/.exec(meminfo)[1]); // memfree is often low, real important value is availablemem
+
+        let currentHostMem = {total: totalmem, free: freemem, available: availablemem};
 
         let currentUsage = {cpu: currentHostCpu, mem: currentHostMem};
 

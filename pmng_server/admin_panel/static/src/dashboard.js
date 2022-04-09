@@ -1,6 +1,6 @@
 import "./css/processes_usage.css";
 
-let chartColor = "#3B6A9C";
+let chartColors = ["#3B6A9C", "#007BFF", "#86C0FF"];
 let socket = undefined, authenticated = false;
 let memChart, cpuChart, statsInterval = 1000;
 
@@ -37,7 +37,7 @@ function init() {
 
             for(let data of history.reverse()) {
                 time += statsInterval;
-                addData(parseInt(data.mem.used / data.mem.total * 1000) / 10, parseInt(data.cpu.used / data.cpu.total * 1000) / 10, time);
+                addData({free: parseInt(data.mem.free / data.mem.total * 1000) / 10, available: parseInt(data.mem.available / data.mem.total * 1000) / 10}, parseInt(data.cpu.used / data.cpu.total * 1000) / 10, time);
             }
         });
 
@@ -71,7 +71,8 @@ function init() {
                         type: "line",
                         data: {
                             datasets: [
-                                {label: "Memory usage %", data: [], borderColor: chartColor, fill: false}
+                                {label: "Available memory %", data: [], borderColor: chartColors[0], fill: false},
+                                {label: "Free memory %", data: [], borderColor: chartColors[1], fill: false}
                             ]
                         },
                         options: {
@@ -113,7 +114,7 @@ function init() {
                         type: "line",
                         data: {
                             datasets: [
-                                {label: "CPU usage %", data: [], borderColor: chartColor, fill: false}
+                                {label: "CPU usage %", data: [], borderColor: chartColors[0], fill: false}
                             ]
                         },
                         options: {
@@ -153,7 +154,7 @@ function init() {
         });
 
         socket.on("stats", (message) => {
-            addData(parseInt(message.mem.used / message.mem.total * 1000) / 10, parseInt(message.cpu.used / message.cpu.total * 1000) / 10);
+            addData({free: parseInt(message.mem.free / message.mem.total * 1000) / 10, available: parseInt(message.mem.available / message.mem.total * 1000) / 10}, parseInt(message.cpu.used / message.cpu.total * 1000) / 10);
         });
     });
 
@@ -164,15 +165,16 @@ function init() {
 }
 
 let lastDrawnX = 0;
-function addData(mem, cpu, x = -1) {
-    $("#info-mem").html(mem + "%");
+function addData({free: freemem, available: availablemem}, cpu, x = -1) {
+    $("#info-mem").html(availablemem + "%");
     $("#info-cpu").html(cpu + "%");
 
     if(x < 0) x = Date.now();
     if(x <= lastDrawnX) return;
     lastDrawnX = x;
 
-    memChart.data.datasets[0].data.push({x, y: mem});
+    memChart.data.datasets[0].data.push({x, y: availablemem});
+    memChart.data.datasets[1].data.push({x, y: freemem});
     memChart.update();
 
     cpuChart.data.datasets[0].data.push({x, y: cpu});
