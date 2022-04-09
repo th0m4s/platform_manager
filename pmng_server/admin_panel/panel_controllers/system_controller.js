@@ -30,11 +30,11 @@ let subprocesses = {
         text: "Executes commands that require root (uid 0) privileges, ie. for storages mounts.",
         check: 1
     },
-    "ftp_server": {
+    /*"ftp_server": {
         name: "FTP server",
         text: "Serves a FTP server for the <i>persistent-storage</i> plugin.",
         check: 1
-    },
+    },*/
     "local_server": {
         name: "Local server",
         text: "Serves basic connections to execute actions from outside of the Javascript core, ie. for project deployments.",
@@ -67,7 +67,7 @@ let subprocesses = {
     },*/
     "secondary_servers": {
         name: "Secondary servers",
-        text: "Hosts the Git webserver, error pages when connecting to a stopped/unknown project and the FTP server used to manage persisent-storage.",
+        text: "Hosts the Git webserver, error pages when connecting to a stopped/unknown project and the FTP server used to manage *persisent-storage*.",
         check: 1
     },
     "http_public_server": {
