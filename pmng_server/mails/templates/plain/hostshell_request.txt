@@ -1,0 +1,16 @@
+Hello <%= fullname %>,
+
+A request to open an interactive shell has been made from the account <%= username %> (IP <%- ipaddress -%>).
+
+
+If accepted, this shell will have a limited lifetime of <%- lifetime %>, and once closed, it will not be possible to reopen it without a new request.
+This request will be automatically denied after 10 minutes if nothing is done, but you can also deny this request instantly by opening the deny link in a browser.
+To accept the request, please open the allow link on a browser or type the allow code on the shell request page.
+
+Allow code: <%= allowcode %>
+Allow link: <%= allowlink %>
+
+Deny link: <%= denylink %>
+
+
+<%- copyright %>

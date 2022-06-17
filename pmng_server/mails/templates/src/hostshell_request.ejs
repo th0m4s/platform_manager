@@ -1,0 +1,25 @@
+<div class="container">
+	<div class="card mt-4 pt-3">
+        <h3 class="card-title w-100 text-center">Allow host shell</h3>
+        <div class="card-body">
+            <br/><p>Hello <%= fullname %>,</p><br/>
+            <p>A request to open an interactive shell has been made from the account <i><%= username %></i> (IP <%- ipaddress -%>).<br/><br/>
+            If accepted, this shell will have a limited lifetime of <i><%- lifetime %></i>, and once closed, it will not be possible to reopen it without a new request.<br/><br/>
+            This request will be automatically denied after 10 minutes if nothing is done, but you can also deny this request instantly by clicking on the grey button or by opening the deny link into a browser.<br/><br/>
+            To accept the request, please click on the blue button or type the following code into the request page:</p>
+            <br/>
+            <a class="btn btn-primary mx-auto" style="font-size: 22px;" href="<%= allowlink %>">Allow shell request</a>
+            
+            <div class="mx-auto" style="margin-top: 10px;">
+                <code style="padding: 5px; border-radius: 8px; border: 1px solid black;"><%- allowcode %></code>
+            </div>
+
+            <br/>
+            <a class="btn btn-secondary mx-auto" style="font-size: 19px;" href="<%= denylink %>">Deny shell request</a>
+            <div style="padding-top: 10px;"><a href="<%= denylink %>" class="mx-auto"><%= denylink %></a></div>
+
+            <br/><br/>
+            <small class="mx-auto text-muted"><%- copyright %></small>
+        </div>
+    </div>
+</div>

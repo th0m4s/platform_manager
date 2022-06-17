@@ -1,5 +1,28 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../database_server");
+const intercom = require("../../intercom/intercom_client").connect();
+
+router.get("/shell/deny/:shellId", async (req, res) => {
+    try {
+        await intercom.sendPromise("system_shell_request", {type: "deny", shellId: req.params.shellId}, {autoResolve: true, autoReject: true});
+        req.flash("success", "Shell request denied.");
+    } catch(error) {
+        req.flash("error", "Cannot deny shell request: " + (error.message ?? error));
+    }
+
+    res.redirect("/panel");
+});
+
+router.get("/shell/allow/:shellId/:allowCode", async (req, res) => {
+    try {
+        await intercom.sendPromise("system_shell_request", {type: "allow", shellId: req.params.shellId, allowCode: req.params.allowCode}, {autoResolve: true, autoReject: true});
+        req.flash("success", "Shell request allowed.");
+    } catch(error) {
+        req.flash("error", "Cannot allow shell request: " + (error.message ?? error));
+    }
+
+    res.redirect("/panel");
+});
 
 router.all("*", async function(req, res, next) {
     if(!(await database_server.isInstalled())) {
@@ -104,6 +127,11 @@ router.get("/dns_challenges", (req, res) => {
     res.locals.root_domain = process.env.ROOT_DOMAIN;
 
     res.render("system/dns_challenges");
+});
+
+router.get("/shell", (req, res) => {
+    req.setPage(res, "Command shell", "system", "shell");
+    res.render("system/shell");
 });
 
 router.all("/*", function(req, res) {req.flash("warning", "This page doesn't exist."); res.redirect("/panel/system/subprocesses");});

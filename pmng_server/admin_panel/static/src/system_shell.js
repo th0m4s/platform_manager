@@ -38,7 +38,7 @@ const onTermData = currify(_onTermData);
 const onWindowResize = wrap(_onWindowResize);
 
 function createTerminal() {
-    let terminalContainer = $("#project_exec-console").get(0);
+    let terminalContainer = $("#project_exec-console").get(0)
 
     let fitAddon = new FitAddon();
     let webglAddon = new WebglAddon();
@@ -61,7 +61,7 @@ function createTerminal() {
     window.addEventListener("resize", onWindowResize(fitAddon));
     
     let {cols, rows} = terminal;
-    socket.emit("terminal", {cols, rows, name: window.name, execType: window.execType});
+    socket.emit("terminal", {cols, rows, execType: "system_shell"});
     fitAddon.fit();
     
     socket.on("disconnect", onDisconnect(terminal));
@@ -73,8 +73,17 @@ function createTerminal() {
     };
 }
 
+function requestTerminal() {
+    $("#requestModal").modal({
+        backdrop: "static",
+        keyboard: false
+    });
+
+    socket.emit("request_terminal", {execType: "system_shell"});
+}
+
 function init() {
-    socket = io("/v1/exec");
+    socket = io("/v1/exec", {reconnection: false});
 
     socket.on("connect", function(){
         console.log("Socket connected.")
@@ -82,7 +91,7 @@ function init() {
 
         socket.on("authenticated", function() {
             console.log("Socket authenticated.");
-            createTerminal();
+            requestTerminal();
         });
 
         socket.on("unauthorized", function(err) {
@@ -91,8 +100,23 @@ function init() {
         });
 
         socket.on("terminal_error", (message) => {
-            $.notify({message: "Terminal error: " + message.message}, {type: "danger"});
+            $.notify({message: "Terminal error: " + message.message}, {type: "danger", z_index: 9999});
             console.error("Terminal error:", message.message);
+        });
+
+        socket.on("too_many_invalid_tries", () => {
+            $("#requestModal").modal("hide");
+            $.notify({message: "Too many invalid tries. Please reload the page."}, {type: "danger"});
+        });
+
+        socket.on("request_denied", () => {
+            $("#requestModal").modal("hide");
+            $.notify({message: "Request denied. Please reload the page."}, {type: "danger"});
+        });
+
+        socket.on("correct_system_code", () => {
+            $("#requestModal").modal("hide");
+            createTerminal();
         });
 
         socket.on("exit", () => {
@@ -109,4 +133,12 @@ function init() {
     });
 }
 
-window.project_exec = {init};
+function confirm_code() {
+    socket.emit("check_code", {code: $("#access_code").val()});
+}
+
+function cancel() {
+    socket.emit("cancel_shell_request", {});
+}
+
+window.system_shell = {init, confirm_code, cancel};

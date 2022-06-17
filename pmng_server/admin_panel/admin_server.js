@@ -100,6 +100,11 @@ let headerLinks = {
                 name: "DNS challenges",
                 link: "/panel/system/dns_challenges",
                 active: ["system", "dns_challenges"]
+            },
+            "system_shell": {
+                name: "System shell",
+                link: "/panel/system/shell",
+                active: ["system", "shell"]
             }
         }
     },

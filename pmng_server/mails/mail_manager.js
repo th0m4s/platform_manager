@@ -371,7 +371,7 @@ function checkAndStart(maildirectory, shouldRestart) {
                 await Promise.all(usersProm);
                 logger.tag("MAIL", "Mail ready!");
             }).catch((error) => {
-                logger.tagError("MAIL", "Cannot start mail server container.");
+                logger.tagError("MAIL", "Cannot start mail server container." + (error.message ?? error));
                 throw error;
             });
         }

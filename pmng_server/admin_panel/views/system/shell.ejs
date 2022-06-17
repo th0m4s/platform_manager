@@ -1,0 +1,87 @@
+<html>
+    <head>
+        <%- include("../default/head.ejs") %>
+    </head>
+    <body>
+        <%- include("../default/flash.ejs") %>
+        <%- include("../default/api.ejs") %>
+        <%- startPageScript("system_shell", ["/socket.io/socket.io.js", "/static/js/xterm.dist.js"]) %>
+        <header>
+            <nav class="navbar pmng-navbar navbar-expand-lg navbar-dark bg-primary">
+                <a class="navbar-brand" href="#" onclick="return false;"><%= site.title %></a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarContent">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <span id="exec-title" class="ml-md-4" style="color: white;">Command shell:</span>
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/panel">Leave shell</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/panel/login/logout">Logout</a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+            <div class="modal fade" id="modal-loading" tabindex="-1" role="dialog">
+                <div class="modal-dialog modal-sm">
+                  <div class="modal-content">
+                    <div class="modal-body" id="loading-content">
+                        
+                    </div>
+                  </div>
+                </div>
+              </div>
+        </header>
+        <%- include("../default/loading.ejs") %>
+        <div id="main-container">
+            <div id="project_exec-console"></div>
+        </div>
+
+        <div class="modal" id="requestModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Terminal request</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>A confirmation is required to open a system shell. Please click on the link you received by mail or
+                            enter the access code below:</p>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="access_code" placeholder="Access code">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" onclick="system_shell.cancel()" class="btn btn-secondary"
+                            data-dismiss="modal">Cancel request</button>
+                        <button type="button" onclick="system_shell.confirm_code()" class="btn btn-primary">Confirm code</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="closedModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Terminal process terminated</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="closedModal-content">
+                        The terminal process was terminated, do you want to reload the page to request a new terminal?
+                    </div>
+                    <div class="modal-footer">
+                        <a href="/panel" class="btn btn-secondary">Close terminal</a>
+                        <button type="button" class="btn btn-primary" onclick="location.reload()">Reload terminal</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
