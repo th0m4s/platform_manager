@@ -107,7 +107,7 @@ function handleConnection(socket) {
                     socket.emit("terminal_error", {message: "Cannot send request mail: " + (error.message ?? error)});
                 });
 
-                startRequestTimeout(shellId, requestTimeoutMinutes);
+                startRequestTimeout(shellId, requestTimeoutMinutes * 60);
                 
                 let simpleOnDisconnect = () => {
                     socket.removeListener("disconnect", simpleOnDisconnect);
