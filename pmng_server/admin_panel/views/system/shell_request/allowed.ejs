@@ -1,0 +1,25 @@
+<html>
+	<head>
+		<%- include("../../default/head.ejs") %>
+	</head>
+	<body>
+		<%- include("../../default/flash.ejs") %>
+		<div class="container">
+			<div class="row justify-content-md-center h-100">
+				<div class="col-md-4 my-auto">
+					<div class="card">
+						<div class="card-body">
+							<h4 class="card-title text-center mb-4 mt-1">Host shell allowed</h4>
+							<hr>
+                            <p>You allowed the host shell request. Once the connection is closed, another request will have to be created.<br/><br/>
+                            You can still deny this request if you change your mind using the button below or the cancel link from the email you received.
+							The user will be instantly disconnected.</p>
+                            
+                            <a href="/panel/system/shell/deny/<%= shellid %>" class="btn btn-secondary text-white btn-sm btn-block">Deny this request</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

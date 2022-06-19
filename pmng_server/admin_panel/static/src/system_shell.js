@@ -114,6 +114,11 @@ function init() {
             $.notify({message: "Request denied. Please reload the page."}, {type: "danger"});
         });
 
+        socket.on("system_timeout", () => {
+            $("#requestModal").modal("hide");
+            $.notify({message: "Ran out of allowed time. Please reload the page."}, {type: "danger"});
+        })
+
         socket.on("correct_system_code", () => {
             $("#requestModal").modal("hide");
             createTerminal();

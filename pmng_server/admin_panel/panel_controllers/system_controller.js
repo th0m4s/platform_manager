@@ -5,23 +5,28 @@ const intercom = require("../../intercom/intercom_client").connect();
 router.get("/shell/deny/:shellId", async (req, res) => {
     try {
         await intercom.sendPromise("system_shell_request", {type: "deny", shellId: req.params.shellId}, {autoResolve: true, autoReject: true});
-        req.flash("success", "Shell request denied.");
+        req.setPage(res, "Host shell denied");
+        res.render("system/shell_request/denied");
     } catch(error) {
-        req.flash("error", "Cannot deny shell request: " + (error.message ?? error));
+        req.setPage(res, "Host shell request error");
+        res.locals.action = "deny";
+        res.locals.error = error.message ?? error;
+        res.render("system/shell_request/error");
     }
-
-    res.redirect("/panel");
 });
 
 router.get("/shell/allow/:shellId/:allowCode", async (req, res) => {
     try {
         await intercom.sendPromise("system_shell_request", {type: "allow", shellId: req.params.shellId, allowCode: req.params.allowCode}, {autoResolve: true, autoReject: true});
-        req.flash("success", "Shell request allowed.");
+        req.setPage(res, "Host shell allowed");
+        res.locals.shellid = req.params.shellId;
+        res.render("system/shell_request/allowed");
     } catch(error) {
-        req.flash("error", "Cannot allow shell request: " + (error.message ?? error));
+        req.setPage(res, "Host shell request error");
+        res.locals.action = "allow";
+        res.locals.error = error.message ?? error;
+        res.render("system/shell_request/error");
     }
-
-    res.redirect("/panel");
 });
 
 router.all("*", async function(req, res, next) {

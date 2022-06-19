@@ -25,6 +25,19 @@ let allowSystemShell = (shellId) => {
     return false;
 }
 
+const systemTimeoutMinutes = 10;
+
+function startSystemTimeout(shellId, seconds) {
+    setTimeout(() => {
+        if(systemShells[shellId] != undefined) {
+            systemShells[shellId].systemAllowed = false;
+            systemShells[shellId].emit("system_timeout", {});
+            systemShells[shellId].disconnect();
+            delete systemShells[shellId];
+        }
+    }, seconds * 1000);
+}
+
 function handleConnection(socket) {
     let containerExec = undefined;
     let exec = undefined;
@@ -63,18 +76,19 @@ function handleConnection(socket) {
                 systemShells[shellId] = socket;
                 socket.systemAllowed = false;
                 socket.shellId = shellId;
-                // allowSystemShell(shellId);
                 
                 let allowCode = crypto.randomBytes(4).toString("hex").toUpperCase();
                 socket.allowCode = allowCode;
-                console.log("TEMP ===========", shellId, allowCode)
+                
+                if(process.env.SHOW_SYSTEMSHELL_CODES_IN_CONSOLE?.toLowerCase() == "true")
+                    console.log("Shell request allow code: " + allowCode + " (shellId: " + shellId + ")");
 
                 let mailLinksStart = "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://admin." + process.env.ROOT_DOMAIN + "/panel/system/shell/";
                 mail_manager.sendClientMail(socket.user.email, "Platform Manager - System shell request", "hostshell_request", {allowCode,
                     username: socket.user.username,
-                    ipaddress: socket.handshake.address,
+                    ipaddress: socket.request.headers["x-forwarded-for"] ?? socket.request.connection.remoteAddress,
                     fullname: socket.user.fullname,
-                    lifetime: "Infinity",
+                    lifetime: systemTimeoutMinutes + " minutes",
                     allowcode: allowCode,
                     allowlink: mailLinksStart + "allow/" + shellId + "/" + allowCode,
                     denylink: mailLinksStart + "deny/" + shellId
@@ -83,7 +97,7 @@ function handleConnection(socket) {
                 });
                 
                 let simpleOnDisconnect = () => {
-                    socket.removeListener("simpleOnDisconnect", simpleOnDisconnect);
+                    socket.removeListener("disconnect", simpleOnDisconnect);
 
                     delete systemShells[shellId];
                 }
@@ -164,6 +178,7 @@ function handleConnection(socket) {
                 encoding: "utf8"
             });
 
+            startSystemTimeout(socket.shellId, 60 * systemTimeoutMinutes);
             stream = exec;
         } else {
             if(containerName == undefined) {
@@ -294,14 +309,10 @@ function initializeNamespace(namespace) {
             switch(message.type) {
                 case "deny":
                     if(systemShells[shellId] != undefined) {
-                        if(systemShells[shellId].systemAllowed != false) {
-                            respond({error: true, message: "System shell already allowed."});
-                        } else {
-                            systemShells[shellId].emit("request_denied", {});
-                            systemShells[shellId].disconnect();
-                            delete systemShells[shellId];
-                            respond({error: false, message: "System shell denied."});
-                        }
+                        systemShells[shellId].emit("request_denied", {});
+                        systemShells[shellId].disconnect();
+                        delete systemShells[shellId];
+                        respond({error: false, message: "System shell denied."});
                     } else {
                         respond({error: true, message: "Shell request not found."});
                     }

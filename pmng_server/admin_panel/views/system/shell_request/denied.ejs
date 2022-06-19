@@ -1,0 +1,24 @@
+<html>
+	<head>
+		<%- include("../../default/head.ejs") %>
+	</head>
+	<body>
+		<%- include("../../default/flash.ejs") %>
+		<div class="container">
+			<div class="row justify-content-md-center h-100">
+				<div class="col-md-4 my-auto">
+					<div class="card">
+						<div class="card-body">
+							<h4 class="card-title text-center mb-4 mt-1">Host shell denied</h4>
+							<hr>
+                            <p>You denied this request of a host system shell. If the request was previously allowed, it was instantly denied and the shell was closed.<br/><br/>
+                            No further action is required and this specific request will never be able to be allowed.</p>
+                            
+                            <a href="/panel" class="btn btn-primary text-white btn-block">Back to the dashboard</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
