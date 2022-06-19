@@ -449,7 +449,7 @@ async function initialize(maildirectory) {
 
 function sendClientMail(to, subject, template, locals = {}) {
     let enableSec = process.env.ENABLE_HTTPS.toLowerCase() == "true", sender = "pmng@" + ROOT_DOMAIN;
-    locals = Object.assign({copyright: "<a href='http" + (enableSec ? "s" : "") + "://admin." + ROOT_DOMAIN + "/'>© 2020 Platform Manager</a>"}, locals);
+    locals = Object.assign({copyright: "<a href='http" + (enableSec ? "s" : "") + "://admin." + ROOT_DOMAIN + "/'>© 2020-2022 Platform Manager</a>"}, locals);
     return pfs.readFile(path.resolve(__dirname, "templates", "dist", template + ".ejs"), "utf-8").then((templateContents) => {
         return ejs.render(templateContents, locals, {async: true});
     }).then((renderedTemplate) => {

@@ -26,12 +26,23 @@ let allowSystemShell = (shellId) => {
 }
 
 const systemTimeoutMinutes = 10;
+const requestTimeoutMinutes = 10; // hardcoded in the mail
 
 function startSystemTimeout(shellId, seconds) {
     setTimeout(() => {
         if(systemShells[shellId] != undefined) {
             systemShells[shellId].systemAllowed = false;
             systemShells[shellId].emit("system_timeout", {});
+            systemShells[shellId].disconnect();
+            delete systemShells[shellId];
+        }
+    }, seconds * 1000);
+}
+
+function startRequestTimeout(shellId, seconds) {
+    setTimeout(() => {
+        if(systemShells[shellId] != undefined && systemShells[shellId].requestAllowed != true) {
+            systemShells[shellId].emit("code_request_timeout", {});
             systemShells[shellId].disconnect();
             delete systemShells[shellId];
         }
@@ -85,7 +96,7 @@ function handleConnection(socket) {
 
                 let mailLinksStart = "http" + (process.env.ENABLE_HTTPS.toLowerCase() == "true" ? "s" : "") + "://admin." + process.env.ROOT_DOMAIN + "/panel/system/shell/";
                 mail_manager.sendClientMail(socket.user.email, "Platform Manager - System shell request", "hostshell_request", {allowCode,
-                    username: socket.user.username,
+                    username: socket.user.name,
                     ipaddress: socket.request.headers["x-forwarded-for"] ?? socket.request.connection.remoteAddress,
                     fullname: socket.user.fullname,
                     lifetime: systemTimeoutMinutes + " minutes",
@@ -95,6 +106,8 @@ function handleConnection(socket) {
                 }).catch((error) => {
                     socket.emit("terminal_error", {message: "Cannot send request mail: " + (error.message ?? error)});
                 });
+
+                startRequestTimeout(shellId, requestTimeoutMinutes);
                 
                 let simpleOnDisconnect = () => {
                     socket.removeListener("disconnect", simpleOnDisconnect);

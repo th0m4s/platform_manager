@@ -117,6 +117,11 @@ function init() {
         socket.on("system_timeout", () => {
             $("#requestModal").modal("hide");
             $.notify({message: "Ran out of allowed time. Please reload the page."}, {type: "danger"});
+        });
+
+        socket.on("code_request_timeout", () => {
+            $("#requestModal").modal("hide");
+            $.notify({message: "Code request timed out. Please reload the page."}, {type: "danger"});
         })
 
         socket.on("correct_system_code", () => {
