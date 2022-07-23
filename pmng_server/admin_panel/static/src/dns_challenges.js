@@ -46,6 +46,7 @@ function init() {
         invertedIndex[getIndex(host, token)] = cid;
 
         addChallengeLine({cid, host, token});
+        thin_buttons.prepareButtons();
     });
 
     socket.on("dns_challenges_remove", (removeMessage) => {
@@ -114,8 +115,8 @@ function formatHost(host) {
 function addChallengeLine(challenge) {
     $("#challenges-list").append(`<li class="list-group-item" id="challenge-${challenge.cid}">
         ${formatHost(challenge.host)}<samp class="ml-md-4 text-secondary">${challenge.token}</samp>
-        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><button onclick="dns_challenges.testChallenge(${challenge.cid})" class="btn btn-sm btn-info"><i class="fas fa-clipboard-check"></i> Check</button>
-        <button id="challenge-${challenge.cid}-rembtn" onclick="dns_challenges.askRemove(${challenge.cid})" class="btn btn-sm btn-danger"><i class="fas fa-trash-alt"></i> Remove</button></div></span></li>`);
+        <span class="float-md-right"><div class="btn-group" role="group" style="margin: -3px -10px;"><button onclick="dns_challenges.testChallenge(${challenge.cid})" class="btn btn-sm btn-info thinable-btn"><i class="fas fa-clipboard-check"></i> <span>Check</span></button>
+        <button id="challenge-${challenge.cid}-rembtn" onclick="dns_challenges.askRemove(${challenge.cid})" class="btn btn-sm btn-danger thinable-btn"><i class="fas fa-trash-alt"></i> <span>Remove</span></button></div></span></li>`);
 
     updateStatusCount();
 }

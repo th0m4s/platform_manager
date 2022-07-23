@@ -1,4 +1,5 @@
 <script>
+let USER_SETTINGS = JSON.parse(decodeURI("<%= encodeURI(user.settings) %><% /* user.settings is already a string */ %>"));
 const API_KEY = "<%= user.key %>";
 $.ajaxSetup({headers:{'Authorization': "Api-Key " + API_KEY}});
 </script>

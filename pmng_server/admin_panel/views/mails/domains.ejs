@@ -8,7 +8,7 @@
         <script>
         window.domains = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(domains)) %>"));
         </script>
-        <%- startPageScript("mails_domains") %>
+        <%- startPageScript("mails_domains", ["/static/js/thin_buttons.dist.js"]) %>
         
         <div id="page">
             <header>
@@ -20,6 +20,7 @@
                 <div class="container-fluid" id="main-container">
                     <div class="row mt-3 mx-3">
                         <h2 class="w-100">Mail domains:</h2>
+                        <button style="position: absolute; top: 25px; right: 30px; height: 31px;" class="btn btn-secondary btn-sm thin-toggle-btn float-right" type="button" title="Toggle thin buttons" onclick="thin_buttons.toggle()"><i class="fas fa-compress thin-toggle"></i><i class="fas fa-expand thin-toggle"></i></button>
                         <p>Including project domains, custom domains from your projects, the projects you have the <i>full-access</i> collaboration mode on.</p>
                     </div>
                     <div class="row mt-1 mx-3">

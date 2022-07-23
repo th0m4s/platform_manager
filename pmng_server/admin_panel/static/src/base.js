@@ -38,9 +38,16 @@ window.showMain = () => {
     $("#main-container").show();
 }
 
+function sendLoadFinish() {
+    $("#main-container").trigger("pmng:loadfinish");
+    requestAnimationFrame(() => $("#main-container").trigger("pmng:delayedloadfinish"));
+}
+
 let noLoadingTimeout = setTimeout(() => {
     noLoadingTimeout = -1;
     window.showMain();
+
+    sendLoadFinish();
 }, 500);
 
 function load(nextScripts) {
@@ -50,6 +57,7 @@ function load(nextScripts) {
             load(nextScripts);
         } else {
             window.showMain();
+            sendLoadFinish();
             window[script].init();
         }
     });
@@ -70,6 +78,7 @@ window.loadAndInit = (script, requirements = []) => {
 window.instantFinishLoad = () => {
     clearLoadingTimeout();
     window.showMain();
+    sendLoadFinish();
 }
 
 console.log("%cStop! Developer console ahead!", "color: red; font-size: 30px; font-weight: bold;");

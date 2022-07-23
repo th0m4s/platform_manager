@@ -36,6 +36,7 @@ function init() {
         switch(message.action) {
             case "add":
                 displayUser(user);
+                thin_buttons.prepareButtons();
                 break;
             case "remove":
                 $("#line-" + user).remove();
@@ -47,7 +48,7 @@ function init() {
 function displayUser(user) {
     let content = `<li class="list-group-item line-user" id="line-${user.name}">`
     + `<b>User #${user.id} : </b> ${user.fullname} (${user.name})<span class="ml-md-4"><i>${user.email}</i> (permission level ${user.scope})</span>`
-    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-primary" onclick="users_all.editUser('${user.name}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-sm btn-danger" ${window.currentUsername == user.name ? "disabled " : ""}onclick="users_all.deleteUser('${user.name}')"><i class="fas fa-trash-alt"></i> Delete</button></div></span></li>`;
+    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-primary thinable-btn" onclick="users_all.editUser('${user.name}')"><i class="fas fa-edit"></i> <span>Edit</span></button><button class="btn btn-sm thinable-btn btn-danger" ${window.currentUsername == user.name ? "disabled " : ""}onclick="users_all.deleteUser('${user.name}')"><i class="fas fa-trash-alt"></i> <span>Delete</span></button></div></span></li>`;
 
     $("#users-list").append(content);
 }
@@ -79,6 +80,8 @@ function listUsers() {
             for(let user of users) {
                 displayUser(user);
             }
+
+            thin_buttons.prepareButtons();
         }
     }).always(() => {
         //utils.hideLoading();

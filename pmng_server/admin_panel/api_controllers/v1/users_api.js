@@ -6,6 +6,7 @@ const string_utils = require("../../../string_utils");
 const rgit_manager = require("../../../remote_git/remote_git_manager");
 const bodyParser = require("../../body_parser");
 const api_auth = require("./api_auth");
+const usersettings_manager = require("../../usersettings_manager");
 
 router.get("/exists/:username", (req, res) => {
     api_auth(req, res, function(user) {
@@ -258,5 +259,26 @@ router.get("/delete/:username", (req, res) => {
         }
     });
 });
+
+router.get("/settings/:setting", (req, res) => {
+    api_auth(req, res, (user) => {
+        usersettings_manager.getUserSetting(user.id, req.params.setting).then((value) => {
+            res.status(200).json({error: false, code: 200, key: req.params.setting, value: value});
+        }).catch((error) => {
+            res.status(500).json({error: true, code: 500, message: "Cannot get setting: " + (error.message ?? error)});
+        });
+    })
+});
+
+router.post("/settings/:setting", bodyParser(), async (req, res) => {
+    api_auth(req, res, (user) => {
+        usersettings_manager.setUserSetting(user.id, req.params.setting, req.body.value, true).then(() => {
+            res.status(200).json({error: false, code: 200, key: req.params.setting, message: "Setting updated."});
+        }).catch((error) => {
+            res.status(500).json({error: true, code: 500, key: req.params.setting, message: "Cannot set setting: " + (error.message ?? error)});
+        });
+    });
+});
+
 
 module.exports = router;

@@ -175,6 +175,8 @@ function addOwnedProjects(projects) {
         list.append(getProjectHtml(project, false));
     });
 
+    thin_buttons.prepareButtons();
+
     if(projects.length > 0) {
         allProjects = allProjects.concat(names);
         checkStates(names);
@@ -201,6 +203,8 @@ function addCollabProjects(results) {
         list.append(getProjectHtml(result.project, result.mode !== "manage"));
     });
 
+    thin_buttons.prepareButtons();
+
     if(results.length > 0) {
         allProjects = allProjects.concat(names);
         checkStates(names);
@@ -211,8 +215,9 @@ function getProjectHtml(project, disabled) {
     let d = disabled ? " disabled" : "";
     return `<li class="list-group-item" id="line-project-${project.name}" data-state="unknown">`
     + `<b>Project #${project.id} : </b><a class="project-link" target="_blank" href="${project.url}">${project.name}</a> (v${project.version})<span class="text-secondary d-block d-md-inline"><samp class="ml-4">${project.version > 0 ? project.type : "No version deployed"}</samp></span>`
-    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info" onclick="projects_list.details('${project.name}')"><i class="fas fa-info-circle"></i> Details</button><button class="btn btn-sm btn-primary" onclick="projects_list.editProject('${project.name}')"${d}><i class="fas fa-edit"></i> Edit</button><button class="btn btn-sm btn-info" data-current="info" id="button-state-${project.name}" onclick="projects_list.updateState('${project.name}')" ${disabled ? 'data-perm="no"' : ""} data-version="${project.version}" data-url="${project.url}" data-id="${project.id}" data-type="${project.type}" disabled><i class="fas fa-sync fa-spin"></i> Syncing...</button>`
-    + `<button class="btn btn-sm btn-secondary" id="button-restart-${project.name}" onclick="projects_list.restartProject('${project.name}')" ${disabled ? 'data-perm="no"' : ""} disabled><i class="fas fa-undo-alt"></i> Restart</button><button class="btn btn-sm btn-danger" onclick="projects_list.deleteProject('${project.name}')"${d}><i class="fas fa-trash-alt"></i> Delete</button></div></span></li>`;
+    + `<span class="float-md-right d-block d-md-inline mt-2 mt-md-0"><div class="btn-group" role="group" style="margin: -3px -10px;"><button class="btn btn-sm btn-info thinable-btn" onclick="projects_list.details('${project.name}')"><i class="fas fa-info-circle"></i> <span>Details</span></button><button class="btn btn-sm btn-primary thinable-btn" onclick="projects_list.editProject('${project.name}')"${d}><i class="fas fa-edit"></i> <span>Edit</span></button>`
+    + `<button class="btn btn-sm btn-info" data-current="info" id="button-state-${project.name}" onclick="projects_list.updateState('${project.name}')" ${disabled ? 'data-perm="no"' : ""} data-version="${project.version}" data-url="${project.url}" data-id="${project.id}" data-type="${project.type}" disabled><i class="fas fa-sync fa-spin"></i> Syncing...</button>`
+    + `<button class="btn btn-sm btn-secondary thinable-btn" id="button-restart-${project.name}" onclick="projects_list.restartProject('${project.name}')" ${disabled ? 'data-perm="no"' : ""} disabled><i class="fas fa-undo-alt"></i> <span>Restart</span></button><button class="btn btn-sm btn-danger thinable-btn" onclick="projects_list.deleteProject('${project.name}')"${d}><i class="fas fa-trash-alt"></i> <span>Delete</span></button></div></span></li>`;
 }
 
 function setProjectWarning(projectname) {

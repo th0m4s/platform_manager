@@ -1,0 +1,31 @@
+.thinable-btn.thinprep {
+    width: var(--original-width);
+    transition: all 0.5s ease-in-out;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.thinable-btn.thinprep span {
+    margin-left: 0px;
+}
+
+.thin-buttons .thinable-btn.thinprep {
+    width: 31px;
+    z-index: 0 !important;
+}
+
+.thin-buttons .thinable-btn.thinprep span {
+    margin-left: 6px;
+}
+
+.thin-toggle.fa-compress, .thin-buttons .thin-toggle.fa-expand {
+    display: inline-block;
+}
+
+.thin-toggle.fa-expand, .thin-buttons .thin-toggle.fa-compress {
+    display: none;
+}
+
+.thin-toggle-btn {
+    width: 31px;
+}
