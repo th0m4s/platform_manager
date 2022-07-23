@@ -98,7 +98,7 @@ function createTableIfNotExists(name, schemaCallback, currentKnex = knex) {
     });
 }
 
-const LAST_DB_VERSION = 1;
+const LAST_DB_VERSION = 2;
 let _dbVersions = null;
 async function checkVersion(subdb = "main", wantVersion = LAST_DB_VERSION) {
     // DB versions are always refreshed (main db installation is in another process)
@@ -244,6 +244,11 @@ async function mainDatabaseUpgrader(newVersion) {
                 {name: "admin", usage: JSON.stringify({projects: {max: 0}, docker: {memory: 0}, storages: {max: 0}}), restricted: "true"}
             ]);
 
+            break;
+        case 2:
+            await knex.schema.alterTable("users", (users) => {
+                users.text("settings").notNullable().defaultTo("{}");
+            });
             break;
     }
 }
