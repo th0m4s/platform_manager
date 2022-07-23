@@ -7,6 +7,11 @@ const net = require("net");
  *  changeConfig: (newConfig: {timeout?: number, autoReject?: boolean, autoResolve?: boolean}) => void}} IntercomClient 
  */
 
+function jsonReplacer(key, value) {
+    if(value instanceof Error) return value.message;
+    else return value;
+}
+
 /**
  * Starts a connection to the intercom server and return a newly created client object.
  * Multiple clients may exist per process.
@@ -57,7 +62,7 @@ function connect() {
         subscribe: function(subjects, callback) {
             if(!checkConnection()) return false;
 
-            connection.write("subs:" + JSON.stringify(subjects) + "\n");
+            connection.write("subs:" + JSON.stringify(subjects, jsonReplacer) + "\n");
             subjects.forEach((subject) => {
                 if(!subs.hasOwnProperty(subject)) subs[subject] = [];
                 subs[subject].push(callback);
@@ -70,7 +75,7 @@ function connect() {
 
             let id = Math.floor(Math.random()*((2**32)-1));
             if(responseCallback != undefined) waitingResp[id] = responseCallback;
-            connection.write("send:" + JSON.stringify({subject: subject, message: message, id: id}) + "\n");
+            connection.write("send:" + JSON.stringify({subject: subject, message: message, id: id}, jsonReplacer) + "\n");
 
             return true;
         },
@@ -90,7 +95,7 @@ function connect() {
             }), respProm]) : respProm;
         }/*,
         respond: function(id, message) {
-            connection.write("resp:" + JSON.stringify({id: id, message: message}) + "\n");
+            connection.write("resp:" + JSON.stringify({id: id, message: message}, jsonReplacer) + "\n");
         }*/,
         changeConfig(newConfig = defaultConfig) {
             defaultConfig = Object.assign(defaultConfig, newConfig);
@@ -112,25 +117,25 @@ function processCommand(connection, command, value, subs, waitingResp) {
         case "recv":
             let subject = value.subject;
             if(subs.hasOwnProperty(subject)) {
-                connection.write("stat:" + JSON.stringify({error: false, message: "received " + subject}) + "\n");
+                connection.write("stat:" + JSON.stringify({error: false, message: "received " + subject}, jsonReplacer) + "\n");
 
                 subs[subject].forEach((cb) => {
                     cb(value.message, (response) => {
-                        connection.write("resp:" + JSON.stringify({id: value.id, message: response}) + "\n");
+                        connection.write("resp:" + JSON.stringify({id: value.id, message: response}, jsonReplacer) + "\n");
                     });
                 })
-            } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown subject " + subject + " for client"}) + "\n");
+            } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown subject " + subject + " for client"}, jsonReplacer) + "\n");
             break;
         case "resp":
             let id = value.id;
             if(waitingResp.hasOwnProperty(id)) {
-                connection.write("stat:" + JSON.stringify({error: false, message: "received response " + id}) + "\n");
+                connection.write("stat:" + JSON.stringify({error: false, message: "received response " + id}, jsonReplacer) + "\n");
 
                 if(waitingResp[id] != undefined) {
                     waitingResp[id](value.message);
                     delete waitingResp[id];
                 }
-            } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown responseid " + id + " for client"}) + "\n");
+            } else connection.write("stat:" + JSON.stringify({error: true, message: "unknown responseid " + id + " for client"}, jsonReplacer) + "\n");
             break;
     }
 }
