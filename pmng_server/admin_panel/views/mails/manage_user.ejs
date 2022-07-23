@@ -24,7 +24,7 @@
                             <h3 class="d-inline"><%- getIfEdit("Edit a", "Create a new") %> mail user:</h3>
                             <div class="btn-group btn-group-sm float-right" role="group">
                                 <a href="/panel/mails/users" class="my-1 btn btn-sm btn-secondary"><i class="fas fa-times"></i> Cancel</a>
-                                <button style="display: <%- getIfEdit('block', 'none'); %>;" onclick="mails_manageuser.resetSSOPassword()" class="my-1 btn btn-sm btn-info" id="reset-ssopassword"><i class="fas fa-undo-alt"></i> Reset SSO password</button>
+                                <% if (isEdit()) { %><button onclick="mails_manageuser.resetSSOPassword()" class="my-1 btn btn-sm btn-info" id="reset-ssopassword"><i class="fas fa-undo-alt"></i> Reset SSO password</button><% } %>
                             </div>
                         </div>
                         <form class="mt-3 w-100" onsubmit="return mails_manageuser.confirm();">

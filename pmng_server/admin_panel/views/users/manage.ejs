@@ -23,7 +23,7 @@
                             <h3 class="d-inline"><%- getIfEdit("Edit a", "Create a new") %> user:</h3>
                             <div class="btn-group btn-group-sm float-right" role="group">
                                 <a href="<%- getIfEdit('../') %>all" class="my-1 btn btn-sm btn-secondary"><i class="fas fa-times"></i> Cancel</a>
-                                <button style="display: <%- getIfEdit('block', 'none'); %>;" onclick="user_manage.resetSSOPassword()" class="my-1 btn btn-sm btn-info" id="reset-dbautopass"><i class="fas fa-undo-alt"></i> Reset database SSO password</button>
+                                <% if (isEdit()) { %><button onclick="user_manage.resetSSOPassword()" class="my-1 btn btn-sm btn-info" id="reset-dbautopass"><i class="fas fa-undo-alt"></i> Reset database SSO password</button><% } %>
                             </div>
                         </div>
                         <form class="mt-3 w-100" onsubmit="return user_manage.confirm();">
