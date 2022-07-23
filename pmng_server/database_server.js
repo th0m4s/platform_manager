@@ -2,10 +2,13 @@ const Knex = require("knex");
 const mdb = require('knex-mariadb');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const pfs = require("fs").promises;
 const logger = require("./platform_logger").logger();
 const runtime_cache_delay = 60000, runtime_cache = require("runtime-caching").cache({timeout: runtime_cache_delay});
 const plugin_mdb = require("./plugins/plugin_mariadb");
 const string_utils = require("./string_utils");
+const privileges = require("./privileges");
+const plugins_manager = require("./plugins_manager");
 const intercom = require("./intercom/intercom_client").connect();
 
 const DB_NAME = "platform_manager";
@@ -30,12 +33,12 @@ const knex = Knex({
 
 // check at least database creation (needed for sessions store of admin panel)
 // tables are created in installDatabase
-knex.raw("SHOW DATABASES;").catch((error) => {
+knex.raw("SHOW DATABASES;").catch(async (error) => {
     if(error.toString().includes("Unknown database")) {
         delete knex.client.connectionSettings.database;
-        knex.raw("CREATE DATABASE `" + DB_NAME + "`;").then(() => {
-            knex.client.connectionSettings.database = DB_NAME;
-        });
+        await knex.raw("CREATE DATABASE `" + DB_NAME + "`;");
+        knex.client.connectionSettings.database = DB_NAME;
+        await knex.raw("USE `" + DB_NAME + "`;");
     }
 });
 
@@ -95,150 +98,191 @@ function createTableIfNotExists(name, schemaCallback, currentKnex = knex) {
     });
 }
 
-/**
- * Creates all the required database for the platform.
- * @returns {Promise<boolean>} A promise resolved with *true* if the installation was successfull (all required tables created), *false* otherwise.
- */
-function installDatabase() {
-    return createTableIfNotExists("users", (users) => {
-        users.increments("id").primary().index();
-        users.text("name").unique();
-        users.text("fullname");
-        users.text("email");
-        users.text("password");
-        users.text("dbautopass");
-        users.integer("scope");
-        users.integer("plan").defaultTo(1);
-    }).then(() => {
-        return Promise.all([
-            createTableIfNotExists("projects", (projects) => {
-                projects.increments("id").primary();
-                projects.string("name", 32).notNullable().unique().index();
-                projects.integer("ownerid", 10).notNullable().unsigned();
-                projects.text("userenv").notNullable().defaultTo("{}");
-                projects.text("customconf").notNullable().defaultTo("{}");
-                projects.string("customconf_key", 16).nullable().defaultTo(null);
-                projects.text("type");
-                projects.integer("version").notNullable().defaultTo(0);
-                projects.text("plugins").notNullable().defaultTo("{}");
-                projects.enum("autostart", ["true", "false"]).notNullable().defaultTo("false");
-                projects.enum("forcepush", ["true", "false"]).notNullable().defaultTo("false");
-                projects.enum("allow_https", ["true", "false"]).notNullable().defaultTo("true");
-                projects.foreign("ownerid").references("id").inTable("users");
-            }), createTableIfNotExists("remote_git_users", (rgitusers) => {
-                rgitusers.increments("id").primary();
-                rgitusers.integer("userid", 10).notNullable().unsigned();
-                rgitusers.string("remote", 16).notNullable();
-                rgitusers.string("remote_user", 48).nullable().defaultTo(null);
-                rgitusers.string("access_token", 128).notNullable();
-                rgitusers.datetime("expire_time");
-                rgitusers.string("refresh_token", 128);
-                rgitusers.datetime("refresh_expire");
-                rgitusers.foreign("userid").references("id").inTable("users");
-            })
-        ])
-    }).then(() => {
-        return Promise.all([
-            createTableIfNotExists("keys", (keys) => {
-                keys.increments("id").primary();
-                keys.string("key", 64).notNullable().unique().index();
-                keys.integer("userid", 10).unsigned().nullable();
-                keys.enum("expired", ["true", "false"]).defaultTo("false");
-                keys.enum("mode", ["session", "api"]);
-                keys.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
-            }), createTableIfNotExists("collabs", (collabs) => {
-                collabs.increments("id").primary();
-                collabs.string("projectname", 32).notNullable().index();
-                collabs.integer("userid", 10);
-                collabs.enum("mode", ["view", "manage"]).notNullable().defaultTo("view");
-                collabs.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
-                collabs.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
-            }), createTableIfNotExists("domains", (domains) => {
-                domains.increments("id").primary();
-                domains.text("domain").notNullable().unique().index();
-                domains.string("projectname", 32).notNullable();
-                domains.enum("enablesub", ["true", "false"]).notNullable().defaultTo("true");
-                domains.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
-            }), createTableIfNotExists("plans", (plans) => {
-                plans.increments("id").primary();
-                plans.text("name").notNullable().unique().index();
-                plans.text("usage").notNullable().defaultTo("{}");
-                plans.decimal("price", 3, 2).notNullable().defaultTo(0);
-                plans.enum("restricted", ["true", "false"]).notNullable().defaultTo("false");
-            }).then(() => {
-                return hasDefaultPlans();
-            }).then((exists) => {
-                if(!exists) return knex("plans").insert([
-                    {name: "default", usage: JSON.stringify({projects: {max: 10}, docker: {memory: 512}, storages: {max: 10737418240}})},
-                    {name: "admin", usage: JSON.stringify({projects: {max: 0}, docker: {memory: 0}, storages: {max: 0}}), restricted: "true"}
-                ]);
-            }), createTableIfNotExists("password_resets", (pResets) => {
-                pResets.increments("id").primary();
-                pResets.string("hash", 32).unique().index().notNullable();
-                pResets.integer("user_id", 10).unsigned().notNullable();
-                pResets.datetime("created_at").notNullable().defaultTo(knex.fn.now());
-                pResets.datetime("used_at").defaultTo(null);
-                pResets.datetime("canceled_at").defaultTo(null);
-                pResets.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
-            }), createTableIfNotExists("email_changes", (eChanges) => {
-                eChanges.increments("id").primary();
-                eChanges.string("allow_hash", 32).unique().index().notNullable();
-                eChanges.string("confirm_hash", 32).unique().index().notNullable();
-                eChanges.integer("user_id", 10).unsigned().notNullable();
-                eChanges.string("old_email", 128).notNullable();
-                eChanges.string("new_email", 128).notNullable();
-                eChanges.datetime("created_at").notNullable().defaultTo(knex.fn.now());
-                eChanges.datetime("allowed_at").defaultTo(null);
-                eChanges.datetime("confirmed_at").defaultTo(null);
-                eChanges.datetime("canceled_at").defaultTo(null);
-                eChanges.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
-            }), createTableIfNotExists("remote_git_integrations", (rgitinte) => {
-                rgitinte.increments("id").primary();
-                rgitinte.integer("git_userid", 10).unsigned().notNullable();
-                rgitinte.string("projectname", 32).notNullable();
-                rgitinte.string("secret", 32).defaultTo(null);
-                rgitinte.string("repo", 64).notNullable();
-                rgitinte.string("repo_id", 64).notNullable();
-                rgitinte.string("branch", 32).notNullable();
-                rgitinte.foreign("git_userid").references("id").inTable("remote_git_users");
-                rgitinte.foreign("projectname").references("name").inTable("projects");
-            }), createTableIfNotExists("ip_bans", (ipBans) => {
-                ipBans.increments("id").primary();
-                ipBans.string("ip", 39).notNullable();
-                ipBans.enum("type", ["ipv4", "ipv6"]).notNullable();
-                ipBans.datetime("banned_at").notNullable();
-                ipBans.datetime("planned_unban_at").notNullable();
-                ipBans.datetime("manuel_unban_at").defaultTo(null);
-            })
-        ]).then(() => {
-            return true;
-        }).catch((e) => { logger.tagError("DB", "Cannot setup databases! " + e); return false; }); 
-    })
+const LAST_DB_VERSION = 1;
+let _dbVersions = null;
+async function checkVersion(subdb = "main", wantVersion = LAST_DB_VERSION) {
+    // DB versions are always refreshed (main db installation is in another process)
+
+    try {
+        _dbVersions = JSON.parse(await pfs.readFile("./db_versions.json"));
+    } catch(error) {
+        if(error.code == "ENOENT") {
+            _dbVersions = {};
+
+            await pfs.writeFile("./db_versions.json", JSON.stringify(_dbVersions));
+            await pfs.chown("./db_versions.json", ...privileges.droppingOptions(false));
+        } else throw error;
+    }
+
+    let currentVersion = _dbVersions[subdb] ?? -1;
+    if(currentVersion == -1) {
+        await setVersion(0, subdb);
+    }
+
+    return currentVersion >= wantVersion;
 }
 
-function hasDefaultPlans() {
-    return knex("plans").where("name", "default").orWhere("name", "admin").select("id").then((results) => {
-        return results.length >= 2;
-    });
+async function setVersion(version, subdb = "main") {
+    // DB versions are always refreshed (main db installation is in another process)
+
+    _dbVersions = JSON.parse(await pfs.readFile("./db_versions.json"));
+    _dbVersions[subdb] = version;
+    await pfs.writeFile("./db_versions.json", JSON.stringify(_dbVersions));
 }
 
-/**
- * Checks if the database is correctly setup.
- * 
- * To check if the platform is installed, prefer *isInstalled()*.
- * @returns {Promise<boolean>} A promise resolved with *true* if all the database is setup (with all the required tables), *false* otherwise.
- */
-function hasDatabase() {
-    return Promise.all([
-      knex.schema.hasTable("users"), knex.schema.hasTable("keys"), knex.schema.hasTable("projects"), knex.schema.hasTable("collabs"), knex.schema.hasTable("domains"), 
-        knex.schema.hasTable("plans").then((exists) => {
-          if(!exists) return false;
-          else return hasDefaultPlans();
-      }), knex.schema.hasTable("password_resets"), knex.schema.hasTable("email_changes"), knex.schema.hasTable("remote_git_users"), knex.schema.hasTable("remote_git_integrations"),
-        knex.schema.hasTable("ip_bans")
-    ]).then((results) => {
-      return !results.includes(false);
-    }).catch(() => { return false; });
+async function mainDatabaseUpgrader(newVersion) {
+    switch(newVersion) {
+        case 1:
+            await createTableIfNotExists("users", (users) => {
+                users.increments("id").primary().index();
+                users.text("name").unique();
+                users.text("fullname");
+                users.text("email");
+                users.text("password");
+                users.text("dbautopass");
+                users.integer("scope");
+                users.integer("plan").defaultTo(1);
+            });
+
+            await Promise.all([
+                createTableIfNotExists("projects", (projects) => {
+                    projects.increments("id").primary();
+                    projects.string("name", 32).notNullable().unique().index();
+                    projects.integer("ownerid", 10).notNullable().unsigned();
+                    projects.text("userenv").notNullable().defaultTo("{}");
+                    projects.text("customconf").notNullable().defaultTo("{}");
+                    projects.string("customconf_key", 16).nullable().defaultTo(null);
+                    projects.text("type");
+                    projects.integer("version").notNullable().defaultTo(0);
+                    projects.text("plugins").notNullable().defaultTo("{}");
+                    projects.enum("autostart", ["true", "false"]).notNullable().defaultTo("false");
+                    projects.enum("forcepush", ["true", "false"]).notNullable().defaultTo("false");
+                    projects.enum("allow_https", ["true", "false"]).notNullable().defaultTo("true");
+                    projects.foreign("ownerid").references("id").inTable("users");
+                }), createTableIfNotExists("remote_git_users", (rgitusers) => {
+                    rgitusers.increments("id").primary();
+                    rgitusers.integer("userid", 10).notNullable().unsigned();
+                    rgitusers.string("remote", 16).notNullable();
+                    rgitusers.string("remote_user", 48).nullable().defaultTo(null);
+                    rgitusers.string("access_token", 128).notNullable();
+                    rgitusers.datetime("expire_time");
+                    rgitusers.string("refresh_token", 128);
+                    rgitusers.datetime("refresh_expire");
+                    rgitusers.foreign("userid").references("id").inTable("users");
+                })
+            ]);
+
+            await Promise.all([
+                createTableIfNotExists("keys", (keys) => {
+                    keys.increments("id").primary();
+                    keys.string("key", 64).notNullable().unique().index();
+                    keys.integer("userid", 10).unsigned().nullable();
+                    keys.enum("expired", ["true", "false"]).defaultTo("false");
+                    keys.enum("mode", ["session", "api"]);
+                    keys.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
+                }), createTableIfNotExists("collabs", (collabs) => {
+                    collabs.increments("id").primary();
+                    collabs.string("projectname", 32).notNullable().index();
+                    collabs.integer("userid", 10).unsigned().notNullable();
+                    collabs.enum("mode", ["view", "manage"]).notNullable().defaultTo("view");
+                    collabs.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
+                    collabs.foreign("userid").references("id").inTable("users").onDelete("CASCADE");
+                }), createTableIfNotExists("domains", (domains) => {
+                    domains.increments("id").primary();
+                    domains.text("domain").notNullable().unique().index();
+                    domains.string("projectname", 32).notNullable();
+                    domains.enum("enablesub", ["true", "false"]).notNullable().defaultTo("true");
+                    domains.foreign("projectname").references("name").inTable("projects").onDelete("CASCADE");
+                }), createTableIfNotExists("plans", (plans) => {
+                    plans.increments("id").primary();
+                    plans.text("name").notNullable().unique().index();
+                    plans.text("usage").notNullable().defaultTo("{}");
+                    plans.decimal("price", 3, 2).notNullable().defaultTo(0);
+                    plans.enum("restricted", ["true", "false"]).notNullable().defaultTo("false");
+                }), createTableIfNotExists("password_resets", (pResets) => {
+                    pResets.increments("id").primary();
+                    pResets.string("hash", 32).unique().index().notNullable();
+                    pResets.integer("user_id", 10).unsigned().notNullable();
+                    pResets.datetime("created_at").notNullable().defaultTo(knex.fn.now());
+                    pResets.datetime("used_at").defaultTo(null);
+                    pResets.datetime("canceled_at").defaultTo(null);
+                    pResets.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
+                }), createTableIfNotExists("email_changes", (eChanges) => {
+                    eChanges.increments("id").primary();
+                    eChanges.string("allow_hash", 32).unique().index().notNullable();
+                    eChanges.string("confirm_hash", 32).unique().index().notNullable();
+                    eChanges.integer("user_id", 10).unsigned().notNullable();
+                    eChanges.string("old_email", 128).notNullable();
+                    eChanges.string("new_email", 128).notNullable();
+                    eChanges.datetime("created_at").notNullable().defaultTo(knex.fn.now());
+                    eChanges.datetime("allowed_at").defaultTo(null);
+                    eChanges.datetime("confirmed_at").defaultTo(null);
+                    eChanges.datetime("canceled_at").defaultTo(null);
+                    eChanges.foreign("user_id").references("id").inTable("users").onDelete("CASCADE");
+                }), createTableIfNotExists("remote_git_integrations", (rgitinte) => {
+                    rgitinte.increments("id").primary();
+                    rgitinte.integer("git_userid", 10).unsigned().notNullable();
+                    rgitinte.string("projectname", 32).notNullable();
+                    rgitinte.string("secret", 32).defaultTo(null);
+                    rgitinte.string("repo", 64).notNullable();
+                    rgitinte.string("repo_id", 64).notNullable();
+                    rgitinte.string("branch", 32).notNullable();
+                    rgitinte.foreign("git_userid").references("id").inTable("remote_git_users");
+                    rgitinte.foreign("projectname").references("name").inTable("projects");
+                }), createTableIfNotExists("ip_bans", (ipBans) => {
+                    ipBans.increments("id").primary();
+                    ipBans.string("ip", 39).notNullable();
+                    ipBans.enum("type", ["ipv4", "ipv6"]).notNullable();
+                    ipBans.datetime("banned_at").notNullable();
+                    ipBans.datetime("planned_unban_at").notNullable();
+                    ipBans.datetime("manuel_unban_at").defaultTo(null);
+                })
+            ]);
+
+            await knex("plans").insert([
+                {name: "default", usage: JSON.stringify({projects: {max: 10}, docker: {memory: 512}, storages: {max: 10737418240}})},
+                {name: "admin", usage: JSON.stringify({projects: {max: 0}, docker: {memory: 0}, storages: {max: 0}}), restricted: "true"}
+            ]);
+
+            break;
+    }
+}
+
+let _currentlyInstalling = [];
+async function installDatabase(subdb = "main", newVersion = LAST_DB_VERSION, upgrader = mainDatabaseUpgrader) {
+    try {
+        if (_currentlyInstalling.includes(subdb)) return false;
+        if(await checkVersion(subdb, newVersion)) return true;
+
+        let currentVersion = _dbVersions[subdb] ?? -1;
+        if(currentVersion < 0) throw new Error("Cannot check database version");
+
+        _currentlyInstalling.push(subdb);
+        while(currentVersion < newVersion) {
+            currentVersion++;
+
+            logger.tag("DB", "Upgrading database \"" + subdb + "\" to version " + currentVersion + "...");
+
+            await upgrader(currentVersion);
+            await setVersion(currentVersion, subdb);
+        }
+    } catch(error) {
+        logger.tagError("DB", "Cannot setup database \"" + subdb + "\"! " + (error.message ?? error));
+        _currentlyInstalling.splice(_currentlyInstalling.indexOf(subdb), 1);
+        return false;
+    }
+
+    logger.tag("DB", "Database " + subdb + " is up-to-date.");
+    _currentlyInstalling.splice(_currentlyInstalling.indexOf(subdb), 1);
+    
+    try {
+        if(subdb == "main")
+            await intercom.sendPromise("dockermng", {command: "startGlobalPlugins"});
+    } catch(error) {
+        logger.tagError("DOCKER", "Cannot start global plugins after database installation.");
+    }
+
+    return true;
 }
 
 /**
@@ -252,12 +296,12 @@ function hasAdminUser() {
 }
 
 /**
- * Checks if the entire platform is installed by checking *hasDatabase* and *hasAdminUser*.
- * Database operations should not be executed if this returns false.
+ * Checks if the entire platform is installed by checking *checkVersion* and *hasAdminUser*.
+ * Database operations should not be executed if this returns *false*.
  * @returns {Promise<boolean>} A promise resolved with the installed state of the platform.
  */
 function isInstalled() {
-    return hasDatabase().then((result) => {
+    return checkVersion().then((result) => {
         if(!result) return false;
         else return hasAdminUser();
     }).catch(() => {return false; }).then((result) => {
@@ -423,7 +467,7 @@ module.exports.findUserById = findUserById;
 module.exports.findUserByKey = findUserByKey;
 module.exports.findUserId = findUserId;
 module.exports.installDatabase = installDatabase;
-module.exports.hasDatabase = hasDatabase;
+module.exports.checkVersion = checkVersion;
 module.exports.hasAdminUser = hasAdminUser;
 module.exports.isInstalled = isInstalled;
 module.exports.getPluginKnex = getPluginKnex;

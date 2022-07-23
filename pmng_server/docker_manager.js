@@ -12,7 +12,6 @@ const database_server = require("./database_server");
 const plugins_manager = require("./plugins_manager");
 const plans_manager = require("./plans_manager");
 const child_process = require("child_process");
-const regex_utils = require("./regex_utils");
 const privileges = require("./privileges");
 const treekill = require("tree-kill");
 const net = require("net");
@@ -153,50 +152,10 @@ async function maininstance() {
     for(let requiredImage of required_images)
         await ensureImageExists(requiredImage.name, requiredImage.dockerfile, {latest: true, adminLogs: true});
 
-    logger.tag("DOCKER", "Starting global plugins...");
-    // loading plugins (starting global plugins containers)
-    // paths relative to platform_manager.js:
-    //    - plugins is normally the data directory
-    //    - server/plugins contains the plugins scripts
-    pluginsConfigFile = path.join(process.env.PLUGINS_PATH, "config.json");
-    await pfs.readFile(pluginsConfigFile).then((config) => {
-        config = JSON.parse(config);
-
-        return pfs.readdir("./pmng_server/plugins").then((files) => {
-            let prom = [], hooksStarted = [];
-            files.forEach((file) => {
-                let pluginname = regex_utils.testPlugin(file);
-                if(pluginname !== null) {
-                    if(config[pluginname] == undefined) {
-                        config[pluginname] = {};
-                    }
-
-                    let plugin = plugins_manager.getPlugin(pluginname);
-                    hooksStarted.push(plugin.initializeHooks);
-                    prom.push(plugin.startGlobalPlugin(path.join(process.env.PLUGINS_PATH, pluginname), config[pluginname], (newConfig) => {
-                        config[pluginname] = newConfig;
-                        return pfs.writeFile(pluginsConfigFile, JSON.stringify(config));
-                    }).catch((error) => {
-                        throw {pluginname, error};
-                    }));
-                }
-            });
-
-            plugins_manager.waitForHooks().then(() => {
-                for(let cb of hooksStarted) {
-                    cb();
-                }
-            });
-
-            Promise.allSettled(prom).then((states) => {
-                states.forEach((state) => {
-                    if(state.status != "fulfilled") {
-                        logger.tagWarn("DOCKER", "Cannot start global plugin " + state.reason.pluginname + ": " + state.reason.error);
-                    }
-                });
-            });
-        });
-    });
+    plugins_manager.setupHooks();
+    
+    if(await database_server.isInstalled())
+        await plugins_manager.startGlobalPlugins();
 
     intercom.subscribe(["dockermng"], (message, respond) => {
         let projectname = message.project || ""; // some commands don't need project
@@ -216,6 +175,9 @@ async function maininstance() {
                 else respond({error: true});
             case "requestPorts":
                 respond(portMappings);
+                break;
+            case "startGlobalPlugins":
+                plugins_manager.startGlobalPlugins().then(() => respond({error: false, message: "Global plugins started."})).catch((error) => respond({error: true, message: error}));
                 break;
             case "analyzeRunning":
                 logger.tag("DOCKER", "Searching for running docker containers...");

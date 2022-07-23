@@ -30,48 +30,22 @@ function getMailDatabase(table) {
     return table == undefined ? _mailKnex : _mailKnex(table);
 }
 
-function _mailDbInstalled() {
+async function mailDatabaseUpgrader(newVersion) {
     let mailKnex = getMailDatabase();
-    if(mailKnex == undefined) return Promise.resolve(false);
-    return Promise.all([
-    mailKnex.schema.hasTable("virtual_domains"), mailKnex.schema.hasTable("virtual_users"), mailKnex.schema.hasTable("virtual_aliases")/*, mailKnex.schema.hasTable("expires")*/]).then((results) => {
-        return !results.includes(false) ? true : undefined;
-    }).catch(() => { return false; });
-}
 
-function isMailInstalled() {
-    return _mailDbInstalled().then((result) => {
-        installedCached = result;
-        return result;
-    });
-}
+    switch(newVersion) {
+        case 1:
+            await database_server.createTableIfNotExists("virtual_domains", (domains) => {
+                domains.increments("id").primary().index().notNullable();
+                domains.string("name", 50).notNullable();
+                domains.string("projectname", 32).nullable();
+                domains.integer("cdomainid", 10).nullable().unsigned();
+                domains.enum("system", ["true", "false"]).defaultTo("false");
+                domains.foreign("projectname").references("name").inTable(database_server.DB_NAME + ".projects").onDelete("CASCADE").onUpdate("SET NULL");
+                domains.foreign("cdomainid").references("id").inTable(database_server.DB_NAME + ".domains").onDelete("CASCADE").onUpdate("SET NULL");
+            }, mailKnex);
 
-let installedCached = false;
-function isMailInstalledCache() {
-    return installedCached;
-}
-
-let installing = false;
-function installMailDatabase() {
-    if(installing) return Promise.reject("Already installing mail server...");
-    installing = true;
-
-    return isMailInstalled().then((installed) => {
-        if(installed) throw "Mail server already installed.";
-
-        logger.tag("MAIL", "Starting mail server installation...");
-        
-        let mailKnex = getMailDatabase();
-        return database_server.createTableIfNotExists("virtual_domains", (domains) => {
-            domains.increments("id").primary().index().notNullable();
-            domains.string("name", 50).notNullable();
-            domains.string("projectname", 32).nullable();
-            domains.integer("cdomainid", 10).nullable().unsigned();
-            domains.enum("system", ["true", "false"]).defaultTo("false");
-            domains.foreign("projectname").references("name").inTable(database_server.DB_NAME + ".projects").onDelete("CASCADE").onUpdate("SET NULL");
-            domains.foreign("cdomainid").references("id").inTable(database_server.DB_NAME + ".domains").onDelete("CASCADE").onUpdate("SET NULL");
-        }, mailKnex).then(() => {
-            return Promise.all([
+            await Promise.all([
                 database_server.createTableIfNotExists("virtual_users", (users) => {
                     users.increments("id").primary().index().notNullable();
                     users.integer("domain_id", 10).unsigned().notNullable();
@@ -81,11 +55,11 @@ function installMailDatabase() {
                     users.string("quota", 16).defaultTo("100M").notNullable();
                     users.enum("system", ["true", "false"]).defaultTo("false");
                     users.enum("pwdset", ["true", "false"]).defaultTo("true"); // should manually set to false when auto-creating mail users
+                    users.string("sso_decrypt", 24);
+                    users.string("sso_encrypt", 106);
                     users.foreign("domain_id").references("id").inTable("virtual_domains").onDelete("CASCADE");
                     users.foreign("projectname").references("name").inTable(database_server.DB_NAME + ".projects").onDelete("CASCADE").onUpdate("SET NULL");
-                }, mailKnex).then(() => {
-                    return true;
-                }),
+                }, mailKnex),
                 database_server.createTableIfNotExists("virtual_aliases", (aliases) => {
                     aliases.increments("id").primary().index().notNullable();
                     aliases.integer("domain_id", 10).unsigned().notNullable();
@@ -95,28 +69,25 @@ function installMailDatabase() {
                     aliases.enum("system", ["true", "false"]).defaultTo("false");
                     aliases.foreign("domain_id").references("id").inTable("virtual_domains").onDelete("CASCADE");
                     aliases.foreign("projectname").references("name").inTable(database_server.DB_NAME + ".projects").onDelete("CASCADE").onUpdate("SET NULL");
-                }, mailKnex).then(() => {
-                    return true;
-                })/*,
-                database_server.createTableIfNotExists("expires", (expires) => {
-                    expires.string("username", 100).notNullable();
-                    expires.string("mailbox", 255).notNullable();
-                    expires.integer("expire_stamp").notNullable();
-                    expires.primary(["username", "mailbox"]);
-                }, mailKnex).then(() => {
-                    return true;
-                })*/
-            ]).then((results) => {
-                if(results.includes(false)) throw "Cannot install databases.";
-            });
-        }).then(() => {
-            installedCached = true;
-            logger.tag("MAIL", "Mail installation completed.");
-        }).catch((error) => {
-            logger.tagError("MAIL", "Mail installation failed: " + error);
-            throw error;
-        });
-    });
+                }, mailKnex)]);
+            break;
+    }
+}
+
+let installing = false;
+const LAST_MAIL_DB_VERSION = 1;
+async function upgradeMailDatabaseIfNeeded() {
+    if(installing) throw new Error("Already installing/upgrading mail server...");
+    installing = true;
+    let updateStatus = await database_server.installDatabase("mail", LAST_MAIL_DB_VERSION, mailDatabaseUpgrader);
+    installing = false;
+
+    if(updateStatus) {
+        logger.tag("MAIL", "Mail installation completed.");
+    } else {
+        logger.tagError("MAIL", "Mail installation failed.");
+        throw new Error("Cannot install or update mail database!");
+    }
 }
 
 // checks for default system accounts
@@ -434,7 +405,7 @@ async function initialize(maildirectory) {
         if(!dbs.includes(MAIL_DBNAME)) return database_server.database.raw("CREATE DATABASE `" + MAIL_DBNAME + "`;");
     });
 
-    if(!(await isMailInstalled())) await installMailDatabase();
+    await upgradeMailDatabaseIfNeeded();
 
     subprocess_util.fakeFork("mails_server", () => {
         return getMailContainer().then((container) => {
@@ -479,10 +450,7 @@ function sendClientMail(to, subject, template, locals = {}) {
 
 
 module.exports.MAIL_DBNAME = MAIL_DBNAME;
-module.exports.isMailInstalled = isMailInstalled;
-module.exports.isMailInstalledCache = isMailInstalledCache;
 module.exports.getMailDatabase = getMailDatabase;
-module.exports.installMailDatabase = installMailDatabase;
 module.exports.checkDomainIdUsers = checkDomainIdUsers;
 module.exports.cryptPassword = cryptPassword;
 module.exports.getUserMissingPasswords = getUserMissingPasswords;

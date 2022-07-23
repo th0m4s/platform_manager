@@ -258,7 +258,7 @@ router.post("/passwordReset", bodyParser(), async (req, res) => {
 });
 
 router.get("/install", async function(req, res) {
-    if(!(await database_server.hasDatabase())) {
+    if(!(await database_server.checkVersion())) {
         res.redirect("/panel/login/install/database");
     } else if(!(await database_server.hasAdminUser())) {
         res.redirect("/panel/login/install/user");
@@ -268,7 +268,7 @@ router.get("/install", async function(req, res) {
 });
 
 router.get("/install/database", async function(req, res) {
-    if(!(await database_server.hasDatabase())) {
+    if(!(await database_server.checkVersion())) {
         req.setPage(res, "Database installation");
         res.render("login/install_db");
     } else if(!(await database_server.hasAdminUser())) {
@@ -281,7 +281,7 @@ router.get("/install/database", async function(req, res) {
 });
 
 router.get("/install/user", async function(req, res) {
-    if(!(await database_server.hasDatabase())) {
+    if(!(await database_server.checkVersion())) {
         req.flash("warn", "Cannot create admin user: database not installed.");
         res.redirect("/panel/login/install/database");
     } else if(!(await database_server.hasAdminUser())) {
@@ -294,7 +294,7 @@ router.get("/install/user", async function(req, res) {
 });
 
 router.post("/install/user", bodyParser(), async function(req, res) {
-    if(!(await database_server.hasDatabase())) {
+    if(!(await database_server.checkVersion())) {
         req.flash("warn", "Cannot create admin user: database not installed.");
         res.redirect("/panel/login/install/database");
     } else if(!(await database_server.hasAdminUser())) {

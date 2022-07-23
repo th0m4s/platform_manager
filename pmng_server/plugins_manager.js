@@ -5,8 +5,10 @@ const project_manager = require("./project_manager");
 const database_server = require("./database_server");
 const pfs = require("fs").promises;
 const path = require("path");
+const logger = require("./platform_logger").logger();
 const bodyParser = require("./admin_panel/body_parser");
 const intercom = require("./intercom/intercom_client").connect();
+const regex_utils = require("./regex_utils");
 const api_auth = require("./admin_panel/api_controllers/v1/api_auth");
 const LibPlugin = require("./plugins/lib_plugin");
 
@@ -235,16 +237,13 @@ function getConfig(pluginname, projectname) {
     });
 }
 
-/**
- * Waits for all the platform processes to be started.
- * @returns {Promise} A promise resolved when all the platform hooks are started.
- */
-function waitForHooks() {
+let _hooksPromise;
+function setupHooks() {
     let requiredHooks = {
         "dns": false
     };
 
-    return new Promise((resolve) => {
+    _hooksPromise = new Promise((resolve) => {
         intercom.subscribe(["hookStarted"], (message) => {
             requiredHooks[message.hook] = true;
     
@@ -255,11 +254,60 @@ function waitForHooks() {
     });
 }
 
+/**
+ * Waits for all the platform processes to be started.
+ * @returns {Promise} A promise resolved when all the platform hooks are started.
+ */
+function waitForHooks() {
+    return _hooksPromise;
+}
+
+const GLOBAL_CONFIG_PATH = path.resolve(process.env.PLUGINS_PATH, "config.json");
+let _globalStarted = false;
+async function startGlobalPlugins() {
+    if(_globalStarted) return;
+
+    logger.tag("DOCKER", "Starting global plugins...");
+
+    // loading plugins (starting global plugins containers)
+    // paths relative to platform_manager.js:
+    //    - plugins is normally the data directory
+    //    - server/plugins contains the plugins scripts
+
+    let files = await pfs.readdir("./pmng_server/plugins");
+    let prom = [], hooksStarted = [];
+    for(let file of files) {
+        let pluginname = regex_utils.testPlugin(file);
+        if(pluginname !== null) {
+            let plugin = getPlugin(pluginname);
+            hooksStarted.push(plugin.initializeHooks);
+            prom.push(plugin.startGlobalPlugin(path.join(process.env.PLUGINS_PATH, pluginname), await getPluginGlobalConfig(pluginname), (newConfig) => {
+                config[pluginname] = newConfig;
+                return pfs.writeFile(pluginsConfigFile, JSON.stringify(config));
+            }).catch((error) => {
+                throw {pluginname, error};
+            }));
+        }
+    }
+
+    waitForHooks().then(() => {
+        for(let cb of hooksStarted) {
+            cb();
+        }
+    });
+
+    await Promise.allSettled(prom).then((states) => {
+        states.forEach((state) => {
+            if(state.status != "fulfilled") {
+                logger.tagWarn("DOCKER", "Cannot start global plugin " + state.reason.pluginname + ": " + state.reason.error);
+            }
+        });
+    });
+}
+
 let allGlobal = undefined;
-// not used by docker_manager when starting global plugins
-// TODO: add save here and move code from docker_manager
 async function getPluginGlobalConfig(pluginname) {
-    if(allGlobal == undefined) allGlobal = JSON.parse(await pfs.readFile(path.resolve(process.env.PLUGINS_PATH, "config.json")));
+    if(allGlobal == undefined) allGlobal = JSON.parse(await pfs.readFile(GLOBAL_CONFIG_PATH));
 
     return allGlobal[pluginname];
 }
@@ -277,5 +325,7 @@ module.exports.getPlugin = getPlugin;
 module.exports.getRouter = getRouter;
 module.exports.getConfig = getConfig;
 module.exports.getAllConfigs = getAllConfigs;
+module.exports.startGlobalPlugins = startGlobalPlugins;
+module.exports.setupHooks = setupHooks;
 module.exports.waitForHooks = waitForHooks;
 module.exports.getPluginGlobalConfig = getPluginGlobalConfig;
