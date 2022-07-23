@@ -289,7 +289,7 @@ function handleConnection(socket) {
             return;
         }
 
-        if(message.code == socket.allowCode) {
+        if(socket.allowCode != undefined && message.code.toUpperCase() == socket.allowCode) {
             allowSystemShell(socket.shellId);
         } else {
             if(socket.invalidTries == undefined) socket.invalidTries = 0;
@@ -344,6 +344,8 @@ function initializeNamespace(namespace) {
                                 }
                             }
                         }
+                    } else {
+                        respond({error: true, message: "Shell request not found."});
                     }
                     break;
                 default:
