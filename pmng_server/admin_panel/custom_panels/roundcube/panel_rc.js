@@ -56,6 +56,8 @@ function checkAndStart(shouldRestart) {
                 process.env.DB_SOCKET + ":/var/start/mysqld.sock"
             ];
 
+            logger.tag("WEB", "Starting RC panel container...");
+
             // now create rc container
             return docker_manager.docker.container.create({
                 Image: "pmng/panel-rc",
@@ -79,12 +81,13 @@ function checkAndStart(shouldRestart) {
                     Binds
                 }
             }).then((container) => {
+                logger.tag("WEB", "Starting RC panel container...");
                 return container.start();
             }).then(() => {
                 logger.tag("WEB", "Roundcube custom admin panel started.");
                 return true;
             }).catch((error) => {
-                logger.tagError("WEB", "Cannot start RC panel: " + error);
+                logger.tagError("WEB", "Cannot create or the start the RC panel: " + error);
                 return false;
             });
         } else return true; // already started

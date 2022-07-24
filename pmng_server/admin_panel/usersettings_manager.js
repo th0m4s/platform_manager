@@ -4,6 +4,7 @@ const SETTINGS = {
     thin_buttons: {
         type: "boolean",
         default: false,
+        displayName: "Thin buttons on lists with multiple action buttons"
     },
     landing_page: {
         type: "enum",
@@ -13,7 +14,8 @@ const SETTINGS = {
             subprocesses: "Platform subprocesses",
             dnschallenges: "DNS challenges"
         },
-        default: "dashboard" // here default is the internal value
+        default: "dashboard", // here default is the internal value
+        displayName: "Landing page after login"
     }
 }
 
@@ -22,7 +24,11 @@ function getDefaultSettings() {
 }
 
 async function getUserSettings(userid) {
-    return Object.assign({}, getDefaultSettings(), await database_server.database("users").where("id", userid).select("settings").first().then((x) => x.settings).then(JSON.parse));
+    return Object.assign({}, getDefaultSettings(), await database_server.database("users").where("id", userid).select("settings").first().then((x) => x.settings ?? "null").then(JSON.parse));
+}
+
+async function getUserNameSettings(username) {
+    return Object.assign({}, getDefaultSettings(), await database_server.database("users").where("name", username).select("settings").first().then((x) => x.settings ?? "null").then(JSON.parse));
 }
 
 function setUserSettings(userid, settings) {
@@ -31,7 +37,11 @@ function setUserSettings(userid, settings) {
 }
 
 async function getUserSetting(userid, setting) {
-    return (await getUserSettings(userid))[setting];
+    return (await getUserSettings(userid))?.[setting];
+}
+
+async function getUserNameSetting(username, setting) {
+    return (await getUserNameSettings(username))?.[setting];
 }
 
 async function setUserSetting(userid, setting, value, throwIfInvalid = false) {
@@ -88,6 +98,8 @@ async function setUserSetting(userid, setting, value, throwIfInvalid = false) {
 
 module.exports.SETTINGS = SETTINGS;
 module.exports.getUserSettings = getUserSettings;
+module.exports.getUserNameSettings = getUserNameSettings;
 module.exports.setUserSettings = setUserSettings;
 module.exports.getUserSetting = getUserSetting;
+module.exports.getUserNameSetting = getUserNameSetting;
 module.exports.setUserSetting = setUserSetting;

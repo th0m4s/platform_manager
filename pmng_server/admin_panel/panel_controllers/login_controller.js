@@ -5,6 +5,7 @@ const mail_manager = require("../../mails/mail_manager");
 const passport = require('passport');
 const logger = require("../../platform_logger").logger();
 const bodyParser = require("../body_parser");
+const usersettings_manager = require("../usersettings_manager");
 
 router.all("/", function(req, res, next) {
     if(req.user != null) {
@@ -44,6 +45,23 @@ router.post('/', bodyParser(), async (req, res, next) => {
                     if(successRedirect.includes("?")) successRedirect += "&";
                     else successRedirect += "?";
                     successRedirect += key + "=" + value;
+                }
+            }
+        }
+
+        if(req.body.username != undefined) {
+            let landingPage = await usersettings_manager.getUserNameSetting(req.body.username, "landing_page");
+            if(landingPage != undefined && Object.keys(usersettings_manager.SETTINGS.landing_page.values).includes(landingPage)) {
+                switch(landingPage) {
+                    case "projects":
+                        successRedirect = "/panel/projects/list";
+                        break;
+                    case "subprocesses":
+                        successRedirect = "/panel/system/subprocesses";
+                        break;
+                    case "dnschallenges":
+                        successRedirect = "/panel/system/dns_challenges";
+                        break;
                 }
             }
         }

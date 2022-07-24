@@ -9,6 +9,7 @@
         let user = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(user)) %>"));
         let newEmail = <%- newEmail == undefined ? "undefined" : '"' + newEmail + '"' %>;
         let remoteGits = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(remoteGits)) %>"));
+        let settingsData = JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(settingsData)) %>"));
         </script>
         <%- startPageScript("user_me") %>
         
@@ -23,9 +24,12 @@
                     <div class="row mt-3 mx-3" id="details-row">
                         <div class="w-100">
                             <h3 class="d-inline">My user account:</h3>
-                            <button onclick="user_me.resetSSOPassword()" class="my-1 btn btn-sm btn-info float-right" id="reset-dbautopass"><i class="fas fa-undo-alt"></i> Reset database SSO password</button>
+                            <div class="btn-group btn-group-sm float-right my-1" role="group">
+                                <button onclick="user_me.save()" class="btn btn-primary btn-sm" id="confirm-button"><i class="fas fa-save"></i> Save changes</button>
+                                <button onclick="user_me.resetSSOPassword()" class="btn btn-sm btn-info" id="reset-dbautopass"><i class="fas fa-undo-alt"></i> Reset database SSO password</button>
+                            </div>
                         </div>
-                        <form class="mt-3 w-100" onsubmit="return user_me.save();">
+                        <form class="mt-2 w-100" onsubmit="return user_me.save();">
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -69,14 +73,25 @@
                                     </div>
                                 </div>
                             </div>
-                            <button type="submit" id="confirm-button" class="btn btn-primary btn-lg btn-block mt-3">Save changes</button>
                         </form>
+                    </div>
+                    <div class="row mx-3" id="usersettings-row">
+                        <div class="w-100">
+                            <h3 class="d-inline">User settings:</h3>
+                            <small class="text-secondary ml-md-3">(automatically saved)</small>
+                            <p class="w-100" id="usersettings-status">Loading...</p>
+                            <div class="card w-100 mt-2" style="display: none;" id="usersettings-card">
+                                <ul class="list-group list-group-flush" id="usersettings-list">
+                                    
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                     <div class="row mt-4 mx-3" id="gitusers-row">
                         <div class="w-100">
                             <h3 class="d-inline">Git providers connection:</h3>
                             <p class="w-100" id="gitusers-status">Loading...</p>
-                            <div class="card w-100 mt-1" style="display: none;" id="gitusers-card">
+                            <div class="card w-100 mt-2" style="display: none;" id="gitusers-card">
                                 <ul class="list-group list-group-flush" id="gitusers-list">
                                     
                                 </ul>

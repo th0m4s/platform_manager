@@ -74,6 +74,8 @@ function checkAndStart(shouldRestart) {
                 Binds.push(process.env.DB_SOCKET + ":/var/start/mysqld.sock");
             }
 
+            logger.tag("WEB", "Creating PMA panel container...");
+
             // now create pma container
             return docker_manager.docker.container.create({
                 Image: "pmng/panel-pma",
@@ -97,12 +99,13 @@ function checkAndStart(shouldRestart) {
                     Binds
                 }
             }).then((container) => {
+                logger.tag("WEB", "Starting PMA panel container...");
                 return container.start();
             }).then(() => {
                 logger.tag("WEB", "phpMyAdmin custom admin panel started.");
                 return true;
             }).catch((error) => {
-                logger.tagError("WEB", "Cannot start PMA panel: " + error);
+                logger.tagError("WEB", "Cannot create or start the PMA panel: " + error);
                 return false;
             });
         } else return true; // already started

@@ -405,7 +405,7 @@ async function initialize(maildirectory) {
         if(!dbs.includes(MAIL_DBNAME)) return database_server.database.raw("CREATE DATABASE `" + MAIL_DBNAME + "`;");
     });
 
-    if(database_server.checkVersion("mail", LAST_MAIL_DB_VERSION))
+    if(!(await database_server.checkVersion("mail", LAST_MAIL_DB_VERSION)))
         await upgradeMailDatabaseIfNeeded();
 
     subprocess_util.fakeFork("mails_server", () => {

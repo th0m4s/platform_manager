@@ -23,7 +23,52 @@ function init() {
         }
 
         gitProvidersList.parent().show();
-    } else $("#gitusers-status").html("No git provider found.").show();    
+    } else $("#gitusers-status").html("No git provider found.").show();
+    
+    if(Object.keys(settingsData).length > 0) {
+        $("#usersettings-status").hide();
+        let userSettingsList = $("#usersettings-list").html("");
+        for(let [key, data] of Object.entries(settingsData)) {
+            let {type, displayName} = data;
+            switch(type) {
+                case "string":
+                case "number":
+                    userSettingsList.append(`<li class="list-group-item p-2 pl-3"><div class="usersetting-name pt-0 my-1 d-inline-block">${displayName}:</div><input value="${USER_SETTINGS[key]}" type="${type == "number" ? "number" : "text"}" class="form-control form-control-sm w-25 float-right" id="input-usersetting-${key}" placeholder="${data.placeholder == undefined ? "" : data.placeholder}"></li>`);
+                    break;
+                case "enum":
+                    let values = "";
+                    for(let [internal, display] of Object.entries(data.values))
+                        values += `<option value=${internal}${USER_SETTINGS[key] == internal ? " selected" : ""}>${display}</option>`;
+                    userSettingsList.append(`<li class="list-group-item p-2 pl-3"><div class="usersetting-name pt-0 my-1 d-inline-block">${displayName}:</div><select class="form-control custom-select-sm custom-select w-25 float-right" id="input-usersetting-${key}">${values}</select></li>`)
+                    break;
+                case "boolean":
+                    userSettingsList.append(`<li class="list-group-item"><span class="usersetting-name">${displayName}:</span><input type="checkbox"${USER_SETTINGS[key] ? " checked" : ""} class="float-right mt-2 mb-1" id="input-usersetting-${key}"></li>`);
+                    break;
+                default:
+                    console.warn("No valid type for user setting", key, "found", type);
+                    userSettingsList.append(`Invalid data type for <code>${key}</code> (found type <code>${type}</code>).`);
+                    break;
+            }
+
+            $("#input-usersetting-" + key).on("input", (event) => {
+                let source = $(event.target);
+                let value = source.val();
+                if(type == "boolean") value = source.is(":checked");
+
+                $.post("/api/v1/users/settings/" + key, {value}).fail((xhr, status, error) => {
+                    $.notify({message: "Cannot save user setting."}, {type: "warning"});
+                    console.warn("Cannot save user setting (server error):", error);
+                }).done((response) => {
+                    if(response.error) {
+                        $.notify({message: "Cannot save user setting."}, {type: "warning"});
+                        console.warn("Cabbot save user setting (application error):", response.message);
+                    }
+                });
+            });
+        }
+
+        userSettingsList.parent().show();
+    } else $("#usersettings-status").html("No user settings found.").show();
 }
 
 let canChangeEmail = true;

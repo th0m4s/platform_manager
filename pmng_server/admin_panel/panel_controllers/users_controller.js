@@ -1,6 +1,7 @@
 const express = require('express'), router = express.Router();
 const database_server = require("../../database_server");
 const rgit_manager = require("../../remote_git/remote_git_manager");
+const usersettings_manager = require("../usersettings_manager");
 
 router.all("*", async function(req, res, next) {
     if(!(await database_server.isInstalled())) {
@@ -21,6 +22,7 @@ router.get("/me", async (req, res) => {
     res.locals.user = req.user;
     res.locals.newEmail = await database_server.userChangingMail(req.user.id);
     res.locals.remoteGits = await rgit_manager.listRemotesDetails(req.user.id);
+    res.locals.settingsData = usersettings_manager.SETTINGS;
     res.render("users/me");
 });
 
