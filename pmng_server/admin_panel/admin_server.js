@@ -200,7 +200,7 @@ async function start() {
         res.redirect(301, "/panel/login");
     });
 
-    let server = admin.listen(8080, () => {
+    let server = admin.listen(8080, "127.0.0.1", () => {
         logger.tag("WEB", "Admin server started.");
     });
 

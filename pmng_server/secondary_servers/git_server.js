@@ -64,7 +64,7 @@ function unauthorized(res) {
  * Starts the git web subserver. It creates a link between an http server and a git server.
  */
 function start() {
-    server.listen(8081, () => {
+    server.listen(8081, "127.0.0.1", () => {
         logger.tag("GIT", "Git server started.");
     });
 }

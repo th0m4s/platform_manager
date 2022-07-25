@@ -28,7 +28,7 @@ app.all("*", (req, res) => {
 });
 
 function start() {
-    app.listen(8099, () => {
+    app.listen(8099, "127.0.0.1", () => {
         logger.tag("WEB", "Error server started.");
     });
 }
