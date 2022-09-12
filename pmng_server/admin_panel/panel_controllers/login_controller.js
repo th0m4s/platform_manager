@@ -1,8 +1,8 @@
-const express = require('express'), router = express.Router();
+const express = require("express"), router = express.Router();
 const database_server = require("../../database_server");
 const string_utils = require("../../string_utils");
 const mail_manager = require("../../mails/mail_manager");
-const passport = require('passport');
+const passport = require("passport");
 const logger = require("../../platform_logger").logger();
 const bodyParser = require("../body_parser");
 const usersettings_manager = require("../usersettings_manager");
@@ -27,7 +27,7 @@ router.get("/logout", async function(req, res) {
 });
 
 let SSO_TYPES = {"database": {url: "/databases/login.sso.php", name: "MySQL databases explorer"}, "webmail": {url: "/webmail/?sso=pmng", name: "Platform Manager webmail"}};
-router.post('/', bodyParser(), async (req, res, next) => {
+router.post("/", bodyParser(), async (req, res, next) => {
     if(await database_server.isInstalled()) {
         let ssotype = req.body.sso;
         let ssodata = ssotype == undefined ? undefined : SSO_TYPES[ssotype];
@@ -47,9 +47,7 @@ router.post('/', bodyParser(), async (req, res, next) => {
                     successRedirect += key + "=" + value;
                 }
             }
-        }
-
-        if(req.body.username != undefined) {
+        } else if(req.body.username != undefined) {
             let landingPage = await usersettings_manager.getUserNameSetting(req.body.username, "landing_page");
             if(landingPage != undefined && Object.keys(usersettings_manager.SETTINGS.landing_page.values).includes(landingPage)) {
                 switch(landingPage) {
@@ -66,7 +64,7 @@ router.post('/', bodyParser(), async (req, res, next) => {
             }
         }
 
-        passport.authenticate('local', { session: true, successRedirect, failureRedirect, failureFlash: true, successFlash: "Login successful." })(req, res, next);
+        passport.authenticate("local", { session: true, successRedirect, failureRedirect, failureFlash: true, successFlash: "Login successful." })(req, res, next);
     } else {
         res.redirect("/panel/login/install");
     }
