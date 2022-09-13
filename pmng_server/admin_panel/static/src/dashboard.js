@@ -3,6 +3,7 @@ import "./css/processes_usage.css";
 let chartColors = ["#3B6A9C", "#007BFF", "#86C0FF"];
 let socket = undefined, authenticated = false;
 let memChart, cpuChart, statsInterval = 1000;
+let systemStartedAt = undefined, uptimeIntervalId = -1;
 
 function init() {
     socket = io("/v1/system");
@@ -42,8 +43,14 @@ function init() {
         });
 
         socket.on("system_info", (message) => {
-            $("#info-os").html(`${message.os.version} on ${message.os.platform} ${message.os.release}`);
+            $("#info-os").html(`${message.os.hostname} running ${message.os.platform} ${message.os.release}`);
             $("#info-node-version").html(`${message.node.version} (${message.node.arch})`);
+
+            if(uptimeIntervalId > 0) clearInterval(uptimeIntervalId);
+            systemStartedAt = moment().add(-parseInt(message.os.uptime), "seconds");
+            let updateUptime = () => $("#info-os-uptime").html("(started " + systemStartedAt.fromNow() + ")");
+            updateUptime().attr("title", systemStartedAt.format("LLLL"));
+            uptimeIntervalId = setInterval(updateUptime, 1000);
         });
 
         socket.on("disk_space", (message) => {

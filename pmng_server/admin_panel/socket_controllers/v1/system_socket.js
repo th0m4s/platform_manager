@@ -150,7 +150,9 @@ function initializeNamespace(namespace) {
                     os: {
                         version: os.version(),
                         platform: os.platform(),
-                        release: os.release()
+                        release: os.release(),
+                        uptime: os.uptime(),
+                        hostname: os.hostname()
                     },
                     node: {
                         version: process.version,
