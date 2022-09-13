@@ -38,7 +38,7 @@ const onTermData = currify(_onTermData);
 const onWindowResize = wrap(_onWindowResize);
 
 function createTerminal() {
-    let terminalContainer = $("#project_exec-console").get(0)
+    let terminalContainer = $("#project_exec-console").get(0);
 
     let fitAddon = new FitAddon();
     let webglAddon = new WebglAddon();
@@ -73,7 +73,12 @@ function createTerminal() {
     };
 }
 
+let terminalRequested = false;
 function requestTerminal() {
+    if (terminalRequested) return;
+    terminalRequested = true;
+
+    $("#confirmModal").modal("hide");
     $("#requestModal").modal({
         backdrop: "static",
         keyboard: false
@@ -91,7 +96,10 @@ function init() {
 
         socket.on("authenticated", function() {
             console.log("Socket authenticated.");
-            requestTerminal();
+            $("#confirmModal").modal({
+                backdrop: "static",
+                keyboard: false
+            });
         });
 
         socket.on("unauthorized", function(err) {
@@ -144,11 +152,13 @@ function init() {
 }
 
 function confirm_code() {
-    socket.emit("check_code", {code: $("#access_code").val()});
+    if(terminalRequested)
+        socket.emit("check_code", {code: $("#access_code").val()});
 }
 
 function cancel() {
-    socket.emit("cancel_shell_request", {});
+    if(terminalRequested)
+        socket.emit("cancel_shell_request", {});
 }
 
-window.system_shell = {init, confirm_code, cancel};
+window.system_shell = {init, confirm_code, cancel, requestTerminal};
