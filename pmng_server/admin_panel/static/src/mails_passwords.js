@@ -60,27 +60,30 @@ function sendForm() {
     if(errorConfirm != undefined) {
         $.notify({message: "Confirmation for <i>" + errorConfirm + "</i> is incorrect."}, {type: "warning"});
     } else {
-        let encrypt = window.unixcrypt.encrypt;
-        utils.showInfiniteLoading("Encrypting password" + plural + "...");
+        // the unixcrypt module doesn't work in the browser as it uses the crypto module
+        // let encrypt = window.unixcrypt.encrypt;
+        // utils.showInfiniteLoading("Encrypting password" + plural + "...");
 
-        setTimeout(() => {
-            passwords = passwords.map(({id, password}) => { return {id, password: encrypt(password)} });
-            utils.showInfiniteLoading("Saving password" + plural + "...");
-            $.post("/api/v1/mails/setPasswords", {encrypted: true, passwords}).fail((xhr, status, error) => {
+        // setTimeout(() => {
+        //     ...
+        // }, 500);
+
+        // passwords = passwords.map(({id, password}) => { return {id, password: encrypt(password)} });
+        utils.showInfiniteLoading("Saving password" + plural + "...");
+        $.post("/api/v1/mails/setPasswords", {encrypted: false, passwords}).fail((xhr, status, error) => {
+            $.notify({message: "Cannot save password" + plural + ". See console for details.<br/>If the error keeps repeating, try logout and login again."}, {type: "danger"});
+            console.error("Cannot save (server error):", error);
+        }).done((response) => {
+            if(response.error) {
                 $.notify({message: "Cannot save password" + plural + ". See console for details.<br/>If the error keeps repeating, try logout and login again."}, {type: "danger"});
-                console.error("Cannot save (server error):", error);
-            }).done((response) => {
-                if(response.error) {
-                    $.notify({message: "Cannot save password" + plural + ". See console for details.<br/>If the error keeps repeating, try logout and login again."}, {type: "danger"});
-                    console.error("Cannot save (application error):", message);
-                } else {
-                    utils.addNotification("Mail password" + plural + " saved.", "success");
-                    location.reload();
-                }
-            }).always(() => {
-                utils.hideLoading();
-            })
-        }, 500);
+                console.error("Cannot save (application error):", message);
+            } else {
+                utils.addNotification("Mail password" + plural + " saved.", "success");
+                location.reload();
+            }
+        }).always(() => {
+            utils.hideLoading();
+        });
     }
 
     return false;

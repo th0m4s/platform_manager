@@ -7675,7 +7675,7 @@ universal-user-agent@^6.0.0:
   resolved "https://registry.yarnpkg.com/universal-user-agent/-/universal-user-agent-6.0.0.tgz#3381f8503b251c0d9cd21bc1de939ec9df5480ee"
   integrity sha512-isyNax3wXoKaulPDZWHQqbmIx1k2tb9fb3GGDBRxCscfYV2Ch7WxPArBsFEG8s/safwXTT7H4QGhaIkTp9447w==
 
-unixcrypt@^1.0.13:
+unixcrypt@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/unixcrypt/-/unixcrypt-1.1.0.tgz#c39d0b5b0d13728a97f23748475f80ab122ebb85"
   integrity sha512-Cx09JgFeMv+CeftBTeXrHL/uar9P7BH33NoBuMF343Nq7JBVAtKyEzvTOF+bYIUYKApfGK3Kn9KkVNln+K3gPw==
