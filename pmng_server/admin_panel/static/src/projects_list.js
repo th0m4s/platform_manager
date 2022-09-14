@@ -4,7 +4,7 @@ let specialStates = {};
 function init() {
     //utils.showInfiniteLoading("Loading projects...");
     window.hideMain();
-    socket = io("/v1/projects");
+    socket = io("/v1/projects", {transports: ["websocket"]});
 
     socket.on("connect", function(){
         console.log("Socket connected.")

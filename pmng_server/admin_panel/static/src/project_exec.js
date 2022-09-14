@@ -74,7 +74,7 @@ function createTerminal() {
 }
 
 function init() {
-    socket = io("/v1/exec");
+    socket = io("/v1/exec", {transports: ["websocket"]});
 
     socket.on("connect", function(){
         console.log("Socket connected.")

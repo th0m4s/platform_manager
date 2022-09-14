@@ -3,7 +3,7 @@ let socket = undefined;
 function init() {
     //utils.showInfiniteLoading("Loading containers...");
     window.hideMain();
-    socket = io("/v1/docker");
+    socket = io("/v1/docker", {transports: ["websocket"]});
 
     socket.on("connect", function(){
         console.log("Socket connected.")

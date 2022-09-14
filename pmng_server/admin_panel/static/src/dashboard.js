@@ -6,7 +6,7 @@ let memChart, cpuChart, statsInterval = 1000;
 let systemStartedAt = undefined, uptimeIntervalId = -1;
 
 function init() {
-    socket = io("/v1/system");
+    socket = io("/v1/system", {transports: ["websocket"]});
     window.socket = socket;
 
     socket.on("connect", function() {

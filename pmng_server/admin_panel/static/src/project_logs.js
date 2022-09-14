@@ -47,7 +47,7 @@ function getLineHtml(line, customClass = "") {
 }
 
 function init() {
-    socket = io("/v1/logs");
+    socket = io("/v1/logs", {transports: ["websocket"]});
 
     socket.on("connect", function(){
         console.log("Socket connected.")

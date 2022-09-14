@@ -3,7 +3,7 @@ let socket = undefined;
 function init() {
     //utils.showInfiniteLoading("Loading users...");
     window.hideMain();
-    socket = io("/v1/users");
+    socket = io("/v1/users", {transports: ["websocket"]});
 
     socket.on("connect", function(){
         console.log("Socket connected.")

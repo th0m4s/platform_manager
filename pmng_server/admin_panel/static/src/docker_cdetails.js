@@ -4,7 +4,7 @@ function init() {
     //utils.showInfiniteLoading("Loading container details...");
     window.hideMain();
     window.refreshInterval = setInterval(refreshDetails, 10*1000);
-    socket = io("/v1/docker");
+    socket = io("/v1/docker", {transports: ["websocket"]});
 
     socket.on("connect", function(){
         console.log("Socket connected.")

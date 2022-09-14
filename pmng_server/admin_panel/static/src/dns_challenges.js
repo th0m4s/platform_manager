@@ -13,7 +13,7 @@ function getId() {
 }
 
 function init() {
-    socket = io("/v1/system");
+    socket = io("/v1/system", {transports: ["websocket"]});
 
     socket.on("connect", function(){
         console.log("Socket connected.")

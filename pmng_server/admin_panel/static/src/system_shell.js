@@ -88,7 +88,7 @@ function requestTerminal() {
 }
 
 function init() {
-    socket = io("/v1/exec", {reconnection: false});
+    socket = io("/v1/exec", {reconnection: false, transports: ["websocket"]});
 
     socket.on("connect", function(){
         console.log("Socket connected.")

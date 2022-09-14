@@ -3,7 +3,7 @@ import "./css/processes_usage.css";
 let chartColors = ["#3B6A9C", "#007BFF", "#86C0FF"];
 let socket = undefined, authenticated = false, statsInterval = 1000, startedTime;
 function init() {
-    socket = io("/v1/system");
+    socket = io("/v1/system", {transports: ["websocket"]});
     window.socket = socket;
 
     socket.on("connect", function() {
