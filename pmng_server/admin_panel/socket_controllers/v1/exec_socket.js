@@ -72,6 +72,7 @@ function handleConnection(socket) {
     };
     
     let onData = (msg) => {
+        console.log(stream == undefined, msg);
         stream.write(msg);
     };
 

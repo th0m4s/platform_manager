@@ -43,6 +43,7 @@ function createTerminal() {
     let fitAddon = new FitAddon();
     let webglAddon = new WebglAddon();
     let terminal = new Terminal({
+        allowProposedApi: true,
         scrollback: 1000,
         tabStopWidth: 4,
         defaultFontFamily,
