@@ -7,7 +7,7 @@ function prepareButtons() {
     
         for(let button of buttons) {
             button = $(button);
-            button.css("--original-width", (button.outerWidth() + ((button.children("svg").length == 0) ? 18 : 0)) + "px");
+            button.css("--original-width", button.outerWidth() + "px");
         }
 
         buttons.addClass("thinprep");

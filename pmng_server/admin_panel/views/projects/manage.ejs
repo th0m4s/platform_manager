@@ -9,7 +9,7 @@
         const current = "<%- user.name %>";
         const edit = <% if (isEdit()) { %>true; const values=JSON.parse(decodeURI("<%- encodeURI(JSON.stringify(edit)) %>"))<% } else { %>false<% } %>;
         </script>
-        <%- startPageScript("project_manage") %>
+        <%- startPageScript("project_manage", ["/static/js/tagsinput_bloodhound.dist.js"]) %>
         
         <div id="page">
             <header>

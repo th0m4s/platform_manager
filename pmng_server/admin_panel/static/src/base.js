@@ -2,10 +2,8 @@ window.$ = require("jquery");
 
 require("bootstrap");
 require("bootstrap-notify");
-require("bootstrap4-tagsinput-umd/tagsinput");
 
 window.Cookies = require("js-cookie");
-window.Bloodhound = require("corejs-typeahead/dist/typeahead.bundle");
 
 $.ajaxSetup({ cache: true });
 
@@ -58,7 +56,6 @@ function load(nextScripts, totalScriptsCount) {
             let xhr = new XMLHttpRequest();
             xhr.addEventListener("progress", (event) => {
                 if(event.lengthComputable) {
-                    console.log("computable", script);
                     let progress = ((totalScriptsCount - remainingCount) + event.loaded / event.total) / totalScriptsCount;
                     $("#main-loading-bar").css("width", (progress * 100) + "%").removeClass("progress-bar-striped");
                 } else {

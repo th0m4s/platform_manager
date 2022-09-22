@@ -29,6 +29,17 @@ let config = {
             {
                 test: /\.css$/,
                 use: ["style-loader", "css-loader"]
+            },
+            {
+                test: /\.(svg|eot|woff|woff2|ttf)$/,
+                use: [{
+                    loader: "file-loader",
+                    options: {
+                        outputPath: "../fonts",
+                        publicPath: "/static/fonts",
+                        name: "[name].[ext]"
+                    }
+                }],
             }
         ]
     },
