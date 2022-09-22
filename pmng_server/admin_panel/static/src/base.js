@@ -50,15 +50,32 @@ let noLoadingTimeout = setTimeout(() => {
     sendLoadFinish();
 }, 500);
 
-function load(nextScripts) {
-    let script = nextScripts.shift(), isRequirement = nextScripts.length > 0;
-    $.getScript(isRequirement ? script : "/static/js/" + script + ".dist.js", () => {
-        if(isRequirement) {
-            load(nextScripts);
-        } else {
-            window.showMain();
-            sendLoadFinish();
-            window[script].init();
+function load(nextScripts, totalScriptsCount) {
+    let script = nextScripts.shift(), remainingCount = nextScripts.length, isRequirement = remainingCount > 0;
+    $.ajax({
+        dataType: "script",
+        xhr: () => {
+            let xhr = new XMLHttpRequest();
+            xhr.addEventListener("progress", (event) => {
+                if(event.lengthComputable) {
+                    console.log("computable", script);
+                    let progress = ((totalScriptsCount - remainingCount) + event.loaded / event.total) / totalScriptsCount;
+                    $("#main-loading-bar").css("width", (progress * 100) + "%").removeClass("progress-bar-striped");
+                } else {
+                    $("#main-loading-bar").css("width", ((totalScriptsCount - remainingCount + 0.25) * 100 / totalScriptsCount) + "%").addClass("progress-bar-striped");
+                }
+            });
+            return xhr;
+        },
+        url: isRequirement ? script : "/static/js/" + script + ".dist.js",
+        success: () => {
+            if(isRequirement) {
+                load(nextScripts, totalScriptsCount);
+            } else {
+                window.showMain();
+                sendLoadFinish();
+                window[script].init();
+            }
         }
     });
 }
@@ -72,7 +89,7 @@ function clearLoadingTimeout() {
 
 window.loadAndInit = (script, requirements = []) => {
     clearLoadingTimeout();
-    load(requirements.concat(script));
+    load(requirements.concat(script), requirements.length + 1);
 }
 
 window.instantFinishLoad = () => {
