@@ -12,6 +12,8 @@ let config = {
         function(context, request, callback) {
             if (/^moment$/.test(request) && context.includes("node_modules")){
                 return callback(null, "root " + request);
+            } else if(/^jquery$/.test(request) && (context.includes("typeahead") || context.includes("tagsinput"))) {
+                return callback(null, "root $");
             }
     
             callback();

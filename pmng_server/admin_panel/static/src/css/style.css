@@ -62,7 +62,7 @@
 }
 
 .bootstrap-tagsinput .badge {
-    margin-right: 3px;
+    margin-right: 3px !important;
 }
 
 .docker-link, .docker-link:hover, .docker-link:visited {
