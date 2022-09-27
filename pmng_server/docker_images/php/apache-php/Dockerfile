@@ -53,13 +53,13 @@ RUN sed -i "s/#LoadModule\ rewrite_module/LoadModule\ rewrite_module/" /etc/apac
     && sed -i "s/#LoadModule\ session_cookie_module/LoadModule\ session_cookie_module/" /etc/apache2/httpd.conf \
     && sed -i "s/#LoadModule\ session_crypto_module/LoadModule\ session_crypto_module/" /etc/apache2/httpd.conf \
     && sed -i "s/#LoadModule\ deflate_module/LoadModule\ deflate_module/" /etc/apache2/httpd.conf \
-    && sed -i "s#^DocumentRoot \".*#DocumentRoot \"/var/project/public\"#g" /etc/apache2/httpd.conf \
-    && sed -i "s#/var/www/localhost/htdocs#/var/project/public#" /etc/apache2/httpd.conf \
+    && sed -i "s#/var/www/localhost/htdocs#/var/project/public#g" /etc/apache2/httpd.conf \
     && sed -i "s/User apache/User project/" /etc/apache2/httpd.conf \
     && sed -i "s/Group apache/Group project/" /etc/apache2/httpd.conf \
     && printf "\n<Directory \"/var/project/public\">\n\tAllowOverride All\n</Directory>\n" >> /etc/apache2/httpd.conf \
-	&& printf "ServerName $(ip route get 8.8.8.8 | awk '{print $NF; exit}')\n" >> /etc/apache2/httpd.conf
-    
+	&& printf "ServerName $(ip route get 8.8.8.8 | awk '{print $NF; exit}')\n" >> /etc/apache2/httpd.conf \
+	&& printf "IncludeOptional /var/project/conf.d/*.conf\n" >> /etc/apache2/httpd.conf 
+
 RUN mkdir /var/start/
 COPY --chown=1000:1000 entrypoint.sh /var/start
 RUN chmod +x /var/start/entrypoint.sh
