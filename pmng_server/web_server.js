@@ -17,6 +17,7 @@ const CONNECTIONS_LOG = process.env.CONNECTIONS_LOG?.toLowerCase() == "true", DE
 const subprocess_util = require("./subprocess_util");
 const plugins_manager = require("./plugins_manager");
 const ip_manager = require("./ip_manager");
+const isIP = require("is-ip");
 
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 // const countPublic = enable_https ? 2 : 1, runningPublic = [];
@@ -112,6 +113,22 @@ async function _getPortDetails(host) {
     return resp + "\r\n";
 }*/
 
+let serverTimingConfig = {};
+function updateServerTimingConfig(projectname, config) {
+    let list = new net.BlockList();
+    for(let rule of config.rules) {
+        let parts = rule.split("/");
+        let family = "ipv" + (isIP.v4(parts[0]) ? "4" : "6");
+        if(parts.length == 1) {
+            list.addAddress(parts[0], family);
+        } else if(parts.length == 2) {
+            list.addSubnet(parts[0], parseInt(parts[1]), family);
+        }
+    }
+
+    serverTimingConfig[projectname] = {enabled: config.enabled, desc: config.desc, list};
+}
+
 let portMappings = {};
 /**
  * Registers intercom ports subscription to associate each host with a port given by docker_manager.js and http challenges
@@ -122,7 +139,7 @@ function registerIntercomThread() {
         connCount = 0;
     }, clusterUpdateInterval*1000);
 
-    intercom.subscribe(["portBroadcast"], function(message) {
+    intercom.subscribe(["portBroadcast"], (message) => {
         switch(message.command) {
             case "addPort":
                 portMappings[message.project] = message.port;
@@ -136,6 +153,10 @@ function registerIntercomThread() {
         }
     });
 
+    intercom.subscribe(["server-timing_update"], (message) => {
+        updateServerTimingConfig(message.project, message.config);
+    });
+
     intercom.subscribe(["updateplugins"], (message) => {
         loadPluginsForProject(message.projectname);
     });
@@ -145,6 +166,10 @@ function registerIntercomThread() {
 
     intercom.sendPromise("dockermng", {command: "requestPorts"}).then((actualPorts) => {
         portMappings = Object.assign(portMappings, actualPorts);
+    });
+
+    intercom.sendPromise("server-timing_request").then((data) => {
+        Object.entries(data).forEach(([project, config]) => updateServerTimingConfig(project, config));
     });
 
     prepareSocketError();
@@ -309,6 +334,8 @@ function getPluginInterceptors(pluginname) {
  * @param {http.ServerResponse} res The server response to be sent back.
  */
 async function webServe(req, res) {
+    let startTime = process.uptime();
+
     req.on("error", (error) => {
         if(DEBUG_HTTP_S_ERRORS) {
             console.log("HTTP/S req error", error);
@@ -376,6 +403,22 @@ async function webServe(req, res) {
     } else {
         if(!portDetails.isSpecial) {
             let projectname = portDetails.project;
+
+            let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+            let serverTimingEnabled = serverTimingConfig[projectname].enabled && serverTimingConfig[projectname].list.check(ip, "ipv" + (isIP.v4(ip) ? "4" : "6"));
+            let serverTimingDesc = serverTimingConfig[projectname].desc;
+            res.addServerTiming = (name, duration, description) => {
+                if(!serverTimingEnabled) return;
+                let existing = res.getHeader("Server-Timing");
+                if (existing == undefined) existing = [];
+                else if(!Array.isArray(existing)) existing = [existing];
+
+                existing.push(name + ";dur=" + duration.toFixed(3) + (serverTimingDesc && description != undefined ? ";desc=\"" + description + "\"" : ""));
+                res.setHeader("Server-Timing", existing);
+            }
+
+            res.addServerTiming("routing", (process.uptime() - startTime) * 1000, "Request to project details");
+
             if(pluginsPerProject[projectname] == undefined) await loadPluginsForProject(projectname);
             for(let [pluginname, pluginconfig] of (pluginsPerProject[projectname] ?? [])) {
                 let interceptor = getPluginInterceptors(pluginname);
@@ -385,7 +428,9 @@ async function webServe(req, res) {
                 }
             }
         }
-    
+
+        res.addServerTiming?.("total_proxy", (process.uptime() - startTime) * 1000, "Reception to proxying");
+
         if(!res.writableEnded) http2proxy.web(req, res, {hostname: "127.0.0.1", port, onReq: (req, { headers }) => {
             headers["x-forwarded-for"] = req.socket.remoteAddress
             headers["x-forwarded-proto"] = req.socket.encrypted ? "https" : "http"

@@ -9,7 +9,7 @@ function canBeNum(value) {
 }
 
 function init() {
-    const plugins = ["mariadb", "redis", "persistent-storage", "custom-port", "srv-record", "plan-limiter", "auto-redirect"];
+    const plugins = ["mariadb", "redis", "persistent-storage", "custom-port", "srv-record", "plan-limiter", "auto-redirect", "server-timing"];
 
     let inputCollabs = $("#input-collaborators");
     inputCollabs.tagsinput({ tagClass: "badge-secondary tagsbadge" });
@@ -362,6 +362,10 @@ function confirm() {
                         specialWithoutRestart++;
                         needDelay = true;
                         specialTexts.push("<i class='fas fa-info-circle'></i> Information: The plan-limiter plugin will not be initialized and your project will continue to use the maximum allowed settings until you setup the plugin from the Details page of the project..");
+                    } else if(item == "server-timing") {
+                        specialWithoutRestart++;
+                        needDelay = true;
+                        specialTexts.push("<i class='fas fa-info-circle'></i> Information: The server-timing plugin will not be enabled until you setup rules from the Details page of the project.");
                     }
                 });
                 text += "</ul>";
