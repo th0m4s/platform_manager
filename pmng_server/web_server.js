@@ -348,7 +348,7 @@ async function webServe(req, res) {
 
     if(CONNECTIONS_LOG) connectionsLogger(req, res);
 
-    let domain = (req.headers.host ?? "").trimLeft().split(":")[0];
+    let domain = getHost(req.headers).trimLeft().split(":")[0];
 
     connCount++;
     if(req.method == "GET" && regex_utils.isACMEChallenge(req.url)) {
@@ -389,7 +389,7 @@ async function webServe(req, res) {
         if(!res.writableEnded) http2proxy.web(req, res, {hostname: "127.0.0.1", port, onReq: (req, { headers }) => {
             headers["x-forwarded-for"] = req.socket.remoteAddress
             headers["x-forwarded-proto"] = req.socket.encrypted ? "https" : "http"
-            headers["x-forwarded-host"] = req.headers["host"]
+            headers["x-forwarded-host"] = req.headers["host"] ?? req.headers[":authority"] ?? "undefined";
         }}, webErrorHandler);
     }
 }
@@ -408,6 +408,10 @@ async function webServe(req, res) {
         proxyRes.removeAllListeners();
     });
 });*/
+
+function getHost(headers, defaultValue = "") {
+    return headers["host"] ?? headers[":authority"] ?? defaultValue;
+}
 
 /**
  * Upgrades a standard HTTP connection to a WebSocket connection.
@@ -435,10 +439,10 @@ async function upgradeRequest(req, socket, head) {
     });
 
     // connCount++;
-    http2proxy.ws(req, socket, head, {hostname: "127.0.0.1", port: (await getPortDetails((req.headers.host || "").trimLeft().split(":")[0])).port, onReq: (req, { headers }) => {
+    http2proxy.ws(req, socket, head, {hostname: "127.0.0.1", port: (await getPortDetails(getHost(req.headers).trimLeft().split(":")[0])).port, onReq: (req, { headers }) => {
         headers["x-forwarded-for"] = req.socket.remoteAddress
         headers["x-forwarded-proto"] = req.socket.encrypted ? "https" : "http"
-        headers["x-forwarded-host"] = req.headers["host"]
+        headers["x-forwarded-host"] = getHost(req.headers);
     }}, wsErrorHandler);
 }
 
