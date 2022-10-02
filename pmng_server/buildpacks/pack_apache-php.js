@@ -85,6 +85,9 @@ class ApachePHPBuildpack extends BasePHPBuildpack {
                     if(cacheOption == "$assets") {
                         logger("Enabling cache control for assets...");
                         cacheConf = "<FilesMatch \"\\.(ico|jpg|jpeg|png|gif|avif|apng|jfif|pjpeg|pjp|tif|tiff|bmp|webp|webm|mp4|mov|mkv|avi|m4v|mpeg|ogv|css|js|svg|woff|woff2|ttf|eot|otf|mp3|m4a|aac|oga|ogg|wav)$\">\nHeader set Cache-Control \"max-age=604800, public\"\n</FilesMatch>";
+                    } else if(cacheOption == "$lighthouse") {
+                        logger("Enabling cache control according to Lighthouse efficient cache policy (97 days for assets)...");
+                        cacheConf = "<FilesMatch \"\\.(ico|jpg|jpeg|png|gif|avif|apng|jfif|pjpeg|pjp|tif|tiff|bmp|webp|webm|mp4|mov|mkv|avi|m4v|mpeg|ogv|css|js|svg|woff|woff2|ttf|eot|otf|mp3|m4a|aac|oga|ogg|wav)$\">\nHeader set Cache-Control \"max-age=8380800, public\"\n</FilesMatch>";
                     } else {
                         logger("Enabling cache control...");
                         logger("WARNING: Cache-Control header will be set to all files!");
