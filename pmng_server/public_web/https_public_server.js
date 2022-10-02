@@ -1,20 +1,20 @@
-const https = require("https");
+const http2 = require("http2");
 const web = require("../web_server");
 const logger = require("../platform_logger").logger();
 const privileges = require("../privileges");
 const regex_utils = require("../regex_utils");
-const path = require("path");
 const greenlock_manager = require("../https/greenlock_manager");
 
 const wantCluster = true;
 const cluster = wantCluster ? require("cluster") : undefined;
 
 /**
- * Starts a child server responsible for handling HTTPS connections.
+ * Starts a child server responsible for handling HTTP2 and HTTPS/1.x connections.
  */
 function start() {
-    const https_options = {
+    const http2_options = {
         trace: true,
+        allowHTTP1: true,
         SNICallback: (serverName, cb) => {
             regex_utils.testCustom(serverName).then((project) => {
                 let serverFile = serverName;
@@ -45,7 +45,7 @@ function start() {
         }
     };
 
-    let httpsServer = https.createServer(https_options, (req, res) => {web.webServe(req, res)}).listen(443, () => {
+    let httpsServer = http2.createSecureServer(http2_options, (req, res) => {web.webServe(req, res)}).listen(443, () => {
         if(wantCluster) logger.tag("HTTPS CLUSTER", `public server ${process.pid} (worker #${cluster.worker.id}) started.`);
         else logger.tag("HTTPS CLUSTER", "public only server started.");
 
