@@ -405,8 +405,8 @@ async function webServe(req, res) {
             let projectname = portDetails.project;
 
             let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-            let serverTimingEnabled = serverTimingConfig[projectname].enabled && serverTimingConfig[projectname].list.check(ip, "ipv" + (isIP.v4(ip) ? "4" : "6"));
-            let serverTimingDesc = serverTimingConfig[projectname].desc;
+            let serverTimingEnabled = serverTimingConfig[projectname]?.enabled == true && serverTimingConfig[projectname].list.check(ip, "ipv" + (isIP.v4(ip) ? "4" : "6"));
+            let serverTimingDesc = serverTimingConfig[projectname]?.desc;
             res.addServerTiming = (name, duration, description) => {
                 if(!serverTimingEnabled) return;
                 let existing = res.getHeader("Server-Timing");
