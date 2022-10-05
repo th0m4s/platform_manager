@@ -1,0 +1,12 @@
+/var/log/postfix.log {
+    daily
+    missingok
+    copytruncate
+    rotate 7
+    compress
+    delaycompress
+    sharedscripts
+    postrotate
+        postfix reload
+    endscript
+}

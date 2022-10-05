@@ -167,7 +167,7 @@ function checkAndStart(maildirectory, shouldRestart) {
                 logger.tag("MAIL", "Mail folder converted.");
             }
 
-            let Binds = [vhostsDirectory + ":/var/mail/vhosts", pfSpool + ":/var/spool/postfix"];
+            let Binds = [vhostsDirectory + ":/var/mail/vhosts", pfSpool + ":/var/spool/postfix", path.resolve(maildirectory, "logs") + ":/var/log"];
             // SQL MAIL USER
 
             let mailSqlUser = "mailuser", mailSqlPassword = string_utils.generatePassword(16, 24);
@@ -413,7 +413,7 @@ async function initialize(maildirectory) {
             return container != null;
         });
     }, async () => {
-        await checkAndStart(mailDirectory, true);
+        await checkAndStart(maildirectory, true);
     });
 
     return checkAndStart(maildirectory, forceRestart);
