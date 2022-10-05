@@ -375,7 +375,19 @@ async function webServe(req, res) {
 
     if(CONNECTIONS_LOG) connectionsLogger(req, res);
 
-    let domain = getHost(req.headers).trimLeft().split(":")[0];
+    let host = getHost(req.headers);
+    if(host == undefined) {
+        res.writeHead(400, {
+            "Content-Type": "text/html"
+        });
+
+        let message = "Your browser didn't include a <i>" + (req.httpVersionMajor == 1 ? "Host" : ":authority") + "</i> header in this request.";
+        if(errorPageCache == "") res.end("<h2>400 Bad Request!</h2><p>" + message + "</p>");
+        else res.end(errorPageCache.replace("error_message", "400 Bad Request: " + message));
+        return;
+    }
+
+    let domain = host.trimLeft().split(":")[0];
 
     connCount++;
     if(req.method == "GET" && regex_utils.isACMEChallenge(req.url)) {
@@ -454,8 +466,8 @@ async function webServe(req, res) {
     });
 });*/
 
-function getHost(headers, defaultValue = "") {
-    return headers["host"] ?? headers[":authority"] ?? defaultValue;
+function getHost(headers) {
+    return headers["host"] ?? headers[":authority"];
 }
 
 /**
@@ -484,10 +496,13 @@ async function upgradeRequest(req, socket, head) {
     });
 
     // connCount++;
-    http2proxy.ws(req, socket, head, {hostname: "127.0.0.1", port: (await getPortDetails(getHost(req.headers).trimLeft().split(":")[0])).port, onReq: (req, { headers }) => {
-        headers["x-forwarded-for"] = req.socket.remoteAddress
-        headers["x-forwarded-proto"] = req.socket.encrypted ? "https" : "http"
-        headers["x-forwarded-host"] = getHost(req.headers);
+    let host = getHost(req.headers);
+    if(host == undefined) return;
+
+    http2proxy.ws(req, socket, head, {hostname: "127.0.0.1", port: (await getPortDetails(host.trimLeft().split(":")[0])).port, onReq: (req, { headers }) => {
+        headers["x-forwarded-for"] = req.socket.remoteAddress;
+        headers["x-forwarded-proto"] = req.socket.encrypted ? "https" : "http";
+        headers["x-forwarded-host"] = host;
     }}, wsErrorHandler);
 }
 
@@ -507,7 +522,7 @@ function webErrorHandler(err, req, res) {
                 });
             
                 if(errorPageCache == "") res.end("<p>Could not connect to server: " + err + "</p>");
-                else res.end(errorPageCache.replace("error_message", err));
+                else res.end(errorPageCache.replace("error_message", "Oops, it looks like we cannot get a working connection to this website!<br/>" + err));
             }
         }
     } catch(error) {
