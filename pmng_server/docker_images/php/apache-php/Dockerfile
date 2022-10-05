@@ -58,7 +58,7 @@ RUN sed -i "s/#LoadModule\ rewrite_module/LoadModule\ rewrite_module/" /etc/apac
     && sed -i "s/Group apache/Group project/" /etc/apache2/httpd.conf \
     && printf "\n<Directory \"/var/project/public\">\n\tAllowOverride All\n</Directory>\n" >> /etc/apache2/httpd.conf \
 	&& printf "ServerName $(ip route get 8.8.8.8 | awk '{print $NF; exit}')\n" >> /etc/apache2/httpd.conf \
-	&& printf "IncludeOptional /var/project/conf.d/*.conf\n" >> /etc/apache2/httpd.conf 
+	&& printf "ServerTokens Prod\nServerSignature Off\nIncludeOptional /var/project/conf.d/*.conf\n" >> /etc/apache2/httpd.conf
 
 RUN mkdir /var/start/
 COPY --chown=1000:1000 entrypoint.sh /var/start
