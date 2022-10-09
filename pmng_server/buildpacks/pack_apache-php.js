@@ -75,7 +75,7 @@ class ApachePHPBuildpack extends BasePHPBuildpack {
 
             switch(cacheType) {
                 case "boolean":
-                    if(projectData.options.options.cachecontrol) {
+                    if(cacheOption) {
                         logger("Enabling default cache control...");
                         logger("WARNING: Cache-Control header will be set to all files!");
                         cacheConf = "Header set Cache-Control \"max-age=604800, public\"";
