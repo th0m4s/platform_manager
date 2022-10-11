@@ -487,12 +487,14 @@ function startProject(projectname) {
             // generating customconf (runtime variables) key
             let customconf_key = crypto.randomBytes(8).toString("hex");
 
-            let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "CUSTOM_PORT", "CUSTOMCONF_KEY"];
+            let env = [], specialEnv = ["PORT", "PROJECT_VERSION", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "CUSTOM_PORT", "CUSTOMCONF_KEY", "IS_PMNG", "PMNG_VERSION"];
             for(let [key, value] of Object.entries(project.userenv)) {
                 if(!specialEnv.includes(key.toUpperCase())) env.push(key + "=" + value);
             }
 
-            // add version and customconf key to env
+            // add PMNG special env
+            env.push("IS_PMNG=true");
+            env.push("PMNG_VERSION=" + (process.env.PMNG_GIT_TAG ?? process.env.PMNG_GIT_COMMIT ?? "unknown"));
             env.push("PROJECT_VERSION=" + project.version);
             env.push("CUSTOMCONF_KEY=" + customconf_key);
 
