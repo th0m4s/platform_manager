@@ -6,9 +6,14 @@ class ApachePHPBuildpack extends BasePHPBuildpack {
         logger("Using Apache2/PHP7 server type.");
         let entrypoint = await super.build(projectName, projectData, utils, logger, hasAddons);
 
-        let checkConfFolder = async () => {
+        try {
             if(!(await utils.exists("d", "conf.d")))
                 await utils.execCommand("mkdir ./conf.d");
+
+            await utils.writeFile("conf.d/main.conf", "ServerName " + projectName + "." + process.env.ROOT_DOMAIN + "\n");
+        } catch(error) {
+            logger("Cannot write Apache configuration!");
+            throw error;
         }
 
         let compressionOption = projectData.server_options?.compression;
@@ -60,7 +65,6 @@ class ApachePHPBuildpack extends BasePHPBuildpack {
 
             if(compressionConf != "") {
                 try {
-                    await checkConfFolder();
                     await utils.writeFile("conf.d/compression.conf", "<IfModule mod_deflate.c>\n" + compressionConf + "</IfModule>");
                 } catch(error) {
                     throw "Cannot write compression settings: " + error;
@@ -109,7 +113,6 @@ class ApachePHPBuildpack extends BasePHPBuildpack {
 
             if(cacheConf != "") {
                 try {
-                    await checkConfFolder();
                     await utils.writeFile("conf.d/cache_control.conf", cacheConf);
                 } catch(error) {
                     throw "Cannot write cache-control settings: " + error;
