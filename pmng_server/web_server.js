@@ -443,10 +443,19 @@ async function webServe(req, res) {
 
         res.addServerTiming?.("total_proxy", (process.uptime() - startTime) * 1000, "Reception to proxying");
 
+        let reqHostname = getHost(req.headers);
         if(!res.writableEnded) http2proxy.web(req, res, {hostname: "127.0.0.1", port, onReq: (req, { headers }) => {
             headers["x-forwarded-for"] = req.socket.remoteAddress
             headers["x-forwarded-proto"] = req.socket.encrypted ? "https" : "http"
-            headers["x-forwarded-host"] = req.headers["host"] ?? req.headers[":authority"] ?? "undefined";
+            headers["x-forwarded-host"] = reqHostname ?? "undefined";
+        }, onRes: (req, res, proxyRes) => {
+            let resHeaders = proxyRes.headers, newLocation = resHeaders["location"];
+            if(newLocation != undefined && reqHostname != undefined) {
+                resHeaders["location"] =  newLocation.replace(new RegExp("http:\\/\\/(localhost|(172|127|10)\\.[\\d.]+):" + port), "http" + (process.env.ENABLE_HTTPS?.toLowerCase() == "true" ? "s" : "") + "://" + reqHostname)
+            }
+
+            res.writeHead(proxyRes.statusCode, resHeaders);
+            proxyRes.pipe(res);
         }}, webErrorHandler);
     }
 }
