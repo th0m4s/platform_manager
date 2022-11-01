@@ -18,6 +18,7 @@ const subprocess_util = require("./subprocess_util");
 const plugins_manager = require("./plugins_manager");
 const ip_manager = require("./ip_manager");
 const isIP = require("is-ip");
+const { PassThrough } = require("stream");
 
 const enable_https = process.env.ENABLE_HTTPS.toLowerCase() == "true";
 // const countPublic = enable_https ? 2 : 1, runningPublic = [];
@@ -445,17 +446,82 @@ async function webServe(req, res) {
 
         let reqHostname = getHost(req.headers);
         if(!res.writableEnded) http2proxy.web(req, res, {hostname: "127.0.0.1", port, onReq: (req, { headers }) => {
-            headers["x-forwarded-for"] = req.socket.remoteAddress
-            headers["x-forwarded-proto"] = req.socket.encrypted ? "https" : "http"
+            headers["x-forwarded-for"] = req.socket.remoteAddress;
+            headers["x-forwarded-proto"] = req.socket.encrypted ? "https" : "http";
             headers["x-forwarded-host"] = reqHostname ?? "undefined";
-        }, onRes: (req, res, proxyRes) => {
-            let resHeaders = proxyRes.headers, newLocation = resHeaders["location"];
+        }, onRes: async (req, res, proxyRes) => {
+            let resHeaders = proxyRes.headers;
+            let statusCode = proxyRes.statusCode;
+            let lastInput = proxyRes;
+            let continueInterceptors = true;
+
+            if(!portDetails.isSpecial) {
+                let projectname = portDetails.project;
+
+                for(let [pluginname, pluginconfig] of (pluginsPerProject[projectname] ?? [])) {
+                    let interceptor = getPluginInterceptors(pluginname);
+                    if(interceptor !== false) {
+                        let headResponse = await interceptor.responseHeadInterceptor(projectname, pluginconfig, {status: statusCode, headers: resHeaders});
+                    
+                        if(headResponse === true) {
+                            continueInterceptors = false;
+                            break;
+                        } else if(headResponse === false) {
+                            break;
+                        } else if(headResponse !== undefined) {
+                            let headResponseType = typeof headResponse;
+                            if(headResponseType === "number") {
+                                statusCode = headResponse;
+                            } else if(headResponseType === "object" && !Array.isArray(headResponse)) {
+                                let statusResponse = headResponse["status"];
+                                if(typeof statusResponse === "number") {
+                                    statusCode = statusResponse;
+
+                                    let headersResponse = headResponse["headers"];
+                                    if(typeof headersResponse === "object" && !Array.isArray(headersResponse)) {
+                                        for(let [key, value] of Object.entries(headersResponse)) {
+                                            resHeaders[key] = value;
+                                        }
+                                    }
+                                } else {
+                                    for(let [key, value] of Object.entries(headResponse)) {
+                                        resHeaders[key] = value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            let newLocation = resHeaders["location"];
             if(newLocation != undefined && reqHostname != undefined) {
                 resHeaders["location"] =  newLocation.replace(new RegExp("http:\\/\\/(localhost|(172|127|10)\\.[\\d.]+):" + port), "http" + (process.env.ENABLE_HTTPS?.toLowerCase() == "true" ? "s" : "") + "://" + reqHostname)
             }
 
-            res.writeHead(proxyRes.statusCode, resHeaders);
-            proxyRes.pipe(res);
+            resHeaders["x-powered-by"] = "PlatformManager";
+            res.writeHead(statusCode, resHeaders);
+            
+            if(!portDetails.isSpecial) {
+                let projectname = portDetails.project;
+
+                if(continueInterceptors) {
+                    for(let [pluginname, pluginconfig] of (pluginsPerProject[projectname] ?? [])) {
+                        let interceptor = getPluginInterceptors(pluginname);
+                        if(interceptor !== false) {
+                            let duplex = new PassThrough();
+                            let bodyResponse = await interceptor.responseBodyInterceptor(projectname, pluginconfig, lastInput, duplex);
+                            lastInput = duplex;
+
+                            if(bodyResponse === true || duplex.writableEnded === true) {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            lastInput.pipe(res);
         }}, webErrorHandler);
     }
 }

@@ -37,14 +37,21 @@ class Plugin {
             async requestInterceptor(projectname, pluginconfig, req, portdetails, res) { },
 
             async responseHeadInterceptor(projectname, pluginconfig, data) {
-                // data: {status: {code: number, message: string}, headers: Object}
+                // data: {status: number, headers: Object}
 
                 // should return true to stop all remaining interceptors, false to stop remaining interceptors but keep body interceptors
-                // and undefined to continue all interceptors
+                // and something else to continue all interceptors
+                // if return type is int, it will be the new status code
+                // else, if return has an int status property, it will be interpreted as a status code
+                // in the last case, the return object will be the headers
+
+                // headers can also be modified in-place, whereas status cannot
             },
 
             responseBodyInterceptor(projectname, pluginconfig, input, output) {
                 input.pipe(output);
+
+                // should return true to stop all remaining interceptors
             }
         };
 
