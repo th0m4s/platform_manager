@@ -7,7 +7,7 @@ const logger = require("../platform_logger").logger();
 const rootCom = express(), userCom = express();
 
 async function listenRootCom() {
-    let comSocketFile = path.resolve(process.env.CONTAINERUTILS_MOUNT_PATH, "container_com.sock");
+    let comSocketFile = path.resolve(process.env.CONTAINERUTILS_MOUNT_PATH, "root_container_com.sock");
 
     try {
         await pfs.access(comSocketFile);
@@ -20,8 +20,14 @@ async function listenRootCom() {
     });
 
     logger.tag("COM ROOT", "Starting root container com server...");
-    rootCom.listen(comSocketFile, () => {
+    rootCom.listen(comSocketFile, async () => {
         logger.tag("COM ROOT", "Root container com server started.");
+        try {
+            await pfs.chmod(comSocketFile, "0600");
+            logger.tag("COM ROOT", "Changed permissions of root container com to 0600.");
+        } catch(modeError) {
+            logger.tag("COM ROOT", "Error while changing permissions of root container com: " + modeError);
+        }
         resolve();
     });
 
